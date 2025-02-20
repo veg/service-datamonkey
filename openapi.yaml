@@ -1,0 +1,769 @@
+openapi: 3.0.2
+info:
+  version: 1.0.0
+  title: Datamonkey API
+  contact:
+    email: spond@temple.edu
+    url: 'http://github.com/veg/api-datamonkey'
+  x-logo:
+    url: >-
+      https://raw.githubusercontent.com/veg/datamonkey-js/refs/heads/master/public/assets/img/header-logo.svg
+    altText: Datamonkey.org logo
+  license:
+    name: Apache 2.0
+    url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
+  description: >
+    Datamonkey is a free public server for comparative analysis of sequence
+    alignments using state-of-the-art statistical models. <br> This is the
+    OpenAPI definition for the Datamonkey API.
+externalDocs:
+  description: Use Datamonkey today!
+  url: 'https://datamonkey.org'
+tags:
+  - name: HyPhy Methods
+    description: Examples starting jobs and fetching results for specific HyPhy methods
+  - name: File Upload and QC
+    description: Examples uploading files to Datamonkey
+  - name: Codon Aware Alignments
+    description: >-
+      Examples building codon-aware alignments from uploaded data. Somewhere
+      over the rainbow..
+  - name: Tree Building
+    description: >-
+      Examples building phylogenetic trees from uploaded data. Somewhere over
+      the rainbow..
+servers:
+  - url: 'http://datamonkey.org/api/v1'
+  - url: 'https://datamonkey.org/api/v1'
+parameters:
+  - name: method
+    in: path
+    description: The name of the HyPhy method
+    required: true
+    schema:
+      type: string
+paths:
+  /methods/fel:
+    parameters:
+      - name: pretty_print
+        in: query
+        description: Pretty print response
+        schema:
+          type: boolean
+    post:
+      tags:
+        - HyPhy Methods
+      summary: Start and monitor a FEL job
+      operationId: startFELJob
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FelRequest'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobStatus'
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvalidDataError'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerError'
+  /methods/fel/results:
+    parameters:
+      - name: pretty_print
+        in: query
+        description: Pretty print response
+        schema:
+          type: boolean
+    post:
+      tags:
+        - HyPhy Methods
+      summary: Get a FEL job result
+      operationId: getFELJob
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FelRequest'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FelResult'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerError'
+  /methods/busted:
+    parameters:
+      - name: pretty_print
+        in: query
+        description: Pretty print response
+        schema:
+          type: boolean
+    post:
+      tags:
+        - HyPhy Methods
+      summary: Start and monitor a BUSTED job
+      operationId: startBUSTEDJob
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BustedRequest'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobStatus'
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvalidDataError'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerError'
+  /methods/busted/results:
+    parameters:
+      - name: pretty_print
+        in: query
+        description: Pretty print response
+        schema:
+          type: boolean
+    post:
+      tags:
+        - HyPhy Methods
+      summary: Get a BUSTED job result
+      operationId: getBUSTEDJob
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BustedRequest'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BustedResult'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerError'
+  /datasets:
+    parameters:
+      - name: pretty_print
+        in: query
+        description: Pretty print response
+        schema:
+          type: boolean
+    get:
+      tags:
+        - File Upload and QC
+      summary: Get a list of datasets uploaded to Datamonkey
+      operationId: getDatasetsList
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Datasets'
+    post:
+      tags:
+        - File Upload and QC
+      summary: Upload a dataset to Datamonkey
+      operationId: PostDataset
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UploadRequest'
+        required: true
+      responses:
+        '201':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Datasets'
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvalidDataError'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerError'
+components:
+  schemas:
+    Hash:
+      type: string
+      pattern: '^[a-zA-Z0-9]+$'
+    GeneticCode:
+      type: object
+      description: |
+        Available Genetic Codes
+      default: Universal
+      enum:
+        - value: Universal
+          display_name: Universal code
+        - value: Vertebrate mtDNA
+          display_name: Vertebrate mitochondrial DNA code
+        - value: Yeast mtDNA
+          display_name: Yeast mitochondrial DNA code
+        - value: Mold/Protozoan mtDNA
+          display_name: 'Mold, Protozoan and Coelenterate mt; Mycloplasma/Spiroplasma'
+        - value: Invertebrate mtDNA
+          display_name: Invertebrate mitochondrial DNA code
+        - value: Ciliate Nuclear
+          display_name: 'Ciliate, Dasycladacean and Hexamita Nuclear code'
+        - value: Echinoderm mtDNA
+          display_name: Echinoderm mitochondrial DNA code
+        - value: Eupltoid Nuclear
+          display_name: Euplotid Nuclear code
+        - value: Alt. Yeast Nuclear
+          display_name: Alternative Yeast Nuclear code
+        - value: Ascidian mtDNA
+          display_name: Ascidian mitochondrial DNA code
+        - value: Flatworm mtDNA
+          display_name: Flatworm mitochondrial DNA code
+        - value: Blepharisma Nuclear
+          display_name: Blepharisma Nuclear code
+    FelRequest:
+      type: object
+      properties:
+        alignment:
+          $ref: '#/components/schemas/Hash'
+          description: Handle to the alignment
+          required: true
+        tree:
+          $ref: '#/components/schemas/Hash'
+          description: Handle to the tree file
+          required: true
+        ci:
+          type: boolean
+          default: false
+          description: Compute confidence intervals for estimated rates
+        srv:
+          type: boolean
+          default: true
+          description: Include synonymous rate variation in the model
+        resample:
+          type: number
+          default: 0
+          description: Number of bootstrap resamples
+        multiple_hits:
+          type: string
+          enum:
+            - None
+            - Double
+            - Double+Triple
+          default: None
+          description: Specify handling of multiple nucleotide substitutions
+        site_multihit:
+          type: string
+          enum:
+            - Estimate
+            - Global
+          default: Estimate
+          description: Specify whether to estimate multiple hit rates for each site
+        genetic_code:
+          $ref: '#/components/schemas/GeneticCode'
+          default: Universal
+        branches:
+          type: array
+          items:
+            type: string
+          default: []
+          description: >-
+            Branches to include in the analysis. If empty, all branches are
+            included.
+    JobStatus:
+      type: object
+      properties:
+        job_id:
+          $ref: '#/components/schemas/Hash'
+        status:
+          type: string
+          enum:
+            - queued
+            - running
+            - completed
+            - error
+        error_message:
+          type: string
+    InvalidDataError:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+                description: The field that caused the error
+              message:
+                type: string
+                description: The error message
+    ServerError:
+      type: object
+      properties:
+        error:
+          type: string
+          description: A general description of the error.
+        code:
+          type: string
+          description: A unique error code (if available).
+        details:
+          type: string
+          description: Optional details about the error.
+    Email:
+      description: User email address
+      type: string
+      format: test
+      example: john.smith@example.com
+    AnalysisInfo:
+      type: object
+      properties:
+        authors: string
+        citation: string
+        contact:
+          $ref: '#/components/schemas/Email'
+        info: string
+        requirements: string
+        settings:
+          type: object
+          properties:
+            ci: number
+            multihit: string
+            pvalue: number
+            resample: number
+            site_filter:
+              type: object
+              properties:
+                site_filter: string
+                site_save_filter: string
+            srv: number
+        version: string
+    InputInfo:
+      type: object
+      properties:
+        file_name: string
+        number_of_sequences: integer
+        number_of_sites: integer
+        partition_count: integer
+        trees:
+          type: object
+          additionalProperties:
+            type: string
+    TestedBranchesInfo:
+      type: object
+      additionalProperties:
+        type: object
+        additionalProperties:
+          type: string
+          enum:
+            - tested
+            - background
+    TimersInfo:
+      type: array
+      items:
+        type: object
+        properties:
+          order: integer
+          time: integer
+    PartitionsInfo:
+      type: object
+      additionalProperties:
+        type: object
+        properties:
+          name:
+            type: string
+          coverage:
+            type: array
+            items:
+              type: integer
+    BaseResponse:
+      type: object
+      properties:
+        analysis:
+          $ref: '#/components/schemas/AnalysisInfo'
+        input:
+          $ref: '#/components/schemas/InputInfo'
+        tested:
+          $ref: '#/components/schemas/TestedBranchesInfo'
+        timers:
+          $ref: '#/components/schemas/TimersInfo'
+        runtime:
+          type: string
+          pattern: '^[0-9]+\.[0-9]+\.[0-9]+$'
+        data partitions:
+          $ref: '#/components/schemas/PartitionsInfo'
+    FelResult:
+      type: object
+      properties:
+        job_id:
+          $ref: '#/components/schemas/Hash'
+        result:
+          allOf:
+            - $ref: '#/components/schemas/BaseResponse'
+            - type: object
+              properties:
+                fits:
+                  type: object
+                  additionalProperties:
+                    type: object
+                    properties:
+                      AIC-c:
+                        type: number
+                      Equilibrium frequencies:
+                        type: array
+                        items:
+                          type: array
+                          items:
+                            type: number
+                      Log Likelihood:
+                        type: number
+                      Rate Distributions:
+                        type: object
+                        additionalProperties:
+                          type: array
+                          items:
+                            type: array
+                            items:
+                              type: number
+                      display order:
+                        type: number
+                      estimated parameters:
+                        type: number
+                branch attributes:
+                  type: object
+                  properties:
+                    attrbitutes:
+                      type: object
+                      additionalProperties:
+                        type: object
+                        properties:
+                          attribute type:
+                            type: string
+                          display_order:
+                            type: integer
+                  additionalProperties:
+                    type: object
+                    additionalProperties:
+                      type: object
+                      properties:
+                        Global MG94xREV:
+                          type: number
+                        Nucleotide GTR:
+                          type: number
+                        original name:
+                          type: string
+                MLE:
+                  type: object
+                  properties:
+                    content:
+                      type: object
+                      additionalProperties:
+                        type: array
+                        items:
+                          type: array
+                          items:
+                            type: number
+    BustedRequest:
+      type: object
+      properties:
+        alignment:
+          $ref: '#/components/schemas/Hash'
+          description: Handle to the alignment
+          required: true
+        tree:
+          $ref: '#/components/schemas/Hash'
+          description: Handle to the tree file
+          required: true
+        srv:
+          type: string
+          enum:
+            - 'Yes'
+            - 'No'
+            - branch-site
+          default: 'Yes'
+          description: Include synonymous rate variation in the model
+        multiple_hits:
+          type: string
+          enum:
+            - None
+            - Double
+            - Double+Triple
+          default: None
+          description: Specify handling of multiple nucleotide substitutions
+        genetic_code:
+          $ref: '#/components/schemas/GeneticCode'
+          default: Universal
+        branches:
+          type: array
+          items:
+            type: string
+          default: []
+          description: >-
+            Branches to include in the analysis. If empty, all branches are
+            included.
+        rates:
+          type: integer
+          minimum: 1
+          maximum: 10
+          default: 3
+          description: The number omega rate classes to include in the model
+        syn_rates:
+          type: integer
+          minimum: 1
+          maximum: 10
+          default: 3
+          description: The number synonymous rate classes to include in the model
+        grid_size:
+          type: integer
+          minimum: 1
+          default: 250
+          description: >-
+            The number of points in the initial distributional guess for
+            likelihood fitting
+        starting_points:
+          type: integer
+          minimum: 1
+          default: 1
+          description: >-
+            The number of initial random guesses to seed rate values
+            optimization
+        error_sink:
+          type: boolean
+          default: false
+          description: >-
+            An advanced experimental setting; include a rate class to capture
+            misalignment artifacts
+    BustedResult:
+      type: object
+      properties:
+        job_id:
+          $ref: '#/components/schemas/Hash'
+        result:
+          allOf:
+            - $ref: '#/components/schemas/BaseResponse'
+            - type: object
+              properties:
+                background:
+                  type: number
+                fits:
+                  type: object
+                  additionalProperties:
+                    type: object
+                    properties:
+                      AIC-c:
+                        type: number
+                      Log Likelihood:
+                        type: number
+                      Rate Distributions:
+                        type: object
+                        properties:
+                          Test:
+                            type: object
+                            additionalProperties:
+                              type: object
+                              properties:
+                                omega:
+                                  type: number
+                                proportion:
+                                  type: number
+                          Synonymous site-to-site rates:
+                            type: object
+                            additionalProperties:
+                              type: object
+                              properties:
+                                proportion:
+                                  type: number
+                                rate:
+                                  type: number
+                      display order:
+                        type: number
+                      estimated parameters:
+                        type: number
+                branch attributes:
+                  type: object
+                  properties:
+                    attrbitutes:
+                      type: object
+                      additionalProperties:
+                        type: object
+                        properties:
+                          attribute type:
+                            type: string
+                          display_order:
+                            type: integer
+                  additionalProperties:
+                    type: object
+                    additionalProperties:
+                      type: object
+                      properties:
+                        MG94xREV with separate rates for branch sets:
+                          type: number
+                        Nucleotide GTR:
+                          type: number
+                        Posterior prob omega class:
+                          type: array
+                          items:
+                            type: array
+                            items:
+                              type: number
+                        Posterior prob omega class by site:
+                          type: array
+                          items:
+                            type: array
+                            items:
+                              type: number
+                        constrained:
+                          type: number
+                        original name:
+                          type: string
+                        unconstrained:
+                          type: number
+                test_results:
+                  type: object
+                  properties:
+                    LRT:
+                      type: number
+                    p-value:
+                      type: number
+                substitutions:
+                  type: object
+                  additionalProperties:
+                    type: object
+                    additionalProperties:
+                      type: object
+                      properties:
+                        root:
+                          type: string
+                      additionalProperties:
+                        type: string
+                Synonymous site-posteriors:
+                  type: array
+                  items:
+                    type: array
+                    items:
+                      type: number
+                Site Log Likelihood:
+                  type: object
+                  properties:
+                    constrained:
+                      type: array
+                      items:
+                        type: array
+                        items:
+                          type: number
+                    unconstrained:
+                      type: array
+                      items:
+                        type: array
+                        items:
+                          type: number
+                    optimized null:
+                      type: array
+                      items:
+                        type: array
+                        items:
+                          type: number
+                Evidence Ratios:
+                  type: object
+                  properties:
+                    constrained:
+                      type: array
+                      items:
+                        type: array
+                        items:
+                          type: number
+                    optimized null:
+                      type: array
+                      items:
+                        type: array
+                        items:
+                          type: number
+    DatasetMeta:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        type:
+          type: string
+    Dataset:
+      type: object
+      allOf:
+        - $ref: '#/components/schemas/DatasetMeta'
+        - type: object
+          properties:
+            id:
+              $ref: '#/components/schemas/Hash'
+            created:
+              type: string
+              format: date-time
+            updated:
+              type: string
+              format: date-time
+    Datasets:
+      type: object
+      properties:
+        datasets:
+          type: array
+          items:
+            $ref: '#/components/schemas/Dataset'
+    UploadRequest:
+      type: object
+      properties:
+        files:
+          type: array
+          items:
+            type: object
+            properties:
+              meta:
+                $ref: '#/components/schemas/DatasetMeta'
+              file:
+                type: string
+                format: binary
+                description: Dataset File. incompatible with the url field
+              url:
+                type: string
+                description: URL of the file to upload. incompatible with the file field

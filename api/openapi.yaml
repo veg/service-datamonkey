@@ -1,0 +1,1246 @@
+openapi: 3.0.2
+info:
+  contact:
+    email: spond@temple.edu
+    url: http://github.com/veg/api-datamonkey
+  description: |
+    Datamonkey is a free public server for comparative analysis of sequence alignments using state-of-the-art statistical models. <br> This is the OpenAPI definition for the Datamonkey API.
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  title: Datamonkey API
+  version: 1.0.0
+  x-logo:
+    url: https://raw.githubusercontent.com/veg/datamonkey-js/refs/heads/master/public/assets/img/header-logo.svg
+    altText: Datamonkey.org logo
+externalDocs:
+  description: Use Datamonkey today!
+  url: https://datamonkey.org
+servers:
+- url: http://datamonkey.org/api/v1
+- url: https://datamonkey.org/api/v1
+tags:
+- description: Examples starting jobs and fetching results for specific HyPhy methods
+  name: HyPhy Methods
+- description: Examples uploading files to Datamonkey
+  name: File Upload and QC
+- description: Examples building codon-aware alignments from uploaded data. Somewhere
+    over the rainbow..
+  name: Codon Aware Alignments
+- description: Examples building phylogenetic trees from uploaded data. Somewhere
+    over the rainbow..
+  name: Tree Building
+paths:
+  /methods/fel:
+    post:
+      operationId: startFELJob
+      parameters:
+      - description: Pretty print response
+        explode: true
+        in: query
+        name: pretty_print
+        required: false
+        schema:
+          type: boolean
+        style: form
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FelRequest'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobStatus'
+          description: Success
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvalidDataError'
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerError'
+          description: Internal Server Error
+      summary: Start and monitor a FEL job
+      tags:
+      - HyPhy Methods
+  /methods/fel/results:
+    post:
+      operationId: getFELJob
+      parameters:
+      - description: Pretty print response
+        explode: true
+        in: query
+        name: pretty_print
+        required: false
+        schema:
+          type: boolean
+        style: form
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FelRequest'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FelResult'
+          description: Success
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerError'
+          description: Internal Server Error
+      summary: Get a FEL job result
+      tags:
+      - HyPhy Methods
+  /methods/busted:
+    post:
+      operationId: startBUSTEDJob
+      parameters:
+      - description: Pretty print response
+        explode: true
+        in: query
+        name: pretty_print
+        required: false
+        schema:
+          type: boolean
+        style: form
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BustedRequest'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobStatus'
+          description: Success
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvalidDataError'
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerError'
+          description: Internal Server Error
+      summary: Start and monitor a BUSTED job
+      tags:
+      - HyPhy Methods
+  /methods/busted/results:
+    post:
+      operationId: getBUSTEDJob
+      parameters:
+      - description: Pretty print response
+        explode: true
+        in: query
+        name: pretty_print
+        required: false
+        schema:
+          type: boolean
+        style: form
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BustedRequest'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BustedResult'
+          description: Success
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerError'
+          description: Internal Server Error
+      summary: Get a BUSTED job result
+      tags:
+      - HyPhy Methods
+  /datasets:
+    get:
+      operationId: getDatasetsList
+      parameters:
+      - description: Pretty print response
+        explode: true
+        in: query
+        name: pretty_print
+        required: false
+        schema:
+          type: boolean
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Datasets'
+          description: Success
+      summary: Get a list of datasets uploaded to Datamonkey
+      tags:
+      - File Upload and QC
+    post:
+      operationId: PostDataset
+      parameters:
+      - description: Pretty print response
+        explode: true
+        in: query
+        name: pretty_print
+        required: false
+        schema:
+          type: boolean
+        style: form
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UploadRequest'
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Datasets'
+          description: Success
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvalidDataError'
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerError'
+          description: Internal Server Error
+      summary: Upload a dataset to Datamonkey
+      tags:
+      - File Upload and QC
+components:
+  schemas:
+    Hash:
+      pattern: "^[a-zA-Z0-9]+$"
+      type: string
+    GeneticCode:
+      description: |
+        Available Genetic Codes
+      enum:
+      - value: Universal
+        display_name: Universal code
+      - value: Vertebrate mtDNA
+        display_name: Vertebrate mitochondrial DNA code
+      - value: Yeast mtDNA
+        display_name: Yeast mitochondrial DNA code
+      - value: Mold/Protozoan mtDNA
+        display_name: "Mold, Protozoan and Coelenterate mt; Mycloplasma/Spiroplasma"
+      - value: Invertebrate mtDNA
+        display_name: Invertebrate mitochondrial DNA code
+      - value: Ciliate Nuclear
+        display_name: "Ciliate, Dasycladacean and Hexamita Nuclear code"
+      - value: Echinoderm mtDNA
+        display_name: Echinoderm mitochondrial DNA code
+      - value: Eupltoid Nuclear
+        display_name: Euplotid Nuclear code
+      - value: Alt. Yeast Nuclear
+        display_name: Alternative Yeast Nuclear code
+      - value: Ascidian mtDNA
+        display_name: Ascidian mitochondrial DNA code
+      - value: Flatworm mtDNA
+        display_name: Flatworm mitochondrial DNA code
+      - value: Blepharisma Nuclear
+        display_name: Blepharisma Nuclear code
+      type: object
+    FelRequest:
+      example:
+        genetic_code: "{}"
+        site_multihit: Estimate
+        ci: false
+        srv: true
+        multiple_hits: None
+        tree: tree
+        alignment: alignment
+        branches:
+        - branches
+        - branches
+        resample: 0.8008281904610115
+      properties:
+        alignment:
+          pattern: "^[a-zA-Z0-9]+$"
+          type: string
+        tree:
+          pattern: "^[a-zA-Z0-9]+$"
+          type: string
+        ci:
+          default: false
+          description: Compute confidence intervals for estimated rates
+          type: boolean
+        srv:
+          default: true
+          description: Include synonymous rate variation in the model
+          type: boolean
+        resample:
+          default: 0
+          description: Number of bootstrap resamples
+          type: number
+        multiple_hits:
+          default: None
+          description: Specify handling of multiple nucleotide substitutions
+          enum:
+          - None
+          - Double
+          - Double+Triple
+          type: string
+        site_multihit:
+          default: Estimate
+          description: Specify whether to estimate multiple hit rates for each site
+          enum:
+          - Estimate
+          - Global
+          type: string
+        genetic_code:
+          $ref: '#/components/schemas/GeneticCode'
+        branches:
+          default: []
+          description: "Branches to include in the analysis. If empty, all branches\
+            \ are included."
+          items:
+            type: string
+          type: array
+      type: object
+    JobStatus:
+      example:
+        error_message: error_message
+        job_id: job_id
+        status: queued
+      properties:
+        job_id:
+          pattern: "^[a-zA-Z0-9]+$"
+          type: string
+        status:
+          enum:
+          - queued
+          - running
+          - completed
+          - error
+          type: string
+        error_message:
+          type: string
+      type: object
+    InvalidDataError:
+      example:
+        errors:
+        - field: field
+          message: message
+        - field: field
+          message: message
+      properties:
+        errors:
+          items:
+            $ref: '#/components/schemas/InvalidDataError_errors_inner'
+          type: array
+      type: object
+    ServerError:
+      example:
+        code: code
+        details: details
+        error: error
+      properties:
+        error:
+          description: A general description of the error.
+          type: string
+        code:
+          description: A unique error code (if available).
+          type: string
+        details:
+          description: Optional details about the error.
+          type: string
+      type: object
+    Email:
+      description: User email address
+      example: john.smith@example.com
+      format: test
+      type: string
+    AnalysisInfo:
+      example:
+        settings:
+          site_filter: "{}"
+        contact: john.smith@example.com
+      properties:
+        contact:
+          description: User email address
+          example: john.smith@example.com
+          format: test
+          type: string
+        settings:
+          $ref: '#/components/schemas/AnalysisInfo_settings'
+      type: object
+    InputInfo:
+      example:
+        trees:
+          key: trees
+      properties:
+        trees:
+          additionalProperties:
+            type: string
+          type: object
+      type: object
+    TestedBranchesInfo:
+      additionalProperties:
+        additionalProperties:
+          enum:
+          - tested
+          - background
+          type: string
+        type: object
+      type: object
+    TimersInfo:
+      items:
+        properties: {}
+        type: object
+      type: array
+    PartitionsInfo:
+      additionalProperties:
+        $ref: '#/components/schemas/PartitionsInfo_value'
+      type: object
+    BaseResponse:
+      properties:
+        analysis:
+          $ref: '#/components/schemas/AnalysisInfo'
+        input:
+          $ref: '#/components/schemas/InputInfo'
+        tested:
+          additionalProperties:
+            additionalProperties:
+              enum:
+              - tested
+              - background
+              type: string
+            type: object
+          type: object
+        timers:
+          items:
+            properties: {}
+            type: object
+          type: array
+        runtime:
+          pattern: "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+          type: string
+        data partitions:
+          additionalProperties:
+            $ref: '#/components/schemas/PartitionsInfo_value'
+          type: object
+      type: object
+    FelResult:
+      example:
+        result:
+          input:
+            trees:
+              key: trees
+          timers:
+          - "{}"
+          - "{}"
+          data partitions:
+            key:
+              coverage:
+              - 0
+              - 0
+              name: name
+          branch attributes:
+            attrbitutes:
+              key:
+                display_order: 9
+                attribute type: attribute type
+          tested:
+            key:
+              key: tested
+          MLE:
+            content:
+              key:
+              - - 3.616076749251911
+                - 3.616076749251911
+              - - 3.616076749251911
+                - 3.616076749251911
+          runtime: runtime
+          analysis:
+            settings:
+              site_filter: "{}"
+            contact: john.smith@example.com
+          fits:
+            key:
+              Log Likelihood: 5.962133916683182
+              estimated parameters: 7.061401241503109
+              Rate Distributions:
+                key:
+                - - 5.637376656633329
+                  - 5.637376656633329
+                - - 5.637376656633329
+                  - 5.637376656633329
+              AIC-c: 6.027456183070403
+              display order: 2.3021358869347655
+              Equilibrium frequencies:
+              - - 1.4658129805029452
+                - 1.4658129805029452
+              - - 1.4658129805029452
+                - 1.4658129805029452
+        job_id: job_id
+      properties:
+        job_id:
+          pattern: "^[a-zA-Z0-9]+$"
+          type: string
+        result:
+          $ref: '#/components/schemas/FelResult_result'
+      type: object
+    BustedRequest:
+      example:
+        genetic_code: "{}"
+        srv: "Yes"
+        syn_rates: 6
+        multiple_hits: None
+        rates: 1
+        tree: tree
+        grid_size: 1
+        alignment: alignment
+        branches:
+        - branches
+        - branches
+        starting_points: 1
+        error_sink: false
+      properties:
+        alignment:
+          pattern: "^[a-zA-Z0-9]+$"
+          type: string
+        tree:
+          pattern: "^[a-zA-Z0-9]+$"
+          type: string
+        srv:
+          default: "Yes"
+          description: Include synonymous rate variation in the model
+          enum:
+          - "Yes"
+          - "No"
+          - branch-site
+          type: string
+        multiple_hits:
+          default: None
+          description: Specify handling of multiple nucleotide substitutions
+          enum:
+          - None
+          - Double
+          - Double+Triple
+          type: string
+        genetic_code:
+          $ref: '#/components/schemas/GeneticCode'
+        branches:
+          default: []
+          description: "Branches to include in the analysis. If empty, all branches\
+            \ are included."
+          items:
+            type: string
+          type: array
+        rates:
+          default: 3
+          description: The number omega rate classes to include in the model
+          maximum: 10
+          minimum: 1
+          type: integer
+        syn_rates:
+          default: 3
+          description: The number synonymous rate classes to include in the model
+          maximum: 10
+          minimum: 1
+          type: integer
+        grid_size:
+          default: 250
+          description: The number of points in the initial distributional guess for
+            likelihood fitting
+          minimum: 1
+          type: integer
+        starting_points:
+          default: 1
+          description: The number of initial random guesses to seed rate values optimization
+          minimum: 1
+          type: integer
+        error_sink:
+          default: false
+          description: An advanced experimental setting; include a rate class to capture
+            misalignment artifacts
+          type: boolean
+      type: object
+    BustedResult:
+      example:
+        result:
+          timers:
+          - "{}"
+          - "{}"
+          tested:
+            key:
+              key: tested
+          Evidence Ratios:
+            optimized null:
+            - - 7.457744773683766
+              - 7.457744773683766
+            - - 7.457744773683766
+              - 7.457744773683766
+            constrained:
+            - - 6.84685269835264
+              - 6.84685269835264
+            - - 6.84685269835264
+              - 6.84685269835264
+          runtime: runtime
+          analysis:
+            settings:
+              site_filter: "{}"
+            contact: john.smith@example.com
+          fits:
+            key:
+              Log Likelihood: 1.4658129805029452
+              estimated parameters: 3.616076749251911
+              Rate Distributions:
+                Test:
+                  key:
+                    proportion: 5.637376656633329
+                    omega: 5.962133916683182
+                Synonymous site-to-site rates:
+                  key:
+                    proportion: 2.3021358869347655
+                    rate: 7.061401241503109
+              AIC-c: 6.027456183070403
+              display order: 9.301444243932576
+          Synonymous site-posteriors:
+          - - 7.386281948385884
+            - 7.386281948385884
+          - - 7.386281948385884
+            - 7.386281948385884
+          input:
+            trees:
+              key: trees
+          data partitions:
+            key:
+              coverage:
+              - 0
+              - 0
+              name: name
+          branch attributes:
+            attrbitutes:
+              key:
+                display_order: 9
+                attribute type: attribute type
+          substitutions:
+            key:
+              key:
+                root: root
+          background: 0.8008281904610115
+          Site Log Likelihood:
+            optimized null:
+            - - 1.4894159098541704
+              - 1.4894159098541704
+            - - 1.4894159098541704
+              - 1.4894159098541704
+            constrained:
+            - - 1.2315135367772556
+              - 1.2315135367772556
+            - - 1.2315135367772556
+              - 1.2315135367772556
+            unconstrained:
+            - - 1.0246457001441578
+              - 1.0246457001441578
+            - - 1.0246457001441578
+              - 1.0246457001441578
+          test_results:
+            p-value: 4.145608029883936
+            LRT: 2.027123023002322
+        job_id: job_id
+      properties:
+        job_id:
+          pattern: "^[a-zA-Z0-9]+$"
+          type: string
+        result:
+          $ref: '#/components/schemas/BustedResult_result'
+      type: object
+    DatasetMeta:
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        type:
+          type: string
+      type: object
+    Dataset:
+      allOf:
+      - $ref: '#/components/schemas/DatasetMeta'
+      - properties:
+          id:
+            $ref: '#/components/schemas/Hash'
+          created:
+            format: date-time
+            type: string
+          updated:
+            format: date-time
+            type: string
+        type: object
+      example:
+        created: 2000-01-23T04:56:07.000+00:00
+        name: name
+        description: description
+        id: null
+        type: type
+        updated: 2000-01-23T04:56:07.000+00:00
+      type: object
+    Datasets:
+      example:
+        datasets:
+        - created: 2000-01-23T04:56:07.000+00:00
+          name: name
+          description: description
+          id: null
+          type: type
+          updated: 2000-01-23T04:56:07.000+00:00
+        - created: 2000-01-23T04:56:07.000+00:00
+          name: name
+          description: description
+          id: null
+          type: type
+          updated: 2000-01-23T04:56:07.000+00:00
+      properties:
+        datasets:
+          items:
+            $ref: '#/components/schemas/Dataset'
+          type: array
+      type: object
+    UploadRequest:
+      properties:
+        files:
+          items:
+            $ref: '#/components/schemas/UploadRequest_files_inner'
+          type: array
+      type: object
+    InvalidDataError_errors_inner:
+      example:
+        field: field
+        message: message
+      properties:
+        field:
+          description: The field that caused the error
+          type: string
+        message:
+          description: The error message
+          type: string
+      type: object
+    AnalysisInfo_settings:
+      example:
+        site_filter: "{}"
+      properties:
+        site_filter:
+          properties: {}
+          type: object
+      type: object
+    PartitionsInfo_value:
+      example:
+        coverage:
+        - 0
+        - 0
+        name: name
+      properties:
+        name:
+          type: string
+        coverage:
+          items:
+            type: integer
+          type: array
+      type: object
+    FelResult_result_allOf_fits_value:
+      example:
+        Log Likelihood: 5.962133916683182
+        estimated parameters: 7.061401241503109
+        Rate Distributions:
+          key:
+          - - 5.637376656633329
+            - 5.637376656633329
+          - - 5.637376656633329
+            - 5.637376656633329
+        AIC-c: 6.027456183070403
+        display order: 2.3021358869347655
+        Equilibrium frequencies:
+        - - 1.4658129805029452
+          - 1.4658129805029452
+        - - 1.4658129805029452
+          - 1.4658129805029452
+      properties:
+        AIC-c:
+          type: number
+        Equilibrium frequencies:
+          items:
+            items:
+              type: number
+            type: array
+          type: array
+        Log Likelihood:
+          type: number
+        Rate Distributions:
+          additionalProperties:
+            items:
+              items:
+                type: number
+              type: array
+            type: array
+          type: object
+        display order:
+          type: number
+        estimated parameters:
+          type: number
+      type: object
+    FelResult_result_allOf_branch_attributes_attrbitutes_value:
+      example:
+        display_order: 9
+        attribute type: attribute type
+      properties:
+        attribute type:
+          type: string
+        display_order:
+          type: integer
+      type: object
+    FelResult_result_allOf_branch_attributes_value_value:
+      properties:
+        Global MG94xREV:
+          type: number
+        Nucleotide GTR:
+          type: number
+        original name:
+          type: string
+      type: object
+    FelResult_result_allOf_branch_attributes:
+      additionalProperties:
+        additionalProperties:
+          $ref: '#/components/schemas/FelResult_result_allOf_branch_attributes_value_value'
+        type: object
+      example:
+        attrbitutes:
+          key:
+            display_order: 9
+            attribute type: attribute type
+      properties:
+        attrbitutes:
+          additionalProperties:
+            $ref: '#/components/schemas/FelResult_result_allOf_branch_attributes_attrbitutes_value'
+          type: object
+      type: object
+    FelResult_result_allOf_MLE:
+      example:
+        content:
+          key:
+          - - 3.616076749251911
+            - 3.616076749251911
+          - - 3.616076749251911
+            - 3.616076749251911
+      properties:
+        content:
+          additionalProperties:
+            items:
+              items:
+                type: number
+              type: array
+            type: array
+          type: object
+      type: object
+    FelResult_result:
+      allOf:
+      - $ref: '#/components/schemas/BaseResponse'
+      - properties:
+          fits:
+            additionalProperties:
+              $ref: '#/components/schemas/FelResult_result_allOf_fits_value'
+            type: object
+          branch attributes:
+            $ref: '#/components/schemas/FelResult_result_allOf_branch_attributes'
+          MLE:
+            $ref: '#/components/schemas/FelResult_result_allOf_MLE'
+        type: object
+      example:
+        input:
+          trees:
+            key: trees
+        timers:
+        - "{}"
+        - "{}"
+        data partitions:
+          key:
+            coverage:
+            - 0
+            - 0
+            name: name
+        branch attributes:
+          attrbitutes:
+            key:
+              display_order: 9
+              attribute type: attribute type
+        tested:
+          key:
+            key: tested
+        MLE:
+          content:
+            key:
+            - - 3.616076749251911
+              - 3.616076749251911
+            - - 3.616076749251911
+              - 3.616076749251911
+        runtime: runtime
+        analysis:
+          settings:
+            site_filter: "{}"
+          contact: john.smith@example.com
+        fits:
+          key:
+            Log Likelihood: 5.962133916683182
+            estimated parameters: 7.061401241503109
+            Rate Distributions:
+              key:
+              - - 5.637376656633329
+                - 5.637376656633329
+              - - 5.637376656633329
+                - 5.637376656633329
+            AIC-c: 6.027456183070403
+            display order: 2.3021358869347655
+            Equilibrium frequencies:
+            - - 1.4658129805029452
+              - 1.4658129805029452
+            - - 1.4658129805029452
+              - 1.4658129805029452
+    BustedResult_result_allOf_fits_value_Rate_Distributions_Test_value:
+      example:
+        proportion: 5.637376656633329
+        omega: 5.962133916683182
+      properties:
+        omega:
+          type: number
+        proportion:
+          type: number
+      type: object
+    BustedResult_result_allOf_fits_value_Rate_Distributions_Synonymous_site_to_site_rates_value:
+      example:
+        proportion: 2.3021358869347655
+        rate: 7.061401241503109
+      properties:
+        proportion:
+          type: number
+        rate:
+          type: number
+      type: object
+    BustedResult_result_allOf_fits_value_Rate_Distributions:
+      example:
+        Test:
+          key:
+            proportion: 5.637376656633329
+            omega: 5.962133916683182
+        Synonymous site-to-site rates:
+          key:
+            proportion: 2.3021358869347655
+            rate: 7.061401241503109
+      properties:
+        Test:
+          additionalProperties:
+            $ref: '#/components/schemas/BustedResult_result_allOf_fits_value_Rate_Distributions_Test_value'
+          type: object
+        Synonymous site-to-site rates:
+          additionalProperties:
+            $ref: '#/components/schemas/BustedResult_result_allOf_fits_value_Rate_Distributions_Synonymous_site_to_site_rates_value'
+          type: object
+      type: object
+    BustedResult_result_allOf_fits_value:
+      example:
+        Log Likelihood: 1.4658129805029452
+        estimated parameters: 3.616076749251911
+        Rate Distributions:
+          Test:
+            key:
+              proportion: 5.637376656633329
+              omega: 5.962133916683182
+          Synonymous site-to-site rates:
+            key:
+              proportion: 2.3021358869347655
+              rate: 7.061401241503109
+        AIC-c: 6.027456183070403
+        display order: 9.301444243932576
+      properties:
+        AIC-c:
+          type: number
+        Log Likelihood:
+          type: number
+        Rate Distributions:
+          $ref: '#/components/schemas/BustedResult_result_allOf_fits_value_Rate_Distributions'
+        display order:
+          type: number
+        estimated parameters:
+          type: number
+      type: object
+    BustedResult_result_allOf_branch_attributes_value_value:
+      properties:
+        MG94xREV with separate rates for branch sets:
+          type: number
+        Nucleotide GTR:
+          type: number
+        Posterior prob omega class:
+          items:
+            items:
+              type: number
+            type: array
+          type: array
+        Posterior prob omega class by site:
+          items:
+            items:
+              type: number
+            type: array
+          type: array
+        constrained:
+          type: number
+        original name:
+          type: string
+        unconstrained:
+          type: number
+      type: object
+    BustedResult_result_allOf_branch_attributes:
+      additionalProperties:
+        additionalProperties:
+          $ref: '#/components/schemas/BustedResult_result_allOf_branch_attributes_value_value'
+        type: object
+      example:
+        attrbitutes:
+          key:
+            display_order: 9
+            attribute type: attribute type
+      properties:
+        attrbitutes:
+          additionalProperties:
+            $ref: '#/components/schemas/FelResult_result_allOf_branch_attributes_attrbitutes_value'
+          type: object
+      type: object
+    BustedResult_result_allOf_test_results:
+      example:
+        p-value: 4.145608029883936
+        LRT: 2.027123023002322
+      properties:
+        LRT:
+          type: number
+        p-value:
+          type: number
+      type: object
+    BustedResult_result_allOf_substitutions_value_value:
+      additionalProperties:
+        type: string
+      example:
+        root: root
+      properties:
+        root:
+          type: string
+      type: object
+    BustedResult_result_allOf_Site_Log_Likelihood:
+      example:
+        optimized null:
+        - - 1.4894159098541704
+          - 1.4894159098541704
+        - - 1.4894159098541704
+          - 1.4894159098541704
+        constrained:
+        - - 1.2315135367772556
+          - 1.2315135367772556
+        - - 1.2315135367772556
+          - 1.2315135367772556
+        unconstrained:
+        - - 1.0246457001441578
+          - 1.0246457001441578
+        - - 1.0246457001441578
+          - 1.0246457001441578
+      properties:
+        constrained:
+          items:
+            items:
+              type: number
+            type: array
+          type: array
+        unconstrained:
+          items:
+            items:
+              type: number
+            type: array
+          type: array
+        optimized null:
+          items:
+            items:
+              type: number
+            type: array
+          type: array
+      type: object
+    BustedResult_result_allOf_Evidence_Ratios:
+      example:
+        optimized null:
+        - - 7.457744773683766
+          - 7.457744773683766
+        - - 7.457744773683766
+          - 7.457744773683766
+        constrained:
+        - - 6.84685269835264
+          - 6.84685269835264
+        - - 6.84685269835264
+          - 6.84685269835264
+      properties:
+        constrained:
+          items:
+            items:
+              type: number
+            type: array
+          type: array
+        optimized null:
+          items:
+            items:
+              type: number
+            type: array
+          type: array
+      type: object
+    BustedResult_result:
+      allOf:
+      - $ref: '#/components/schemas/BaseResponse'
+      - properties:
+          background:
+            type: number
+          fits:
+            additionalProperties:
+              $ref: '#/components/schemas/BustedResult_result_allOf_fits_value'
+            type: object
+          branch attributes:
+            $ref: '#/components/schemas/BustedResult_result_allOf_branch_attributes'
+          test_results:
+            $ref: '#/components/schemas/BustedResult_result_allOf_test_results'
+          substitutions:
+            additionalProperties:
+              additionalProperties:
+                $ref: '#/components/schemas/BustedResult_result_allOf_substitutions_value_value'
+              type: object
+            type: object
+          Synonymous site-posteriors:
+            items:
+              items:
+                type: number
+              type: array
+            type: array
+          Site Log Likelihood:
+            $ref: '#/components/schemas/BustedResult_result_allOf_Site_Log_Likelihood'
+          Evidence Ratios:
+            $ref: '#/components/schemas/BustedResult_result_allOf_Evidence_Ratios'
+        type: object
+      example:
+        timers:
+        - "{}"
+        - "{}"
+        tested:
+          key:
+            key: tested
+        Evidence Ratios:
+          optimized null:
+          - - 7.457744773683766
+            - 7.457744773683766
+          - - 7.457744773683766
+            - 7.457744773683766
+          constrained:
+          - - 6.84685269835264
+            - 6.84685269835264
+          - - 6.84685269835264
+            - 6.84685269835264
+        runtime: runtime
+        analysis:
+          settings:
+            site_filter: "{}"
+          contact: john.smith@example.com
+        fits:
+          key:
+            Log Likelihood: 1.4658129805029452
+            estimated parameters: 3.616076749251911
+            Rate Distributions:
+              Test:
+                key:
+                  proportion: 5.637376656633329
+                  omega: 5.962133916683182
+              Synonymous site-to-site rates:
+                key:
+                  proportion: 2.3021358869347655
+                  rate: 7.061401241503109
+            AIC-c: 6.027456183070403
+            display order: 9.301444243932576
+        Synonymous site-posteriors:
+        - - 7.386281948385884
+          - 7.386281948385884
+        - - 7.386281948385884
+          - 7.386281948385884
+        input:
+          trees:
+            key: trees
+        data partitions:
+          key:
+            coverage:
+            - 0
+            - 0
+            name: name
+        branch attributes:
+          attrbitutes:
+            key:
+              display_order: 9
+              attribute type: attribute type
+        substitutions:
+          key:
+            key:
+              root: root
+        background: 0.8008281904610115
+        Site Log Likelihood:
+          optimized null:
+          - - 1.4894159098541704
+            - 1.4894159098541704
+          - - 1.4894159098541704
+            - 1.4894159098541704
+          constrained:
+          - - 1.2315135367772556
+            - 1.2315135367772556
+          - - 1.2315135367772556
+            - 1.2315135367772556
+          unconstrained:
+          - - 1.0246457001441578
+            - 1.0246457001441578
+          - - 1.0246457001441578
+            - 1.0246457001441578
+        test_results:
+          p-value: 4.145608029883936
+          LRT: 2.027123023002322
+    UploadRequest_files_inner:
+      properties:
+        meta:
+          $ref: '#/components/schemas/DatasetMeta'
+        file:
+          description: Dataset File. incompatible with the url field
+          format: binary
+          type: string
+        url:
+          description: URL of the file to upload. incompatible with the file field
+          type: string
+      type: object
