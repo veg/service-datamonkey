@@ -23,3 +23,7 @@ go.work.sum
 
 # env file
 .env
+
+# pulled down version of openapi.yaml from api-datamonkey
+openapi.yaml
+
