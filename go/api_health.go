@@ -1,7 +1,7 @@
 /*
  * Datamonkey API
  *
- * Datamonkey is a free public server for comparative analysis of sequence alignments using state-of-the-art statistical models. <br> This is the OpenAPI definition for the Datamonkey API. 
+ * Datamonkey is a free public server for comparative analysis of sequence alignments using state-of-the-art statistical models. <br> This is the OpenAPI definition for the Datamonkey API.
  *
  * API version: 1.0.0
  * Contact: spond@temple.edu
@@ -11,6 +11,9 @@
 package openapi
 
 import (
+	"log"
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -18,9 +21,31 @@ type HealthAPI struct {
 }
 
 // Get /api/v1/health
-// Check health of Datamonkey 
+// Check health of Datamonkey
 func (api *HealthAPI) GetHealth(c *gin.Context) {
-	// TODO actually check health
-	c.JSON(200, gin.H{"status": "healthy"})
-}
+	log.Println("Checking health of Datamonkey")
 
+	client := &http.Client{}
+	req, err := http.NewRequest("GET", "http://localhost:9200/_nodes", nil)
+	if err != nil {
+		log.Println("Error during health check:", err)
+		c.JSON(500, gin.H{"status": "unhealthy", "details": gin.H{"slurm": "unhealthy"}})
+		return
+	}
+	req.Header.Set("Accept", "application/json")
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Println("Error during health check:", err)
+		c.JSON(500, gin.H{"status": "unhealthy", "details": gin.H{"slurm": "unhealthy"}})
+		return
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		log.Println("Error during health check:", "Slurm returned bad status code:", resp.StatusCode)
+		c.JSON(500, gin.H{"status": "unhealthy", "details": gin.H{"slurm": "unhealthy"}})
+		return
+	}
+
+	log.Println("Health check passed")
+	c.JSON(200, gin.H{"status": "healthy", "details": gin.H{"slurm": "healthy"}})
+}
