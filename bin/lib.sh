@@ -13,7 +13,7 @@ function getApiSpec {
 
 function generateServer {
   echo "Starting server code generation"
-  npx @openapitools/openapi-generator-cli generate -i openapi.yaml -g go-gin-server -o . --skip-validate-spec
+  npx @openapitools/openapi-generator-cli generate -i openapi.yaml -g go-gin-server -o . --git-repo-id service-datamonkey --git-user-id d-callan --skip-validate-spec
   echo "Code generation complete"
 }
 
