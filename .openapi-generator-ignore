@@ -30,3 +30,6 @@ Dockerfile
 
 # manual changes made here for port
 main.go
+
+# business logic in these files. 
+go/api_*.go
