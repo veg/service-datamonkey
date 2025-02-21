@@ -20,6 +20,8 @@ import (
 type HealthAPI struct {
 }
 
+// TODO: port should be configurable, in the go app, dockerfile, docker-compose, etc via environment variables
+
 // Get /api/v1/health
 // Check health of Datamonkey
 func (api *HealthAPI) GetHealth(c *gin.Context) {

@@ -3,7 +3,7 @@ BIN_DIR := "./bin"
 base_dir :=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 pwd = $(shell pwd)
 local_name = service-datamonkey
-tag ?= dev
+tag ?= latest
 api_version ?= 1.0.0
 
 C_BLUE := "\\033[94m"
