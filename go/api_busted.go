@@ -14,33 +14,19 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type HyPhyMethodsAPI struct {
+type BUSTEDAPI struct {
 }
 
-// Post /api/v1/methods/busted/results
+// Post /api/v1/methods/busted-result
 // Get a BUSTED job result 
-func (api *HyPhyMethodsAPI) GetBUSTEDJob(c *gin.Context) {
+func (api *BUSTEDAPI) GetBUSTEDJob(c *gin.Context) {
 	// Your handler implementation
 	c.JSON(200, gin.H{"status": "OK"})
 }
 
-// Post /api/v1/methods/fel/results
-// Get a FEL job result 
-func (api *HyPhyMethodsAPI) GetFELJob(c *gin.Context) {
-	// Your handler implementation
-	c.JSON(200, gin.H{"status": "OK"})
-}
-
-// Post /api/v1/methods/busted
+// Post /api/v1/methods/busted-start
 // Start and monitor a BUSTED job 
-func (api *HyPhyMethodsAPI) StartBUSTEDJob(c *gin.Context) {
-	// Your handler implementation
-	c.JSON(200, gin.H{"status": "OK"})
-}
-
-// Post /api/v1/methods/fel
-// Start and monitor a FEL job 
-func (api *HyPhyMethodsAPI) StartFELJob(c *gin.Context) {
+func (api *BUSTEDAPI) StartBUSTEDJob(c *gin.Context) {
 	// Your handler implementation
 	c.JSON(200, gin.H{"status": "OK"})
 }

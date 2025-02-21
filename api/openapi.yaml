@@ -20,10 +20,14 @@ servers:
 - url: http://datamonkey.org/api/v1
 - url: https://datamonkey.org/api/v1
 tags:
-- description: Examples starting jobs and fetching results for specific HyPhy methods
-  name: HyPhy Methods
+- description: Examples starting jobs and fetching results for FEL
+  name: FEL
+- description: Examples starting jobs and fetching results for BUSTED
+  name: BUSTED
 - description: Examples uploading files to Datamonkey
   name: File Upload and QC
+- description: Check health of Datamonkey server
+  name: Health
 - description: Examples building codon-aware alignments from uploaded data. Somewhere
     over the rainbow..
   name: Codon Aware Alignments
@@ -31,7 +35,41 @@ tags:
     over the rainbow..
   name: Tree Building
 paths:
-  /methods/fel:
+  /health:
+    get:
+      operationId: getHealth
+      parameters:
+      - description: Pretty print response
+        explode: true
+        in: query
+        name: pretty_print
+        required: false
+        schema:
+          type: boolean
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+          description: Success
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+          description: Unable to get health. Internal server error
+        "503":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+          description: Unable to get health. Service unavailable
+      summary: Check health of Datamonkey
+      tags:
+      - Health
+  /methods/fel-start:
     post:
       operationId: startFELJob
       parameters:
@@ -70,8 +108,8 @@ paths:
           description: Internal Server Error
       summary: Start and monitor a FEL job
       tags:
-      - HyPhy Methods
-  /methods/fel/results:
+      - FEL
+  /methods/fel-result:
     post:
       operationId: getFELJob
       parameters:
@@ -104,8 +142,8 @@ paths:
           description: Internal Server Error
       summary: Get a FEL job result
       tags:
-      - HyPhy Methods
-  /methods/busted:
+      - FEL
+  /methods/busted-start:
     post:
       operationId: startBUSTEDJob
       parameters:
@@ -144,8 +182,8 @@ paths:
           description: Internal Server Error
       summary: Start and monitor a BUSTED job
       tags:
-      - HyPhy Methods
-  /methods/busted/results:
+      - BUSTED
+  /methods/busted-result:
     post:
       operationId: getBUSTEDJob
       parameters:
@@ -178,7 +216,7 @@ paths:
           description: Internal Server Error
       summary: Get a BUSTED job result
       tags:
-      - HyPhy Methods
+      - BUSTED
   /datasets:
     get:
       operationId: getDatasetsList
@@ -242,6 +280,24 @@ paths:
       - File Upload and QC
 components:
   schemas:
+    Status:
+      enum:
+      - healthy
+      - unhealthy
+      - unknown
+      type: string
+    Health:
+      example:
+        details:
+          slurm: null
+          datamonkey: null
+        status: healthy
+      properties:
+        status:
+          $ref: '#/components/schemas/Status'
+        details:
+          $ref: '#/components/schemas/Health_details'
+      type: object
     Hash:
       pattern: "^[a-zA-Z0-9]+$"
       type: string
@@ -738,6 +794,16 @@ components:
           items:
             $ref: '#/components/schemas/UploadRequest_files_inner'
           type: array
+      type: object
+    Health_details:
+      example:
+        slurm: null
+        datamonkey: null
+      properties:
+        slurm:
+          $ref: '#/components/schemas/Status'
+        datamonkey:
+          $ref: '#/components/schemas/Status'
       type: object
     InvalidDataError_errors_inner:
       example:

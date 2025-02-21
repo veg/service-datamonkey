@@ -63,14 +63,42 @@ func DefaultHandleFunc(c *gin.Context) {
 
 type ApiHandleFunctions struct {
 
+	// Routes for the BUSTEDAPI part of the API
+	BUSTEDAPI BUSTEDAPI
+	// Routes for the FELAPI part of the API
+	FELAPI FELAPI
 	// Routes for the FileUploadAndQCAPI part of the API
 	FileUploadAndQCAPI FileUploadAndQCAPI
-	// Routes for the HyPhyMethodsAPI part of the API
-	HyPhyMethodsAPI HyPhyMethodsAPI
+	// Routes for the HealthAPI part of the API
+	HealthAPI HealthAPI
 }
 
 func getRoutes(handleFunctions ApiHandleFunctions) []Route {
 	return []Route{ 
+		{
+			"GetBUSTEDJob",
+			http.MethodPost,
+			"/api/v1/methods/busted-result",
+			handleFunctions.BUSTEDAPI.GetBUSTEDJob,
+		},
+		{
+			"StartBUSTEDJob",
+			http.MethodPost,
+			"/api/v1/methods/busted-start",
+			handleFunctions.BUSTEDAPI.StartBUSTEDJob,
+		},
+		{
+			"GetFELJob",
+			http.MethodPost,
+			"/api/v1/methods/fel-result",
+			handleFunctions.FELAPI.GetFELJob,
+		},
+		{
+			"StartFELJob",
+			http.MethodPost,
+			"/api/v1/methods/fel-start",
+			handleFunctions.FELAPI.StartFELJob,
+		},
 		{
 			"GetDatasetsList",
 			http.MethodGet,
@@ -84,28 +112,10 @@ func getRoutes(handleFunctions ApiHandleFunctions) []Route {
 			handleFunctions.FileUploadAndQCAPI.PostDataset,
 		},
 		{
-			"GetBUSTEDJob",
-			http.MethodPost,
-			"/api/v1/methods/busted/results",
-			handleFunctions.HyPhyMethodsAPI.GetBUSTEDJob,
-		},
-		{
-			"GetFELJob",
-			http.MethodPost,
-			"/api/v1/methods/fel/results",
-			handleFunctions.HyPhyMethodsAPI.GetFELJob,
-		},
-		{
-			"StartBUSTEDJob",
-			http.MethodPost,
-			"/api/v1/methods/busted",
-			handleFunctions.HyPhyMethodsAPI.StartBUSTEDJob,
-		},
-		{
-			"StartFELJob",
-			http.MethodPost,
-			"/api/v1/methods/fel",
-			handleFunctions.HyPhyMethodsAPI.StartFELJob,
+			"GetHealth",
+			http.MethodGet,
+			"/api/v1/health",
+			handleFunctions.HealthAPI.GetHealth,
 		},
 	}
 }
