@@ -20,7 +20,7 @@ type HealthAPI struct {
 // Get /api/v1/health
 // Check health of Datamonkey 
 func (api *HealthAPI) GetHealth(c *gin.Context) {
-	// Your handler implementation
-	c.JSON(200, gin.H{"status": "OK"})
+	// TODO actually check health
+	c.JSON(200, gin.H{"status": "healthy"})
 }
 

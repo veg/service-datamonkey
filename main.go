@@ -26,5 +26,5 @@ func main() {
 
 	router := sw.NewRouter(routes)
 
-	log.Fatal(router.Run(":8080"))
+	log.Fatal(router.Run(":9300"))
 }

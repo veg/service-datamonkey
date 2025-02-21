@@ -25,4 +25,8 @@
 # manual changes were made to Dockerfile to:
 # change the go version from 1.19 to 1.24
 # add go mod tidy before building go app
+# change port
 Dockerfile
+
+# manual changes made here for port
+main.go

@@ -13,5 +13,5 @@ RUN go build -o openapi .
 FROM scratch AS runtime
 ENV GIN_MODE=release
 COPY --from=build /go/src/openapi ./
-EXPOSE 8080/tcp
+EXPOSE 9300/tcp
 ENTRYPOINT ["./openapi"]

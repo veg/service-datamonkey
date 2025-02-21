@@ -55,8 +55,8 @@ build:
 	@docker build -t $(local_name):$(tag) .
 
 
-.PHONY: start-shell
-start-shell:
+.PHONY: start
+start:
 	@docker compose up -d
 
 .PHONY: stop
