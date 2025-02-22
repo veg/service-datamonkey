@@ -13,6 +13,7 @@ package openapi
 import (
 	"bufio"
 	"crypto/md5"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -101,16 +102,47 @@ func (api *FileUploadAndQCAPI) GetDatasetsList(c *gin.Context) {
 func (api *FileUploadAndQCAPI) PostDataset(c *gin.Context) {
 	log.Printf("Handling POST request to upload a dataset")
 
-	// Parse the multipart/form-data request into a slice of UploadRequestFilesInner
 	form, err := c.MultipartForm()
 	if err != nil {
 		c.JSON(400, gin.H{"error": "Failed to parse multipart form"})
 		return
 	}
-
-	var files []UploadRequestFilesInner
-	files = make([]UploadRequestFilesInner, 0, len(form.File))
-
+	/*************  ✨ Codeium Command 🌟  *************/
+	log.Printf("form: %v", form)
+	var file UploadRequest
+	if len(form.File["file"]) > 0 {
+		fileHeader := form.File["file"][0]
+		file.File, err = os.Create(fileHeader.Filename)
+		if err != nil {
+			c.JSON(400, gin.H{"error": err.Error()})
+			return
+		}
+		f, err := fileHeader.Open()
+		if err != nil {
+			c.JSON(400, gin.H{"error": err.Error()})
+			return
+		}
+		defer f.Close()
+		// Use the multipart.File object directly to read its contents
+		_, err = io.Copy(file.File, f)
+		if err != nil {
+			c.JSON(400, gin.H{"error": err.Error()})
+			return
+		}
+	} else if len(form.Value["url"]) > 0 {
+		file.Url = form.Value["url"][0]
+	}
+	/******  ccf69448-deaf-43b8-ae81-25d04783ee36  *******/
+	log.Printf("file: %v", file)
+	// TODO: figure why this always results in EOF error
+	var meta DatasetMeta
+	metaField := c.Request.FormValue("meta")
+	if err := json.Unmarshal([]byte(metaField), &meta); err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+	file.Meta = meta
+	log.Printf("meta: %v", meta)
 	// Check if the dataset_tracker.tab file exists; create it if it doesn't
 	if _, err := os.Stat("/data/uploads/dataset_tracker.tab"); err != nil {
 		log.Printf("Creating /data/uploads/dataset_tracker.tab")
@@ -126,95 +158,92 @@ func (api *FileUploadAndQCAPI) PostDataset(c *gin.Context) {
 		}()
 	}
 
-	log.Printf("Iterating over files")
-	for _, file := range files {
-		log.Printf("Processing file with name %s", file.Meta.Name)
+	log.Printf("Processing file with name %s", file.Meta.Name)
 
-		// Validate presence of required metadata fields
-		if (file.Meta == DatasetMeta{}) || file.Meta.Name == "" {
-			c.JSON(400, gin.H{"error": "File name is required"})
+	// Validate presence of required metadata fields
+	if (file.Meta == DatasetMeta{}) || file.Meta.Name == "" {
+		c.JSON(400, gin.H{"error": "File name is required"})
+		return
+	}
+	if file.Meta.Type == "" {
+		c.JSON(400, gin.H{"error": "File type is required"})
+		return
+	}
+	if file.File == nil && file.Url == "" {
+		c.JSON(400, gin.H{"error": "File or URL is required"})
+		return
+	}
+	if file.File != nil && file.Url != "" {
+		c.JSON(400, gin.H{"error": "File and URL cannot be provided together"})
+		return
+	}
+	log.Printf("Validating file or URL")
+	// Validate the file or URL
+	if file.File != nil {
+		info, err := file.File.Stat()
+		if err != nil {
+			c.JSON(400, gin.H{"error": "File is not valid"})
 			return
 		}
-		if file.Meta.Type == "" {
-			c.JSON(400, gin.H{"error": "File type is required"})
+		if info.Size() == 0 {
+			c.JSON(400, gin.H{"error": "File size is 0"})
 			return
 		}
-		if file.File == nil && file.Url == "" {
-			c.JSON(400, gin.H{"error": "File or URL is required"})
+	}
+	if file.Url != "" {
+		if _, err := os.Stat(file.Url); err != nil {
+			c.JSON(400, gin.H{"error": "URL is not valid"})
 			return
 		}
-		if file.File != nil && file.Url != "" {
-			c.JSON(400, gin.H{"error": "File and URL cannot be provided together"})
+	}
+	log.Printf("Validated file or URL")
+	// Compute a unique filename using a hash of the file's name and type
+	hash := md5.Sum([]byte(file.Meta.Name + file.Meta.Type))
+	filename := fmt.Sprintf("%x", hash)
+	log.Printf("Filename: %s", filename)
+	// Write the file to disk or download it from the URL
+	if file.File != nil {
+		log.Printf("Writing file %s to disk", file.Meta.Name)
+		file.File.Seek(0, 0)
+		bytes, err := io.ReadAll(file.File)
+		if err != nil {
+			c.JSON(500, gin.H{"error": err.Error()})
 			return
 		}
-
-		// Validate the file or URL
-		if file.File != nil {
-			info, err := file.File.Stat()
-			if err != nil {
-				c.JSON(400, gin.H{"error": "File is not valid"})
-				return
-			}
-			if info.Size() == 0 {
-				c.JSON(400, gin.H{"error": "File size is 0"})
-				return
-			}
+		err = os.WriteFile(filename, bytes, 0644)
+		if err != nil {
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
 		}
-		if file.Url != "" {
-			if _, err := os.Stat(file.Url); err != nil {
-				c.JSON(400, gin.H{"error": "URL is not valid"})
-				return
-			}
+	} else {
+		log.Printf("Downloading file %s from url %s", file.Meta.Name, file.Url)
+		resp, err := http.Get(file.Url)
+		if err != nil {
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
 		}
-
-		// Compute a unique filename using a hash of the file's name and type
-		hash := md5.Sum([]byte(file.Meta.Name + file.Meta.Type))
-		filename := fmt.Sprintf("%x", hash)
-
-		// Write the file to disk or download it from the URL
-		if file.File != nil {
-			log.Printf("Writing file %s to disk", file.Meta.Name)
-			file.File.Seek(0, 0)
-			bytes, err := io.ReadAll(file.File)
-			if err != nil {
-				c.JSON(500, gin.H{"error": err.Error()})
-				return
-			}
-			err = os.WriteFile(filename, bytes, 0644)
-			if err != nil {
-				c.JSON(500, gin.H{"error": err.Error()})
-				return
-			}
-		} else {
-			log.Printf("Downloading file %s from url %s", file.Meta.Name, file.Url)
-			resp, err := http.Get(file.Url)
-			if err != nil {
-				c.JSON(500, gin.H{"error": err.Error()})
-				return
-			}
-			defer resp.Body.Close()
-			out, err := os.Create(filename)
-			if err != nil {
-				c.JSON(500, gin.H{"error": err.Error()})
-				return
-			}
-			defer out.Close()
-			_, err = io.Copy(out, resp.Body)
-			if err != nil {
-				c.JSON(500, gin.H{"error": err.Error()})
-				return
-			}
+		defer resp.Body.Close()
+		out, err := os.Create(filename)
+		if err != nil {
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
 		}
-
-		// Append the file metadata to the dataset_tracker.tab file
-		fileMeta := fmt.Sprintf("%s\t%s\t%s\t%s\n", filename, file.Meta.Name, file.Meta.Type, file.Meta.Description)
-		log.Printf("Writing file metadata to dataset_tracker.tab")
-		err := os.WriteFile("/data/uploads/dataset_tracker.tab", []byte(fileMeta), 0644)
+		defer out.Close()
+		_, err = io.Copy(out, resp.Body)
 		if err != nil {
 			c.JSON(500, gin.H{"error": err.Error()})
 			return
 		}
 	}
-
-	c.JSON(200, gin.H{"status": "File uploaded successfully", "files": files})
+	log.Printf("File %s written to disk", filename)
+	// Append the file metadata to the dataset_tracker.tab file
+	fileMeta := fmt.Sprintf("%s\t%s\t%s\t%s\n", filename, file.Meta.Name, file.Meta.Type, file.Meta.Description)
+	log.Printf("Writing file metadata to dataset_tracker.tab")
+	err = os.WriteFile("/data/uploads/dataset_tracker.tab", []byte(fileMeta), 0644)
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	log.Printf("File metadata written to dataset_tracker.tab")
+	c.JSON(200, gin.H{"status": "File uploaded successfully", "file": filename})
 }

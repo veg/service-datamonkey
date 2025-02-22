@@ -790,10 +790,15 @@ components:
       type: object
     UploadRequest:
       properties:
-        files:
-          items:
-            $ref: '#/components/schemas/UploadRequest_files_inner'
-          type: array
+        meta:
+          $ref: '#/components/schemas/DatasetMeta'
+        file:
+          description: Dataset File. incompatible with the url field
+          format: binary
+          type: string
+        url:
+          description: URL of the file to upload. incompatible with the file field
+          type: string
       type: object
     Health_details:
       example:
@@ -1298,15 +1303,3 @@ components:
         test_results:
           p-value: 4.145608029883936
           LRT: 2.027123023002322
-    UploadRequest_files_inner:
-      properties:
-        meta:
-          $ref: '#/components/schemas/DatasetMeta'
-        file:
-          description: Dataset File. incompatible with the url field
-          format: binary
-          type: string
-        url:
-          description: URL of the file to upload. incompatible with the file field
-          type: string
-      type: object

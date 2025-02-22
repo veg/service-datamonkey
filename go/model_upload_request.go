@@ -14,7 +14,7 @@ import (
 	"os"
 )
 
-type UploadRequestFilesInner struct {
+type UploadRequest struct {
 
 	Meta DatasetMeta `json:"meta,omitempty"`
 
