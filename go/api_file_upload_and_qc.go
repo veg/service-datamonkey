@@ -107,8 +107,7 @@ func (api *FileUploadAndQCAPI) PostDataset(c *gin.Context) {
 		c.JSON(400, gin.H{"error": "Failed to parse multipart form"})
 		return
 	}
-	/*************  ✨ Codeium Command 🌟  *************/
-	log.Printf("form: %v", form)
+
 	var file UploadRequest
 	if len(form.File["file"]) > 0 {
 		fileHeader := form.File["file"][0]
@@ -132,9 +131,7 @@ func (api *FileUploadAndQCAPI) PostDataset(c *gin.Context) {
 	} else if len(form.Value["url"]) > 0 {
 		file.Url = form.Value["url"][0]
 	}
-	/******  ccf69448-deaf-43b8-ae81-25d04783ee36  *******/
-	log.Printf("file: %v", file)
-	// TODO: figure why this always results in EOF error
+
 	var meta DatasetMeta
 	metaField := c.Request.FormValue("meta")
 	if err := json.Unmarshal([]byte(metaField), &meta); err != nil {
@@ -142,7 +139,7 @@ func (api *FileUploadAndQCAPI) PostDataset(c *gin.Context) {
 		return
 	}
 	file.Meta = meta
-	log.Printf("meta: %v", meta)
+
 	// Check if the dataset_tracker.tab file exists; create it if it doesn't
 	if _, err := os.Stat("/data/uploads/dataset_tracker.tab"); err != nil {
 		log.Printf("Creating /data/uploads/dataset_tracker.tab")
@@ -177,7 +174,7 @@ func (api *FileUploadAndQCAPI) PostDataset(c *gin.Context) {
 		c.JSON(400, gin.H{"error": "File and URL cannot be provided together"})
 		return
 	}
-	log.Printf("Validating file or URL")
+
 	// Validate the file or URL
 	if file.File != nil {
 		info, err := file.File.Stat()
@@ -190,17 +187,18 @@ func (api *FileUploadAndQCAPI) PostDataset(c *gin.Context) {
 			return
 		}
 	}
+
 	if file.Url != "" {
 		if _, err := os.Stat(file.Url); err != nil {
 			c.JSON(400, gin.H{"error": "URL is not valid"})
 			return
 		}
 	}
-	log.Printf("Validated file or URL")
+
 	// Compute a unique filename using a hash of the file's name and type
 	hash := md5.Sum([]byte(file.Meta.Name + file.Meta.Type))
 	filename := fmt.Sprintf("%x", hash)
-	log.Printf("Filename: %s", filename)
+
 	// Write the file to disk or download it from the URL
 	if file.File != nil {
 		log.Printf("Writing file %s to disk", file.Meta.Name)
@@ -235,6 +233,7 @@ func (api *FileUploadAndQCAPI) PostDataset(c *gin.Context) {
 			return
 		}
 	}
+
 	log.Printf("File %s written to disk", filename)
 	// Append the file metadata to the dataset_tracker.tab file
 	fileMeta := fmt.Sprintf("%s\t%s\t%s\t%s\n", filename, file.Meta.Name, file.Meta.Type, file.Meta.Description)
@@ -244,6 +243,6 @@ func (api *FileUploadAndQCAPI) PostDataset(c *gin.Context) {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
-	log.Printf("File metadata written to dataset_tracker.tab")
+
 	c.JSON(200, gin.H{"status": "File uploaded successfully", "file": filename})
 }
