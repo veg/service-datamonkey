@@ -197,7 +197,8 @@ func (api *FileUploadAndQCAPI) PostDataset(c *gin.Context) {
 
 	// Compute a unique filename using a hash of the file's name and type
 	hash := md5.Sum([]byte(file.Meta.Name + file.Meta.Type))
-	filename := fmt.Sprintf("%x", hash)
+	filename := fmt.Sprintf("/data/uploads/%x", hash)
+	id := fmt.Sprintf("%x", hash)
 
 	// Write the file to disk or download it from the URL
 	if file.File != nil {
@@ -236,13 +237,33 @@ func (api *FileUploadAndQCAPI) PostDataset(c *gin.Context) {
 
 	log.Printf("File %s written to disk", filename)
 	// Append the file metadata to the dataset_tracker.tab file
-	fileMeta := fmt.Sprintf("%s\t%s\t%s\t%s\n", filename, file.Meta.Name, file.Meta.Type, file.Meta.Description)
+	fileMeta := fmt.Sprintf("%s\t%s\t%s\t%s\n", id, file.Meta.Name, file.Meta.Type, file.Meta.Description)
 	log.Printf("Writing file metadata to dataset_tracker.tab")
-	err = os.WriteFile("/data/uploads/dataset_tracker.tab", []byte(fileMeta), 0644)
+	_, err = os.Stat("/data/uploads/dataset_tracker.tab")
+	if err == nil {
+		f, err := os.OpenFile("/data/uploads/dataset_tracker.tab", os.O_APPEND|os.O_WRONLY, 0644)
+		if err != nil {
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
+		defer f.Close()
+
+		_, err = f.Write([]byte(fileMeta))
+		if err != nil {
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
+	} else {
+		err = os.WriteFile("/data/uploads/dataset_tracker.tab", []byte(fileMeta), 0644)
+		if err != nil {
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
+	}
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(200, gin.H{"status": "File uploaded successfully", "file": filename})
+	c.JSON(200, gin.H{"status": "File uploaded successfully", "file": id})
 }

@@ -81,12 +81,12 @@ func (api *FELAPI) StartFELJob(c *gin.Context) {
 	alignmentPath := fmt.Sprintf("/data/uploads/%s", job.Alignment)
 	treePath := fmt.Sprintf("/data/uploads/%s", job.Tree)
 
-	cmd := exec.Command("hyphy", "FEL", "--alignment", alignmentPath, "--tree", treePath)
+	cmd := exec.Command("hyphy", "fel", "--alignment", alignmentPath, "--tree", treePath)
 	if job.Ci {
-		cmd.Args = append(cmd.Args, "--ci")
+		cmd.Args = append(cmd.Args, "--ci", "Yes")
 	}
 	if job.Srv {
-		cmd.Args = append(cmd.Args, "--srv")
+		cmd.Args = append(cmd.Args, "--srv", "Yes")
 	}
 	if job.Resample != 0 {
 		cmd.Args = append(cmd.Args, "--resample", fmt.Sprintf("%f", job.Resample))
