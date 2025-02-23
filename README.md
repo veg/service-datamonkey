@@ -27,7 +27,7 @@ You can also do things like:
 
 `curl -X POST -H "Content-type: multipart/form-data" -F meta='{"name":"TEST","type":"TEST TYPE","description":"TEST DESC"}' -F file=@test.txt  http://localhost:9300/api/v1/datasets` where test.txt contains anything at all. then go to `http://localhost:9300/api/v1/datasets` and confirm its worked.
 
-Datasets uploaded will persist across re-starts of containers, etc. To clear them: `docker run --rm -v service-datamonkey_uploaded_data:/data/uploads ubuntu rm -rf '/data/uploaded/*'`
+Datasets uploaded will persist across re-starts of containers, etc. To clear them: `docker run --rm -v service-datamonkey_uploaded_data:/data/uploads ubuntu rm -rf '/data/uploads/*'`
 
 **PLEASE NOTE THAT CURRENTLY THIS WILL REMOVE JOB RESULTS AND LOGS AS WELL**
 
