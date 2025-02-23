@@ -27,23 +27,32 @@ type HealthAPI struct {
 func (api *HealthAPI) GetHealth(c *gin.Context) {
 	log.Println("Checking health of Datamonkey")
 
+	auth_token := c.GetHeader("X-SLURM-USER-TOKEN")
+	if auth_token == "" {
+		log.Println("Error during health check:", "X-SLURM-USER-TOKEN header not present")
+		c.JSON(500, gin.H{"status": "unhealthy", "details": gin.H{"slurm": "unhealthy"}})
+		return
+	}
+
 	client := &http.Client{}
-	req, err := http.NewRequest("GET", "http://localhost:9200/_nodes", nil)
+	req, err := http.NewRequest("GET", "http://c2:9200/openapi/v3", nil)
 	if err != nil {
 		log.Println("Error during health check:", err)
 		c.JSON(500, gin.H{"status": "unhealthy", "details": gin.H{"slurm": "unhealthy"}})
 		return
 	}
-	req.Header.Set("Accept", "application/json")
+	req.Header.Set("X-SLURM-USER-TOKEN", auth_token)
+
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Println("Error during health check:", err)
+		// TODO figure out why this says connection refused
+		log.Println("Error connecting to slurm during health check:", err)
 		c.JSON(500, gin.H{"status": "unhealthy", "details": gin.H{"slurm": "unhealthy"}})
 		return
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
-		log.Println("Error during health check:", "Slurm returned bad status code:", resp.StatusCode)
+		log.Println("Error response from slurm during health check:", "Slurm returned bad status code:", resp.StatusCode)
 		c.JSON(500, gin.H{"status": "unhealthy", "details": gin.H{"slurm": "unhealthy"}})
 		return
 	}
