@@ -25,7 +25,7 @@ curl -k -vvvv -H X-SLURM-USER-TOKEN:${SLURM_JWT} -X GET 'http://localhost:9300/a
 
 You can also do things like:
 
-`curl -X POST -H "Content-type: multipart/form-data" -F meta='{"name":"TEST","type":"TEST TYPE","description":"TEST DESC"}' -F file=@test.txt  http://localhost:9300/api/v1/datasets` where test.txt contains anything at all. then go to `https://localhost:930/api/v1/datasets and confirm its worked.
+`curl -X POST -H "Content-type: multipart/form-data" -F meta='{"name":"TEST","type":"TEST TYPE","description":"TEST DESC"}' -F file=@test.txt  http://localhost:9300/api/v1/datasets` where test.txt contains anything at all. then go to `http://localhost:9300/api/v1/datasets` and confirm its worked.
 
 Datasets uploaded will persist across re-starts of containers, etc. To clear them: `docker run --rm -v service-datamonkey\_uploaded\_data:/data/uploads ubuntu rm -rf '/data/uploaded/*'`
 
