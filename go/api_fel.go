@@ -30,11 +30,14 @@ type FELAPI struct {
 // Post /api/v1/methods/fel-result
 // Get a FEL job result
 func (api *FELAPI) GetFELJob(c *gin.Context) {
-	jobId := c.Param("jobId")
-	if jobId == "" {
-		c.JSON(400, gin.H{"error": "No job ID provided"})
+	job := FelRequest{}
+	err := c.BindJSON(&job)
+	if err != nil {
+		c.JSON(400, gin.H{"error": "Failed to parse job configuration"})
 		return
 	}
+	cmd := GetFELCmd(job)
+	jobId := GetFELJobID(cmd)
 
 	jobTrackerPath := "/data/uploads/job_tracker.tab"
 	jobTrackerFile, err := os.Open(jobTrackerPath)
@@ -44,9 +47,15 @@ func (api *FELAPI) GetFELJob(c *gin.Context) {
 	}
 	defer jobTrackerFile.Close()
 
+	// TODO update this to find the slurm id given the job id
 	scanner := bufio.NewScanner(jobTrackerFile)
 	for scanner.Scan() {
-		if scanner.Text() == jobId {
+		parts := strings.Split(scanner.Text(), "\t")
+		if len(parts) != 2 {
+			c.JSON(500, gin.H{"error": "Invalid format in job tracker file"})
+			return
+		}
+		if parts[0] == jobId {
 			job := FelRequest{}
 			err := c.BindJSON(&job)
 			if err != nil {
@@ -78,34 +87,8 @@ func (api *FELAPI) StartFELJob(c *gin.Context) {
 		c.JSON(400, gin.H{"error": "Failed to parse job configuration"})
 		return
 	}
-
-	alignmentPath := fmt.Sprintf("/data/uploads/%s", job.Alignment)
-	treePath := fmt.Sprintf("/data/uploads/%s", job.Tree)
-
-	cmd := exec.Command("hyphy", "fel", "--alignment", alignmentPath, "--tree", treePath)
-	if job.Ci {
-		cmd.Args = append(cmd.Args, "--ci", "Yes")
-	}
-	if job.Srv {
-		cmd.Args = append(cmd.Args, "--srv", "Yes")
-	}
-	if job.Resample != 0 {
-		cmd.Args = append(cmd.Args, "--resample", fmt.Sprintf("%f", job.Resample))
-	}
-	if len(job.MultipleHits) > 0 {
-		cmd.Args = append(cmd.Args, "--multiple-hits", job.MultipleHits)
-	}
-	if len(job.SiteMultihit) > 0 {
-		cmd.Args = append(cmd.Args, "--site-multihit", job.SiteMultihit)
-	}
-
-	cmd.Args = append(cmd.Args, "--genetic-code", "Universal")
-
-	for _, branch := range job.Branches {
-		cmd.Args = append(cmd.Args, "--branch", branch)
-	}
-
-	jobID := fmt.Sprintf("%x", sha256.Sum256([]byte(strings.Join(cmd.Args, " "))))
+	cmd := GetFELCmd(job)
+	jobID := GetFELJobID(cmd)
 
 	// check if job id already exists in job_tracker.tab
 	jobTracker, err := os.Open("/data/uploads/job_tracker.tab")
@@ -118,15 +101,29 @@ func (api *FELAPI) StartFELJob(c *gin.Context) {
 	}
 	defer jobTracker.Close()
 
+	auth_token := c.GetHeader("X-SLURM-USER-TOKEN")
+	if auth_token == "" {
+		log.Println("Error during health check:", "X-SLURM-USER-TOKEN header not present")
+		c.JSON(500, gin.H{"status": "unhealthy", "details": gin.H{"slurm": "unhealthy"}})
+		return
+	}
+
 	scanner := bufio.NewScanner(jobTracker)
 	for scanner.Scan() {
-		if scanner.Text() == jobID {
+		parts := strings.Split(scanner.Text(), "\t")
+		if len(parts) != 2 {
+			c.JSON(500, gin.H{"error": "Invalid format in job tracker file"})
+			return
+		}
+		if parts[0] == jobID {
 			// Get the job status from SLURM
-			statusReq, err := http.NewRequest("GET", fmt.Sprintf("http://c2:9200/slurm/v0.0.37/job/status/%s", jobID), nil)
+			statusReq, err := http.NewRequest("GET", fmt.Sprintf("http://c2:9200/slurm/v0.0.37/job/status/%s", parts[1]), nil)
 			if err != nil {
 				c.JSON(500, gin.H{"error": "Failed to create status request"})
 				return
 			}
+
+			statusReq.Header.Set("X-SLURM-USER-TOKEN", auth_token)
 			statusResp, err := http.DefaultClient.Do(statusReq)
 			if err != nil || statusResp.StatusCode != http.StatusOK {
 				c.JSON(500, gin.H{"error": "Failed to retrieve job status"})
@@ -170,13 +167,6 @@ func (api *FELAPI) StartFELJob(c *gin.Context) {
 		return
 	}
 
-	auth_token := c.GetHeader("X-SLURM-USER-TOKEN")
-	if auth_token == "" {
-		log.Println("Error during health check:", "X-SLURM-USER-TOKEN header not present")
-		c.JSON(500, gin.H{"status": "unhealthy", "details": gin.H{"slurm": "unhealthy"}})
-		return
-	}
-
 	slurmReq.Header.Set("X-SLURM-USER-TOKEN", auth_token)
 	slurmReq.Header.Set("Content-Type", "application/json")
 	resp, err := http.DefaultClient.Do(slurmReq)
@@ -186,20 +176,67 @@ func (api *FELAPI) StartFELJob(c *gin.Context) {
 	}
 	defer resp.Body.Close()
 
-	// Write job id to job_tracker.tab
-	// TODO the job_tracker.tab file should map datamonkey to slurm job id
-	// this will mean parsing the response from slurm
+	// Parse SLURM response to get the SLURM job ID
+	var slurmResponse map[string]interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&slurmResponse); err != nil {
+		c.JSON(500, gin.H{"error": "Failed to parse SLURM response"})
+		return
+	}
+	slurmJobID, ok := slurmResponse["job_id"].(string)
+	if !ok {
+		c.JSON(500, gin.H{"error": "Invalid SLURM response format"})
+		return
+	}
+
+	// Write job id to job_tracker.tab with mapping to SLURM job id
 	jobTracker, err = os.OpenFile("/data/uploads/job_tracker.tab", os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
 		c.JSON(500, gin.H{"error": "Failed to write to job tracker file"})
 		return
 	}
 	defer jobTracker.Close()
-	_, err = jobTracker.WriteString(fmt.Sprintf("%s\n", jobID))
+	_, err = jobTracker.WriteString(fmt.Sprintf("%s\t%s\n", jobID, slurmJobID))
 	if err != nil {
 		c.JSON(500, gin.H{"error": "Failed to write to job tracker file"})
 		return
 	}
 
 	c.JSON(200, gin.H{"job_id": jobID, "status": "submitted"})
+}
+
+func GetFELCmd(job FelRequest) *exec.Cmd {
+	alignmentPath := fmt.Sprintf("/data/uploads/%s", job.Alignment)
+	treePath := fmt.Sprintf("/data/uploads/%s", job.Tree)
+
+	cmd := exec.Command("hyphy", "fel", "--alignment", alignmentPath, "--tree", treePath)
+	if job.Ci {
+		cmd.Args = append(cmd.Args, "--ci", "Yes")
+	}
+	if job.Srv {
+		cmd.Args = append(cmd.Args, "--srv", "Yes")
+	}
+	if job.Resample != 0 {
+		cmd.Args = append(cmd.Args, "--resample", fmt.Sprintf("%f", job.Resample))
+	}
+	if len(job.MultipleHits) > 0 {
+		cmd.Args = append(cmd.Args, "--multiple-hits", job.MultipleHits)
+	}
+	if len(job.SiteMultihit) > 0 {
+		cmd.Args = append(cmd.Args, "--site-multihit", job.SiteMultihit)
+	}
+
+	cmd.Args = append(cmd.Args, "--genetic-code", "Universal")
+
+	for _, branch := range job.Branches {
+		cmd.Args = append(cmd.Args, "--branch", branch)
+	}
+
+	return cmd
+}
+
+func GetFELJobID(cmd *exec.Cmd) string {
+
+	jobID := fmt.Sprintf("%x", sha256.Sum256([]byte(strings.Join(cmd.Args, " "))))
+
+	return jobID
 }
