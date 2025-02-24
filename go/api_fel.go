@@ -108,6 +108,9 @@ func (api *FELAPI) StartFELJob(c *gin.Context) {
 		return
 	}
 
+	// TODO consider that slurm job ids reset when slurm restarts.
+	// think about implications for restarting datamonkey in production and
+	// having to recompute previous jobs
 	scanner := bufio.NewScanner(jobTracker)
 	for scanner.Scan() {
 		parts := strings.Split(scanner.Text(), "\t")
@@ -117,7 +120,7 @@ func (api *FELAPI) StartFELJob(c *gin.Context) {
 		}
 		if parts[0] == jobID {
 			// Get the job status from SLURM
-			statusReq, err := http.NewRequest("GET", fmt.Sprintf("http://c2:9200/slurm/v0.0.37/job/status/%s", parts[1]), nil)
+			statusReq, err := http.NewRequest("GET", fmt.Sprintf("http://c2:9200/slurmdb/v0.0.37/job/%s", parts[1]), nil)
 			if err != nil {
 				c.JSON(500, gin.H{"error": "Failed to create status request"})
 				return
@@ -182,7 +185,8 @@ func (api *FELAPI) StartFELJob(c *gin.Context) {
 		c.JSON(500, gin.H{"error": "Failed to parse SLURM response"})
 		return
 	}
-	slurmJobID, ok := slurmResponse["job_id"].(string)
+
+	slurmJobID, ok := slurmResponse["job_id"]
 	if !ok {
 		c.JSON(500, gin.H{"error": "Invalid SLURM response format"})
 		return
