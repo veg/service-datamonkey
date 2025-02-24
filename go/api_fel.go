@@ -15,6 +15,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"os/exec"
@@ -121,7 +122,7 @@ func (api *FELAPI) StartFELJob(c *gin.Context) {
 	for scanner.Scan() {
 		if scanner.Text() == jobID {
 			// Get the job status from SLURM
-			statusReq, err := http.NewRequest("GET", fmt.Sprintf("http://localhost:9200/slurm/status/%s", jobID), nil)
+			statusReq, err := http.NewRequest("GET", fmt.Sprintf("http://c2:9200/slurm/v0.0.37/job/status/%s", jobID), nil)
 			if err != nil {
 				c.JSON(500, gin.H{"error": "Failed to create status request"})
 				return
@@ -149,21 +150,45 @@ func (api *FELAPI) StartFELJob(c *gin.Context) {
 	cmd.Args = append(cmd.Args, "--output", outputFilePath)
 
 	logFilePath := fmt.Sprintf("/data/uploads/%s_%s_log.txt", job.Alignment, jobID)
-	slurmReqBody := fmt.Sprintf(`{"command": "%s", "log_file": "%s"}`, strings.Join(cmd.Args, " "), logFilePath)
-	slurmReq, err := http.NewRequest("POST", "http://localhost:9200/slurm", strings.NewReader(slurmReqBody))
+	slurmReqBody := fmt.Sprintf(`{"job": {
+		"name": "hyphy_test",
+		"ntasks": 1,
+		"nodes": 1,
+		"current_working_directory": "/root",
+		"standard_input": "/dev/null",
+		"standard_output": "%s",
+		"standard_error": "%s",
+		"environment": {
+			"PATH": "/bin:/usr/bin/:/usr/local/bin/",
+			"LD_LIBRARY_PATH": "/lib/:/lib64/:/usr/local/lib"
+		}
+	},
+	"script": "#!/bin/bash\n %s"}`, logFilePath, logFilePath, strings.Join(cmd.Args, " "))
+	slurmReq, err := http.NewRequest("POST", "http://c2:9200/slurm/v0.0.37/job/submit", strings.NewReader(slurmReqBody))
 	if err != nil {
-		c.JSON(500, gin.H{"error": "Failed to create SLURM request"})
+		c.JSON(500, gin.H{"error": fmt.Sprintf("Failed to create SLURM request: %v", err)})
 		return
 	}
+
+	auth_token := c.GetHeader("X-SLURM-USER-TOKEN")
+	if auth_token == "" {
+		log.Println("Error during health check:", "X-SLURM-USER-TOKEN header not present")
+		c.JSON(500, gin.H{"status": "unhealthy", "details": gin.H{"slurm": "unhealthy"}})
+		return
+	}
+
+	slurmReq.Header.Set("X-SLURM-USER-TOKEN", auth_token)
 	slurmReq.Header.Set("Content-Type", "application/json")
 	resp, err := http.DefaultClient.Do(slurmReq)
 	if err != nil || resp.StatusCode != http.StatusOK {
-		c.JSON(500, gin.H{"error": "Failed to start FEL via SLURM"})
+		c.JSON(500, gin.H{"error": fmt.Sprintf("Failed to submit job to SLURM: %v", err)})
 		return
 	}
 	defer resp.Body.Close()
 
 	// Write job id to job_tracker.tab
+	// TODO the job_tracker.tab file should map datamonkey to slurm job id
+	// this will mean parsing the response from slurm
 	jobTracker, err = os.OpenFile("/data/uploads/job_tracker.tab", os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
 		c.JSON(500, gin.H{"error": "Failed to write to job tracker file"})

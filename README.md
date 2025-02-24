@@ -15,6 +15,8 @@ Do stuff like this:
 Hopefully it'll eventually have options like:
  - `make install` to manage dependencies. for now, have to manage them yourself. The important ones are golang >= 1.20 and npx w openapitools/openapi-generator-cli
 
+**NOTE** for now you should also check out [service-slurm](https://github.com/d-callan/service-slurm) and simply `docker compose up -d` and then `docker compose down` before using this repo. I'll fix that eventually, hopefully, but its just to get built slurm images this docker compose can use.
+
 ## Testing
 
 Make sure things are healthy:
@@ -27,7 +29,7 @@ You can also do things like:
 
 `curl -X POST -H "Content-type: multipart/form-data" -F meta='{"name":"TEST","type":"TEST TYPE","description":"TEST DESC"}' -F file=@test.txt  http://localhost:9300/api/v1/datasets` where test.txt contains anything at all. then go to `http://localhost:9300/api/v1/datasets` and confirm its worked.
 
-Datasets uploaded will persist across re-starts of containers, etc. To clear them: `docker run --rm -v service-datamonkey_uploaded_data:/data/uploads ubuntu rm -rf '/data/uploads/*'`
+Datasets uploaded will persist across re-starts of containers, etc. To clear them: `docker volume rm service-datamonkey_uploaded_data`
 
 **PLEASE NOTE THAT CURRENTLY THIS WILL REMOVE JOB RESULTS AND LOGS AS WELL**
 
