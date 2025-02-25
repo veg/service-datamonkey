@@ -15,6 +15,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -47,7 +48,6 @@ func (api *FELAPI) GetFELJob(c *gin.Context) {
 	}
 	defer jobTrackerFile.Close()
 
-	// TODO update this to find the slurm id given the job id
 	scanner := bufio.NewScanner(jobTrackerFile)
 	for scanner.Scan() {
 		parts := strings.Split(scanner.Text(), "\t")
@@ -56,20 +56,22 @@ func (api *FELAPI) GetFELJob(c *gin.Context) {
 			return
 		}
 		if parts[0] == jobId {
-			job := FelRequest{}
-			err := c.BindJSON(&job)
-			if err != nil {
-				c.JSON(400, gin.H{"error": "Failed to parse job configuration"})
-				return
-			}
 			outputFilePath := fmt.Sprintf("/data/uploads/%s_%s_results.json", job.Alignment, jobId)
 			outputFile, err := os.Open(outputFilePath)
 			if err != nil {
 				c.JSON(500, gin.H{"error": "Failed to open output file"})
 				return
 			}
+			defer outputFile.Close()
 
-			c.JSON(200, gin.H{"results": outputFile})
+			var results []byte
+			results, err = io.ReadAll(outputFile)
+			if err != nil {
+				c.JSON(500, gin.H{"error": "Failed to read output file"})
+				return
+			}
+
+			c.JSON(200, gin.H{"results": string(results), "jobId": jobId})
 			return
 		}
 	}
@@ -120,6 +122,8 @@ func (api *FELAPI) StartFELJob(c *gin.Context) {
 		}
 		if parts[0] == jobID {
 			// Get the job status from SLURM
+			log.Printf("job %s already exists in job_tracker.tab", jobID)
+			log.Printf("sending job status request to /slurmdb/v0.0.37/job/%s", parts[1])
 			statusReq, err := http.NewRequest("GET", fmt.Sprintf("http://c2:9200/slurmdb/v0.0.37/job/%s", parts[1]), nil)
 			if err != nil {
 				c.JSON(500, gin.H{"error": "Failed to create status request"})
@@ -140,7 +144,20 @@ func (api *FELAPI) StartFELJob(c *gin.Context) {
 				return
 			}
 
-			c.JSON(200, gin.H{"job_id": jobID, "status": statusResponse["status"]})
+			// check all entries under statusResponse["jobs"]
+			// the one where ["name"] == jobID, we should return ["state"]["current"]
+			var jobStatus string
+			for _, job := range statusResponse["jobs"].([]interface{}) {
+				if job.(map[string]interface{})["name"] != jobID {
+					continue
+				}
+				jobStatus = job.(map[string]interface{})["state"].(map[string]interface{})["current"].(string)
+			}
+			if jobStatus == "" {
+				c.JSON(500, gin.H{"error": "Failed to find job in job status response"})
+				return
+			}
+			c.JSON(200, gin.H{"job_id": jobID, "status": jobStatus})
 			return
 		}
 	}
@@ -151,7 +168,7 @@ func (api *FELAPI) StartFELJob(c *gin.Context) {
 
 	logFilePath := fmt.Sprintf("/data/uploads/%s_%s_log.txt", job.Alignment, jobID)
 	slurmReqBody := fmt.Sprintf(`{"job": {
-		"name": "hyphy_test",
+		"name": "%s",
 		"ntasks": 1,
 		"nodes": 1,
 		"current_working_directory": "/root",
@@ -163,7 +180,7 @@ func (api *FELAPI) StartFELJob(c *gin.Context) {
 			"LD_LIBRARY_PATH": "/lib/:/lib64/:/usr/local/lib"
 		}
 	},
-	"script": "#!/bin/bash\n %s"}`, logFilePath, logFilePath, strings.Join(cmd.Args, " "))
+	"script": "#!/bin/bash\n %s"}`, jobID, logFilePath, logFilePath, strings.Join(cmd.Args, " "))
 	slurmReq, err := http.NewRequest("POST", "http://c2:9200/slurm/v0.0.37/job/submit", strings.NewReader(slurmReqBody))
 	if err != nil {
 		c.JSON(500, gin.H{"error": fmt.Sprintf("Failed to create SLURM request: %v", err)})
@@ -199,7 +216,7 @@ func (api *FELAPI) StartFELJob(c *gin.Context) {
 		return
 	}
 	defer jobTracker.Close()
-	_, err = jobTracker.WriteString(fmt.Sprintf("%s\t%s\n", jobID, slurmJobID))
+	_, err = jobTracker.WriteString(fmt.Sprintf("%s\t%v\n", jobID, slurmJobID))
 	if err != nil {
 		c.JSON(500, gin.H{"error": "Failed to write to job tracker file"})
 		return
