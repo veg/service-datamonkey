@@ -1,10 +1,10 @@
 # service-datamonkey
 
-REST service driving Datamonkey3
+This is a WIP REST service intended to drive Datamonkey3 server-side. It is designed to conform to the OpenAPI specification defined at [api-datamonkey](https://github.com/d-callan/api-datamonkey) using the [go-gin-server](https://openapi-generator.tech/docs/generators/go-gin-server) generator from OpenAPI Generator. 
 
 ## Development
 
-Do stuff like this:
+Handy helpers:
 
  - `make update` to pull down the OpenAPI specification from api-datamonkey and generate a GO Gin server stub from it.
  - `make build` to build just the service-datamonkey container
@@ -16,6 +16,9 @@ Hopefully it'll eventually have options like:
  - `make install` to manage dependencies. for now, have to manage them yourself if you mean to do anything more than run whats already been developed. The important ones are golang >= 1.20 and npx w openapitools/openapi-generator-cli
 
 **NOTE** for now you should also check out [service-slurm](https://github.com/d-callan/service-slurm) and simply `docker compose up -d` and then `docker compose down` before using this repo. I'll fix that eventually, but its just to get built slurm images this docker compose can use.
+
+
+### TLDR
 
 For now that means if its your first time here, starting in the parent directory for this project you should do the following:
 ```
@@ -30,7 +33,7 @@ make start
 
 ## Testing
 
-**Make sure things are healthy**
+### Make sure things are healthy
 
 In the root directory of the project, where you started the service, do the following:
 
@@ -41,7 +44,7 @@ curl -k -vvvv -H X-SLURM-USER-TOKEN:${SLURM_JWT} -X GET 'http://localhost:9300/a
 
 Please note Slurm user token needs updating each time you re-start the service.
 
-**Upload input files for jobs**
+### Upload input files for jobs
 
 You can upload files like:
 
@@ -56,7 +59,7 @@ Datasets uploaded will persist across re-starts of containers, etc. To clear the
 If instead you'd like to remove specific files: `docker compose exec c2 rm /data/uploads/[filename]`
 
 
-**Starting jobs**
+### Starting jobs
 
 For this in particular I'd recommend using Postman, for convenience. Whatever method though, you want to use a url like `http://localhost:9300/api/v1/methods/fel-start` to start and monitor jobs, and one like `http://localhost:9300/api/v1/methods/fel-result` to get results. POST body should look something like:
 ```
@@ -78,13 +81,13 @@ For this in particular I'd recommend using Postman, for convenience. Whatever me
 
 Here, `alignment` and `tree` are references to dataset ids of uploaded data (see below). Starting, monitoring and fetching results for methods also requires the `X-SLURM_USER_TOKEN` header in the request, similar to the health endpoint (see above).
 
-**Clearing the jobs tracker from previous sessions**
+### Clearing the jobs tracker from previous sessions
 
 This is important for the service to be able to meaningfully track Slurm jobs. Slurm job ids restart from 0 on restart, and so for now at least, to make sure we only get jobs from the current session we need to restart our own jobs tracking. I'll figure out what I actually want to do about this in a bit.
 
 In the root directory of the project, where the service was started, do: `docker compose exec c2 rm /data/uploads/job_tracker.tab`. 
 
-**Debugging**
+### Debugging
 
 To see logs for service-datamonkey: `docker logs service-datamonkey`
 To see logs for the Slurm head node: `docker logs c2`
