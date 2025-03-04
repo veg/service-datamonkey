@@ -1,7 +1,7 @@
 /*
  * Datamonkey API
  *
- * Datamonkey is a free public server for comparative analysis of sequence alignments using state-of-the-art statistical models. <br> This is the OpenAPI definition for the Datamonkey API. 
+ * Datamonkey is a free public server for comparative analysis of sequence alignments using state-of-the-art statistical models. <br> This is the OpenAPI definition for the Datamonkey API.
  *
  * API version: 1.0.0
  * Contact: spond@temple.edu
@@ -11,23 +11,83 @@
 package openapi
 
 import (
+	"encoding/json"
+	"fmt"
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 )
 
 type BUSTEDAPI struct {
+	HyPhyBaseAPI
 }
 
-// Post /api/v1/methods/busted-result
-// Get a BUSTED job result 
+// NewBUSTEDAPI creates a new BUSTEDAPI instance
+func NewBUSTEDAPI(basePath, hyPhyPath string, scheduler SchedulerInterface, datasetDir string) *BUSTEDAPI {
+	return &BUSTEDAPI{
+		HyPhyBaseAPI: NewHyPhyBaseAPI(basePath, hyPhyPath, scheduler, datasetDir),
+	}
+}
+
+// GetBUSTEDJob retrieves the status and results of a BUSTED job
 func (api *BUSTEDAPI) GetBUSTEDJob(c *gin.Context) {
-	// Your handler implementation
-	c.JSON(200, gin.H{"status": "OK"})
+	var request BustedRequest
+	if err := c.BindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to parse job configuration"})
+		return
+	}
+
+	adapted, err := AdaptRequest(&request)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to adapt request: %v", err)})
+		return
+	}
+
+	result, err := api.HandleGetJob(c, adapted)
+	if err != nil {
+		if err.Error() == "job is not complete" {
+			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		}
+		return
+	}
+
+	// Parse the raw JSON results into BustedResult
+	resultMap := result.(map[string]interface{})
+	var bustedResult BustedResult
+	if err := json.Unmarshal(resultMap["results"].(json.RawMessage), &bustedResult); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse results"})
+		return
+	}
+	resultMap["results"] = bustedResult
+
+	c.JSON(http.StatusOK, resultMap)
 }
 
-// Post /api/v1/methods/busted-start
-// Start and monitor a BUSTED job 
+// StartBUSTEDJob starts a new BUSTED analysis job
 func (api *BUSTEDAPI) StartBUSTEDJob(c *gin.Context) {
-	// Your handler implementation
-	c.JSON(200, gin.H{"status": "OK"})
-}
+	var request BustedRequest
+	if err := c.BindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to parse job configuration"})
+		return
+	}
 
+	adapted, err := AdaptRequest(&request)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to adapt request: %v", err)})
+		return
+	}
+
+	result, err := api.HandleStartJob(c, adapted)
+	if err != nil {
+		if err.Error() == "authentication token required" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, result)
+}

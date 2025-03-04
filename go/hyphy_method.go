@@ -112,7 +112,7 @@ func (m *HyPhyMethod) GetCommand() string {
 	for i := 0; i < reqType.NumField(); i++ {
 		field := reqType.Field(i)
 		value := reqValue.Field(i)
-		
+
 		// Add argument if field has a value
 		if arg := getCommandArg(field, value, string(m.MethodType)); arg != "" {
 			cmd += arg

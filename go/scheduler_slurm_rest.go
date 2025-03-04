@@ -11,9 +11,10 @@ import (
 
 // SlurmRestConfig holds configuration for Slurm REST API
 type SlurmRestConfig struct {
-	BaseURL   string // Base URL for Slurm REST API, e.g. "http://c2:9200"
-	APIPath   string // API path, e.g. "/slurmdb/v0.0.37"
-	QueueName string
+	BaseURL    string // Base URL for Slurm REST API, e.g. "http://c2:9200"
+	APIPath    string // API path, e.g. "/slurmdb/v0.0.37"
+	QueueName  string
+	AuthToken  string // Auth token for Slurm REST API
 }
 
 // SlurmRestScheduler implements SchedulerInterface for Slurm REST API
@@ -30,10 +31,8 @@ func NewSlurmRestScheduler(config SlurmRestConfig) *SlurmRestScheduler {
 
 // Submit submits a job using Slurm REST API
 func (s *SlurmRestScheduler) Submit(job JobInterface) error {
-	// Get auth token from environment
-	authToken := os.Getenv("SLURM_AUTH_TOKEN")
-	if authToken == "" {
-		return fmt.Errorf("SLURM_AUTH_TOKEN environment variable not set")
+	if s.Config.AuthToken == "" {
+		return fmt.Errorf("Slurm auth token not provided")
 	}
 
 	// Create Slurm job submission request body
@@ -63,7 +62,7 @@ func (s *SlurmRestScheduler) Submit(job JobInterface) error {
 		return fmt.Errorf("failed to create submit request: %v", err)
 	}
 
-	submitReq.Header.Set("X-SLURM-USER-TOKEN", authToken)
+	submitReq.Header.Set("X-SLURM-USER-TOKEN", s.Config.AuthToken)
 	submitReq.Header.Set("Content-Type", "application/json")
 
 	submitResp, err := http.DefaultClient.Do(submitReq)
@@ -103,10 +102,8 @@ func (s *SlurmRestScheduler) Submit(job JobInterface) error {
 
 // GetStatus gets the current status of a Slurm job using REST API
 func (s *SlurmRestScheduler) GetStatus(job JobInterface) (JobStatusValue, error) {
-	// Get auth token from environment
-	authToken := os.Getenv("SLURM_AUTH_TOKEN")
-	if authToken == "" {
-		return JobStatusFailed, fmt.Errorf("SLURM_AUTH_TOKEN environment variable not set")
+	if s.Config.AuthToken == "" {
+		return JobStatusFailed, fmt.Errorf("Slurm auth token not provided")
 	}
 
 	// Read job tracker to get Slurm job ID
@@ -140,7 +137,7 @@ func (s *SlurmRestScheduler) GetStatus(job JobInterface) (JobStatusValue, error)
 		return JobStatusFailed, fmt.Errorf("failed to create status request: %v", err)
 	}
 
-	statusReq.Header.Set("X-SLURM-USER-TOKEN", authToken)
+	statusReq.Header.Set("X-SLURM-USER-TOKEN", s.Config.AuthToken)
 	statusResp, err := http.DefaultClient.Do(statusReq)
 	if err != nil {
 		return JobStatusFailed, fmt.Errorf("failed to get job status: %v", err)
@@ -200,10 +197,8 @@ func (s *SlurmRestScheduler) GetStatus(job JobInterface) (JobStatusValue, error)
 
 // Cancel cancels a running Slurm job
 func (s *SlurmRestScheduler) Cancel(job JobInterface) error {
-	// Get auth token from environment
-	authToken := os.Getenv("SLURM_AUTH_TOKEN")
-	if authToken == "" {
-		return fmt.Errorf("SLURM_AUTH_TOKEN environment variable not set")
+	if s.Config.AuthToken == "" {
+		return fmt.Errorf("Slurm auth token not provided")
 	}
 
 	// Read job tracker to get Slurm job ID
@@ -230,14 +225,14 @@ func (s *SlurmRestScheduler) Cancel(job JobInterface) error {
 		return fmt.Errorf("job not found in tracker")
 	}
 
-	// Cancel the job
+	// Send cancel request to Slurm
 	cancelURL := fmt.Sprintf("%s%s/job/%s", s.Config.BaseURL, s.Config.APIPath, slurmJobID)
 	cancelReq, err := http.NewRequest("DELETE", cancelURL, nil)
 	if err != nil {
 		return fmt.Errorf("failed to create cancel request: %v", err)
 	}
 
-	cancelReq.Header.Set("X-SLURM-USER-TOKEN", authToken)
+	cancelReq.Header.Set("X-SLURM-USER-TOKEN", s.Config.AuthToken)
 	cancelResp, err := http.DefaultClient.Do(cancelReq)
 	if err != nil {
 		return fmt.Errorf("failed to cancel job: %v", err)

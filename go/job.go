@@ -21,7 +21,7 @@ const (
 // JobInterface defines the core job operations
 type JobInterface interface {
 	GetId() string
-	GetStatus() JobStatusValue
+	GetStatus() (JobStatusValue, error)
 	GetDatasetId() string
 	GetOutputPath() string
 	GetLogPath() string
@@ -76,13 +76,13 @@ func (j *BaseJob) GetId() string {
 }
 
 // GetStatus returns the current job status by contacting the scheduler
-func (j *BaseJob) GetStatus() JobStatusValue {
+func (j *BaseJob) GetStatus() (JobStatusValue, error) {
 	status, err := j.Scheduler.GetStatus(j)
 	if err != nil {
 		// If we can't contact scheduler, return failed status
-		return JobStatusFailed
+		return JobStatusFailed, err
 	}
-	return status
+	return status, nil
 }
 
 // GetDatasetId returns the associated dataset ID
