@@ -1,11 +1,9 @@
 package openapi
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
 	"strings"
 )
 
@@ -19,20 +17,22 @@ type SlurmRestConfig struct {
 
 // SlurmRestScheduler implements SchedulerInterface for Slurm REST API
 type SlurmRestScheduler struct {
-	Config SlurmRestConfig
+	Config     SlurmRestConfig
+	JobTracker JobTracker
 }
 
 // NewSlurmRestScheduler creates a new SlurmRestScheduler instance
-func NewSlurmRestScheduler(config SlurmRestConfig) *SlurmRestScheduler {
+func NewSlurmRestScheduler(config SlurmRestConfig, jobTracker JobTracker) *SlurmRestScheduler {
 	return &SlurmRestScheduler{
-		Config: config,
+		Config:     config,
+		JobTracker: jobTracker,
 	}
 }
 
 // Submit submits a job using Slurm REST API
 func (s *SlurmRestScheduler) Submit(job JobInterface) error {
 	if s.Config.AuthToken == "" {
-		return fmt.Errorf("Slurm auth token not provided")
+		return fmt.Errorf("slurm auth token not provided")
 	}
 
 	// Create Slurm job submission request body
@@ -86,15 +86,9 @@ func (s *SlurmRestScheduler) Submit(job JobInterface) error {
 		return fmt.Errorf("invalid response format: missing job_id")
 	}
 
-	// Write job ID to tracker file
-	trackerFile, err := os.OpenFile("/data/uploads/job_tracker.tab", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		return fmt.Errorf("failed to open job tracker file: %v", err)
-	}
-	defer trackerFile.Close()
-
-	if _, err := fmt.Fprintf(trackerFile, "%s\t%v\n", job.GetId(), slurmJobID); err != nil {
-		return fmt.Errorf("failed to write to job tracker: %v", err)
+	// Store job mapping using JobTracker
+	if err := s.JobTracker.StoreJobMapping(job.GetId(), fmt.Sprintf("%v", slurmJobID)); err != nil {
+		return fmt.Errorf("failed to store job mapping: %v", err)
 	}
 
 	return nil
@@ -103,31 +97,13 @@ func (s *SlurmRestScheduler) Submit(job JobInterface) error {
 // GetStatus gets the current status of a Slurm job using REST API
 func (s *SlurmRestScheduler) GetStatus(job JobInterface) (JobStatusValue, error) {
 	if s.Config.AuthToken == "" {
-		return JobStatusFailed, fmt.Errorf("Slurm auth token not provided")
+		return JobStatusFailed, fmt.Errorf("slurm auth token not provided")
 	}
 
-	// Read job tracker to get Slurm job ID
-	trackerFile, err := os.Open("/data/uploads/job_tracker.tab")
+	// Get Slurm job ID from tracker
+	slurmJobID, err := s.JobTracker.GetSchedulerJobID(job.GetId())
 	if err != nil {
-		return JobStatusFailed, fmt.Errorf("failed to open job tracker file: %v", err)
-	}
-	defer trackerFile.Close()
-
-	var slurmJobID string
-	scanner := bufio.NewScanner(trackerFile)
-	for scanner.Scan() {
-		parts := strings.Split(scanner.Text(), "\t")
-		if len(parts) != 2 {
-			continue
-		}
-		if parts[0] == job.GetId() {
-			slurmJobID = parts[1]
-			break
-		}
-	}
-
-	if slurmJobID == "" {
-		return JobStatusFailed, fmt.Errorf("job not found in tracker")
+		return JobStatusFailed, fmt.Errorf("failed to get scheduler job ID: %v", err)
 	}
 
 	// Get job status from Slurm
@@ -198,31 +174,13 @@ func (s *SlurmRestScheduler) GetStatus(job JobInterface) (JobStatusValue, error)
 // Cancel cancels a running Slurm job
 func (s *SlurmRestScheduler) Cancel(job JobInterface) error {
 	if s.Config.AuthToken == "" {
-		return fmt.Errorf("Slurm auth token not provided")
+		return fmt.Errorf("slurm auth token not provided")
 	}
 
-	// Read job tracker to get Slurm job ID
-	trackerFile, err := os.Open("/data/uploads/job_tracker.tab")
+	// Get Slurm job ID from tracker
+	slurmJobID, err := s.JobTracker.GetSchedulerJobID(job.GetId())
 	if err != nil {
-		return fmt.Errorf("failed to open job tracker file: %v", err)
-	}
-	defer trackerFile.Close()
-
-	var slurmJobID string
-	scanner := bufio.NewScanner(trackerFile)
-	for scanner.Scan() {
-		parts := strings.Split(scanner.Text(), "\t")
-		if len(parts) != 2 {
-			continue
-		}
-		if parts[0] == job.GetId() {
-			slurmJobID = parts[1]
-			break
-		}
-	}
-
-	if slurmJobID == "" {
-		return fmt.Errorf("job not found in tracker")
+		return fmt.Errorf("failed to get scheduler job ID: %v", err)
 	}
 
 	// Send cancel request to Slurm
@@ -241,6 +199,11 @@ func (s *SlurmRestScheduler) Cancel(job JobInterface) error {
 
 	if cancelResp.StatusCode != http.StatusOK {
 		return fmt.Errorf("job cancellation failed with status: %d", cancelResp.StatusCode)
+	}
+
+	// Delete job mapping after successful cancellation
+	if err := s.JobTracker.DeleteJobMapping(job.GetId()); err != nil {
+		return fmt.Errorf("failed to delete job mapping: %v", err)
 	}
 
 	return nil

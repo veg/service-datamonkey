@@ -31,6 +31,43 @@ make build
 make start
 ```
 
+## Environment Variables
+
+The following environment variables are used in the application:
+
+- `DATASET_TRACKER_TYPE`: Specifies the type of dataset tracker to use. Default is `FileDatasetTracker`.
+- `DATASET_TRACKER_LOCATION`: Specifies the directory where the dataset tracker will store its files. If not set, defaults to `/data/uploads`.
+- `JOB_TRACKER_TYPE`: Specifies the type of job tracker to use. Default is `FileJobTracker`.
+- `JOB_TRACKER_LOCATION`: Specifies the directory where the job tracker will store its files. If not set, defaults to `/data/uploads`.
+- `SLURM_REST_URL`: Base URL for the Slurm REST API. Default is `http://c2:9200`.
+- `SLURM_REST_API_PATH`: API path for the Slurm REST API. Default is `/slurmdb/v0.0.37`.
+- `SLURM_QUEUE_NAME`: Name of the Slurm queue to use. Default is `normal`.
+- `SLURM_AUTH_TOKEN`: Authentication token for the Slurm REST API. **Required** - No default value.
+- `SCHEDULER_TYPE`: Specifies the type of scheduler to use. Default is `SlurmRestScheduler`.
+- `SERVICE_DATAMONKEY_PORT`: Specifies the port to use for the service. Default is `9300`.
+
+### Example
+
+Sensible defaults are set in the docker-compose.yml file.
+To run the application with alternative desired environment variables, you can set them as follows:
+```bash
+export DATASET_TRACKER_TYPE=FileDatasetTracker
+export DATASET_TRACKER_LOCATION=/data/uploads
+export JOB_TRACKER_TYPE=FileJobTracker
+export JOB_TRACKER_LOCATION=/data/uploads
+export SLURM_REST_URL=http://c2:9200
+export SLURM_REST_API_PATH=/slurmdb/v0.0.37
+export SLURM_QUEUE_NAME=normal
+export SLURM_AUTH_TOKEN=your_auth_token  # Get this from: docker compose exec c2 scontrol token
+export SCHEDULER_TYPE=SlurmRestScheduler
+export SERVICE_DATAMONKEY_PORT=9300
+```
+
+**Note**: The Slurm auth token needs to be updated each time you restart the service. You can get a new token by running:
+```bash
+export $(docker compose exec c2 scontrol token)
+```
+
 ## Testing
 
 ### Make sure things are healthy

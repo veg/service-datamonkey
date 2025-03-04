@@ -11,7 +11,6 @@
 package openapi
 
 import (
-	"bufio"
 	"crypto/md5"
 	"encoding/json"
 	"fmt"
@@ -19,81 +18,51 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
 
 type FileUploadAndQCAPI struct {
+	datasetTracker DatasetTracker
 }
 
-// TODO: eventually probably need a db or something to track files instead of dataset_tracker.tab
+func NewFileUploadAndQCAPI(datasetTracker DatasetTracker) *FileUploadAndQCAPI {
+	return &FileUploadAndQCAPI{
+		datasetTracker: datasetTracker,
+	}
+}
 
 // Get /api/v1/datasets
 // Get a list of datasets uploaded to Datamonkey
-// This function reads the dataset_tracker.tab file and returns a list of datasets
-// The dataset_tracker.tab file is expected to be in the following format:
-//
-//	id  name  type  description
-//	...  ...   ...  ...
 func (api *FileUploadAndQCAPI) GetDatasetsList(c *gin.Context) {
-	filePath := "/data/uploads/dataset_tracker.tab"
-
-	log.Printf("Opening dataset_tracker.tab file at path %s", filePath)
-
-	file, err := os.Open(filePath)
+	datasets, err := api.datasetTracker.List()
 	if err != nil {
-		if os.IsNotExist(err) {
-			log.Printf("dataset_tracker.tab file at path %s not found", filePath)
-			c.JSON(200, gin.H{"datasets": []interface{}{}})
-			return
-		}
-		log.Printf("Failed to open dataset_tracker.tab file at path %s: %s", filePath, err)
-		c.JSON(500, gin.H{"error": "Failed to read dataset file"})
-		return
-	}
-	defer func() {
-		if ferr := file.Close(); ferr != nil {
-			log.Printf("Failed to close dataset_tracker.tab file at path %s: %s", filePath, ferr)
-		}
-	}()
-
-	var datasets []gin.H
-	// Reading file content
-	// We read the file line by line, and for each line we split it by tabs
-	// We expect the format to be "id\tname\ttype\tdescription"
-	// If the line is in the wrong format, we ignore it
-	// If the line is in the correct format, we add it to the datasets slice
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := scanner.Text()
-		log.Printf("Reading line: %s", line)
-		parts := strings.Split(line, "\t")
-		if len(parts) == 4 {
-			datasets = append(datasets, gin.H{
-				"id":          parts[0],
-				"name":        parts[1],
-				"type":        parts[2],
-				"description": parts[3],
-			})
-		}
-	}
-
-	if err := scanner.Err(); err != nil {
-		log.Printf("Failed to parse dataset file at path %s: %s", filePath, err)
-		c.JSON(500, gin.H{"error": "Failed to parse dataset file"})
+		log.Printf("Failed to list datasets: %v", err)
+		c.JSON(500, gin.H{"error": "Failed to list datasets"})
 		return
 	}
 
 	if len(datasets) == 0 {
-		log.Printf("No datasets found in dataset_tracker.tab file at path %s", filePath)
+		log.Printf("No datasets found")
 		c.JSON(200, gin.H{"datasets": []interface{}{}})
 		return
-	} else {
-		log.Printf("Found %d datasets in dataset_tracker.tab file at path %s", len(datasets), filePath)
 	}
 
-	c.JSON(200, gin.H{"datasets": datasets})
+	// Convert datasets to response format
+	response := make([]gin.H, len(datasets))
+	for i, ds := range datasets {
+		response[i] = gin.H{
+			"id":          ds.GetId(),
+			"name":        ds.GetMetadata().Name,
+			"type":        ds.GetMetadata().Type,
+			"description": ds.GetMetadata().Description,
+			"created":     ds.GetMetadata().Created,
+			"updated":     ds.GetMetadata().Updated,
+		}
+	}
+
+	c.JSON(200, gin.H{"datasets": response})
 }
 
 // PostDataset handles the uploading of datasets to Datamonkey.
@@ -139,21 +108,6 @@ func (api *FileUploadAndQCAPI) PostDataset(c *gin.Context) {
 		return
 	}
 	file.Meta = meta
-
-	// Check if the dataset_tracker.tab file exists; create it if it doesn't
-	if _, err := os.Stat("/data/uploads/dataset_tracker.tab"); err != nil {
-		log.Printf("Creating /data/uploads/dataset_tracker.tab")
-		file, err := os.Create("/data/uploads/dataset_tracker.tab")
-		if err != nil {
-			c.JSON(400, gin.H{"error": err.Error()})
-			return
-		}
-		defer func() {
-			if ferr := file.Close(); ferr != nil {
-				log.Printf("Failed to close /data/uploads/dataset_tracker.tab: %s", ferr)
-			}
-		}()
-	}
 
 	log.Printf("Processing file with name %s", file.Meta.Name)
 
@@ -201,15 +155,16 @@ func (api *FileUploadAndQCAPI) PostDataset(c *gin.Context) {
 	id := fmt.Sprintf("%x", hash)
 
 	// Write the file to disk or download it from the URL
+	var content []byte
 	if file.File != nil {
 		log.Printf("Writing file %s to disk", file.Meta.Name)
 		file.File.Seek(0, 0)
-		bytes, err := io.ReadAll(file.File)
+		content, err = io.ReadAll(file.File)
 		if err != nil {
 			c.JSON(500, gin.H{"error": err.Error()})
 			return
 		}
-		err = os.WriteFile(filename, bytes, 0644)
+		err = os.WriteFile(filename, content, 0644)
 		if err != nil {
 			c.JSON(500, gin.H{"error": err.Error()})
 			return
@@ -222,46 +177,29 @@ func (api *FileUploadAndQCAPI) PostDataset(c *gin.Context) {
 			return
 		}
 		defer resp.Body.Close()
-		out, err := os.Create(filename)
+		content, err = io.ReadAll(resp.Body)
 		if err != nil {
 			c.JSON(500, gin.H{"error": err.Error()})
 			return
 		}
-		defer out.Close()
-		_, err = io.Copy(out, resp.Body)
+		err = os.WriteFile(filename, content, 0644)
 		if err != nil {
 			c.JSON(500, gin.H{"error": err.Error()})
 			return
 		}
 	}
 
-	log.Printf("File %s written to disk", filename)
-	// Append the file metadata to the dataset_tracker.tab file
-	fileMeta := fmt.Sprintf("%s\t%s\t%s\t%s\n", id, file.Meta.Name, file.Meta.Type, file.Meta.Description)
-	log.Printf("Writing file metadata to dataset_tracker.tab")
-	_, err = os.Stat("/data/uploads/dataset_tracker.tab")
-	if err == nil {
-		f, err := os.OpenFile("/data/uploads/dataset_tracker.tab", os.O_APPEND|os.O_WRONLY, 0644)
-		if err != nil {
-			c.JSON(500, gin.H{"error": err.Error()})
-			return
-		}
-		defer f.Close()
+	// Create and store the dataset
+	dataset := NewBaseDataset(DatasetMetadata{
+		Name:        file.Meta.Name,
+		Description: file.Meta.Description,
+		Type:        file.Meta.Type,
+		Created:     time.Now(),
+		Updated:     time.Now(),
+	}, content)
 
-		_, err = f.Write([]byte(fileMeta))
-		if err != nil {
-			c.JSON(500, gin.H{"error": err.Error()})
-			return
-		}
-	} else {
-		err = os.WriteFile("/data/uploads/dataset_tracker.tab", []byte(fileMeta), 0644)
-		if err != nil {
-			c.JSON(500, gin.H{"error": err.Error()})
-			return
-		}
-	}
-	if err != nil {
-		c.JSON(500, gin.H{"error": err.Error()})
+	if err := api.datasetTracker.Store(dataset); err != nil {
+		c.JSON(500, gin.H{"error": fmt.Sprintf("Failed to store dataset: %v", err)})
 		return
 	}
 

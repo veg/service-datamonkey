@@ -1,7 +1,7 @@
 /*
  * Datamonkey API
  *
- * Datamonkey is a free public server for comparative analysis of sequence alignments using state-of-the-art statistical models. <br> This is the OpenAPI definition for the Datamonkey API. 
+ * Datamonkey is a free public server for comparative analysis of sequence alignments using state-of-the-art statistical models. <br> This is the OpenAPI definition for the Datamonkey API.
  *
  * API version: 1.0.0
  * Contact: spond@temple.edu
@@ -12,19 +12,119 @@ package main
 
 import (
 	"log"
+	"os"
+	"path/filepath"
 
-	// WARNING!
-	// Pass --git-repo-id and --git-user-id properties when generating the code
-	//
 	sw "github.com/d-callan/service-datamonkey/go"
 )
 
 func main() {
-	routes := sw.ApiHandleFunctions{}
+	// Read the environment variable for the tracker type
+	datasetTrackerType := os.Getenv("DATASET_TRACKER_TYPE")
+	if datasetTrackerType == "" {
+		// Default to FileDatasetTracker if not set
+		datasetTrackerType = "FileDatasetTracker"
+	}
+
+	// Read the environment variable for the tracker directory
+	datasetTrackerDir := os.Getenv("DATASET_TRACKER_LOCATION")
+	if datasetTrackerDir == "" {
+		// Handle the case where the environment variable is not set
+		datasetTrackerDir = "/data/uploads"
+	}
+
+	// Read the environment variable for the job tracker type
+	jobTrackerType := os.Getenv("JOB_TRACKER_TYPE")
+	if jobTrackerType == "" {
+		// Default to FileJobTracker if not set
+		jobTrackerType = "FileJobTracker"
+	}
+
+	// Read the environment variable for the tracker directory
+	jobTrackerDir := os.Getenv("JOB_TRACKER_LOCATION")
+	if jobTrackerDir == "" {
+		// Handle the case where the environment variable is not set
+		jobTrackerDir = "/data/uploads"
+	}
+
+	// Initialize dataset tracker
+	var datasetTracker sw.DatasetTracker
+	switch datasetTrackerType {
+	case "FileDatasetTracker":
+		datasetTracker = sw.NewFileDatasetTracker(filepath.Join(datasetTrackerDir, "datasets.json"))
+	case "OtherTracker":
+		// Initialize the hypothetical other tracker
+		// Note: NewOtherTracker is not defined in the original code, so this will not compile
+		// datasetTracker = NewOtherTracker(datasetDir)
+		log.Fatalf("OtherTracker is not implemented")
+	default:
+		log.Fatalf("Unknown tracker type: %s", datasetTrackerType)
+	}
+
+	// Initialize job tracker
+	var jobTracker sw.JobTracker
+	switch jobTrackerType {
+	case "FileJobTracker":
+		jobTracker = sw.NewFileJobTracker(filepath.Join(jobTrackerDir, "jobs.json"))
+	case "OtherJobTracker":
+		// Initialize the hypothetical other tracker
+		// Note: NewOtherTracker is not defined in the original code, so this will not compile
+		// jobTracker = NewOtherTracker(jobDir)
+		log.Fatalf("OtherJobTracker is not implemented")
+	default:
+		log.Fatalf("Unknown job tracker type: %s", jobTrackerType)
+	}
+
+	// Read the environment variable for the scheduler type
+	schedulerType := os.Getenv("SCHEDULER_TYPE")
+	if schedulerType == "" {
+		// Not safe to assume a scheduler type
+		log.Fatalf("SCHEDULER_TYPE is not set")
+	}
+
+	// Read the environment variables for the scheduler configuration
+	slurmRestURL := os.Getenv("SLURM_REST_URL")
+	if slurmRestURL == "" && schedulerType == "SlurmRestScheduler" {
+		log.Fatalf("SLURM_REST_URL is not set")
+	}
+	slurmRestAPIPath := os.Getenv("SLURM_REST_API_PATH")
+	if slurmRestAPIPath == "" && schedulerType == "SlurmRestScheduler" {
+		log.Fatalf("SLURM_REST_API_PATH is not set")
+	}
+	slurmQueueName := os.Getenv("SLURM_QUEUE_NAME")
+	if slurmQueueName == "" && schedulerType == "SlurmRestScheduler" {
+		log.Fatalf("SLURM_QUEUE_NAME is not set")
+	}
+	slurmAuthToken := os.Getenv("SLURM_AUTH_TOKEN")
+	if slurmAuthToken == "" && schedulerType == "SlurmRestScheduler" {
+		log.Fatalf("SLURM_AUTH_TOKEN is not set")
+	}
+
+	// Initialize Slurm REST scheduler
+	slurmConfig := sw.SlurmRestConfig{
+		BaseURL:   slurmRestURL,
+		APIPath:   slurmRestAPIPath,
+		QueueName: slurmQueueName,
+		AuthToken: slurmAuthToken,
+	}
+	scheduler := sw.NewSlurmRestScheduler(slurmConfig, jobTracker)
+
+	// Initialize API handlers
+	routes := sw.ApiHandleFunctions{
+		FELAPI:             *sw.NewFELAPI("", "", scheduler, filepath.Join(datasetTrackerDir)),
+		BUSTEDAPI:          *sw.NewBUSTEDAPI("", "", scheduler, filepath.Join(datasetTrackerDir)),
+		FileUploadAndQCAPI: *sw.NewFileUploadAndQCAPI(datasetTracker),
+	}
 
 	log.Printf("Server started")
 
 	router := sw.NewRouter(routes)
 
-	log.Fatal(router.Run(":9300"))
+	// Read the environment variable for the port
+	port := os.Getenv("SERVICE_DATAMONKEY_PORT")
+	if port == "" {
+		port = "9300"
+	}
+
+	log.Fatal(router.Run(":" + port))
 }

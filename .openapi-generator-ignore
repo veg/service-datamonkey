@@ -28,7 +28,7 @@
 # change port
 Dockerfile
 
-# manual changes made here for port
+# Ignore main.go
 main.go
 
 # business logic in these files. 

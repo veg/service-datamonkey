@@ -1,4 +1,4 @@
-version: "2.2"
+version: "3.8"
 
 services:
   datamonkey:
@@ -13,6 +13,15 @@ services:
       - 9300:9300
     depends_on:
       - c2
+    environment:
+      DATASET_TRACKER_TYPE: ${DATASET_TRACKER_TYPE:-FileDatasetTracker}
+      DATASET_TRACKER_LOCATION: ${DATASET_TRACKER_LOCATION:-/data/uploads}
+      SLURM_REST_URL: ${SLURM_REST_URL:-http://c2:9200}
+      SLURM_REST_API_PATH: ${SLURM_REST_API_PATH:-/slurmdb/v0.0.37}
+      SLURM_QUEUE_NAME: ${SLURM_QUEUE_NAME:-normal}
+      SLURM_AUTH_TOKEN: ${SLURM_AUTH_TOKEN}
+      SCHEDULER_TYPE: ${SCHEDULER_TYPE:-SlurmRestScheduler}
+      SERVICE_DATAMONKEY_PORT: ${SERVICE_DATAMONKEY_PORT:-9300}
 
   mysql:
     image: mariadb:10.10
