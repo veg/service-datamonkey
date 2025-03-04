@@ -11,6 +11,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -18,113 +19,104 @@ import (
 	sw "github.com/d-callan/service-datamonkey/go"
 )
 
-func main() {
-	// Read the environment variable for the tracker type
-	datasetTrackerType := os.Getenv("DATASET_TRACKER_TYPE")
-	if datasetTrackerType == "" {
-		// Default to FileDatasetTracker if not set
-		datasetTrackerType = "FileDatasetTracker"
+// getEnvWithDefault returns environment variable value or default if not set
+func getEnvWithDefault(key, defaultValue string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
 	}
+	return defaultValue
+}
 
-	// Read the environment variable for the tracker directory
-	datasetTrackerDir := os.Getenv("DATASET_TRACKER_LOCATION")
-	if datasetTrackerDir == "" {
-		// Handle the case where the environment variable is not set
-		datasetTrackerDir = "/data/uploads"
+// getEnvWithFatal returns environment variable value or exits if not set
+func getEnvWithFatal(key string) string {
+	value := os.Getenv(key)
+	if value == "" {
+		log.Fatalf("%s is not set", key)
 	}
+	return value
+}
 
-	// Read the environment variable for the job tracker type
-	jobTrackerType := os.Getenv("JOB_TRACKER_TYPE")
-	if jobTrackerType == "" {
-		// Default to FileJobTracker if not set
-		jobTrackerType = "FileJobTracker"
-	}
+// initDatasetTracker initializes and returns a dataset tracker based on environment configuration
+func initDatasetTracker() sw.DatasetTracker {
+	trackerType := getEnvWithDefault("DATASET_TRACKER_TYPE", "FileDatasetTracker")
+	trackerDir := getEnvWithDefault("DATASET_TRACKER_LOCATION", "/data/uploads")
 
-	// Read the environment variable for the tracker directory
-	jobTrackerDir := os.Getenv("JOB_TRACKER_LOCATION")
-	if jobTrackerDir == "" {
-		// Handle the case where the environment variable is not set
-		jobTrackerDir = "/data/uploads"
-	}
-
-	// Initialize dataset tracker
-	var datasetTracker sw.DatasetTracker
-	switch datasetTrackerType {
+	switch trackerType {
 	case "FileDatasetTracker":
-		datasetTracker = sw.NewFileDatasetTracker(filepath.Join(datasetTrackerDir, "datasets.json"))
+		return sw.NewFileDatasetTracker(filepath.Join(trackerDir, "datasets.json"))
 	case "OtherTracker":
-		// Initialize the hypothetical other tracker
-		// Note: NewOtherTracker is not defined in the original code, so this will not compile
-		// datasetTracker = NewOtherTracker(datasetDir)
 		log.Fatalf("OtherTracker is not implemented")
+		return nil
 	default:
-		log.Fatalf("Unknown tracker type: %s", datasetTrackerType)
+		log.Fatalf("Unknown dataset tracker type: %s", trackerType)
+		return nil
 	}
+}
 
-	// Initialize job tracker
-	var jobTracker sw.JobTracker
-	switch jobTrackerType {
+// initJobTracker initializes and returns a job tracker based on environment configuration
+func initJobTracker() sw.JobTracker {
+	trackerType := getEnvWithDefault("JOB_TRACKER_TYPE", "FileJobTracker")
+	trackerDir := getEnvWithDefault("JOB_TRACKER_LOCATION", "/data/uploads")
+
+	switch trackerType {
 	case "FileJobTracker":
-		jobTracker = sw.NewFileJobTracker(filepath.Join(jobTrackerDir, "jobs.json"))
+		return sw.NewFileJobTracker(filepath.Join(trackerDir, "jobs.json"))
 	case "OtherJobTracker":
-		// Initialize the hypothetical other tracker
-		// Note: NewOtherTracker is not defined in the original code, so this will not compile
-		// jobTracker = NewOtherTracker(jobDir)
 		log.Fatalf("OtherJobTracker is not implemented")
+		return nil
 	default:
-		log.Fatalf("Unknown job tracker type: %s", jobTrackerType)
+		log.Fatalf("Unknown job tracker type: %s", trackerType)
+		return nil
 	}
+}
 
-	// Read the environment variable for the scheduler type
-	schedulerType := os.Getenv("SCHEDULER_TYPE")
-	if schedulerType == "" {
-		// Not safe to assume a scheduler type
-		log.Fatalf("SCHEDULER_TYPE is not set")
+// initSlurmConfig initializes and returns Slurm configuration
+func initSlurmConfig() sw.SlurmRestConfig {
+	return sw.SlurmRestConfig{
+		BaseURL:   getEnvWithFatal("SLURM_REST_URL"),
+		APIPath:   getEnvWithFatal("SLURM_REST_API_PATH"),
+		QueueName: getEnvWithFatal("SLURM_QUEUE_NAME"),
+		AuthToken: getEnvWithFatal("SLURM_AUTH_TOKEN"),
 	}
+}
 
-	// Read the environment variables for the scheduler configuration
-	slurmRestURL := os.Getenv("SLURM_REST_URL")
-	if slurmRestURL == "" && schedulerType == "SlurmRestScheduler" {
-		log.Fatalf("SLURM_REST_URL is not set")
-	}
-	slurmRestAPIPath := os.Getenv("SLURM_REST_API_PATH")
-	if slurmRestAPIPath == "" && schedulerType == "SlurmRestScheduler" {
-		log.Fatalf("SLURM_REST_API_PATH is not set")
-	}
-	slurmQueueName := os.Getenv("SLURM_QUEUE_NAME")
-	if slurmQueueName == "" && schedulerType == "SlurmRestScheduler" {
-		log.Fatalf("SLURM_QUEUE_NAME is not set")
-	}
-	slurmAuthToken := os.Getenv("SLURM_AUTH_TOKEN")
-	if slurmAuthToken == "" && schedulerType == "SlurmRestScheduler" {
-		log.Fatalf("SLURM_AUTH_TOKEN is not set")
-	}
+// initScheduler initializes and returns a scheduler based on environment configuration
+func initScheduler(jobTracker sw.JobTracker) sw.SchedulerInterface {
+	schedulerType := getEnvWithDefault("SCHEDULER_TYPE", "SlurmRestScheduler")
 
-	// Initialize Slurm REST scheduler
-	slurmConfig := sw.SlurmRestConfig{
-		BaseURL:   slurmRestURL,
-		APIPath:   slurmRestAPIPath,
-		QueueName: slurmQueueName,
-		AuthToken: slurmAuthToken,
+	switch schedulerType {
+	case "SlurmRestScheduler":
+		config := initSlurmConfig()
+		return sw.NewSlurmRestScheduler(config, jobTracker)
+	default:
+		log.Fatalf("Unknown scheduler type: %s", schedulerType)
+		return nil
 	}
-	scheduler := sw.NewSlurmRestScheduler(slurmConfig, jobTracker)
+}
 
-	// Initialize API handlers
-	routes := sw.ApiHandleFunctions{
-		FELAPI:             *sw.NewFELAPI("", "", scheduler, filepath.Join(datasetTrackerDir)),
-		BUSTEDAPI:          *sw.NewBUSTEDAPI("", "", scheduler, filepath.Join(datasetTrackerDir)),
+// initAPIHandlers initializes the API handlers with the given components
+func initAPIHandlers(scheduler sw.SchedulerInterface, datasetTracker sw.DatasetTracker, dataDir string) sw.ApiHandleFunctions {
+	return sw.ApiHandleFunctions{
+		FELAPI:             *sw.NewFELAPI("", "", scheduler, dataDir),
+		BUSTEDAPI:          *sw.NewBUSTEDAPI("", "", scheduler, dataDir),
 		FileUploadAndQCAPI: *sw.NewFileUploadAndQCAPI(datasetTracker),
 	}
+}
 
-	log.Printf("Server started")
+func main() {
+	// Initialize components
+	datasetTracker := initDatasetTracker()
+	jobTracker := initJobTracker()
+	scheduler := initScheduler(jobTracker)
+	dataDir := getEnvWithDefault("DATASET_TRACKER_LOCATION", "/data/uploads")
 
-	router := sw.NewRouter(routes)
+	// Initialize API handlers
+	routes := initAPIHandlers(scheduler, datasetTracker, dataDir)
 
-	// Read the environment variable for the port
-	port := os.Getenv("SERVICE_DATAMONKEY_PORT")
-	if port == "" {
-		port = "9300"
+	// Start server
+	port := getEnvWithDefault("SERVICE_DATAMONKEY_PORT", "9300")
+	log.Printf("Server starting on port %s", port)
+	if err := sw.NewRouter(routes).Run(fmt.Sprintf(":%s", port)); err != nil {
+		log.Fatalf("Server error: %v", err)
 	}
-
-	log.Fatal(router.Run(":" + port))
 }
