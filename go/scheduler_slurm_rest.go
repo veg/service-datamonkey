@@ -209,5 +209,36 @@ func (s *SlurmRestScheduler) Cancel(job JobInterface) error {
 	return nil
 }
 
+// CheckHealth checks the health of the Slurm REST API
+func (s *SlurmRestScheduler) CheckHealth() (bool, string, error) {
+	if s.Config.AuthToken == "" {
+		return false, "Auth token not configured", fmt.Errorf("slurm auth token not configured")
+	}
+
+	// Construct the URL for the health check
+	healthCheckURL := fmt.Sprintf("%s/openapi/v3", s.Config.BaseURL)
+	
+	client := &http.Client{}
+	req, err := http.NewRequest("GET", healthCheckURL, nil)
+	if err != nil {
+		return false, "Failed to create request", fmt.Errorf("failed to create health check request: %v", err)
+	}
+	
+	req.Header.Set("X-SLURM-USER-TOKEN", s.Config.AuthToken)
+	
+	resp, err := client.Do(req)
+	if err != nil {
+		return false, "Connection error", fmt.Errorf("failed to connect to slurm: %v", err)
+	}
+	defer resp.Body.Close()
+	
+	if resp.StatusCode != http.StatusOK {
+		return false, fmt.Sprintf("Bad status code: %d", resp.StatusCode), 
+			fmt.Errorf("slurm returned bad status code: %d", resp.StatusCode)
+	}
+	
+	return true, "Healthy", nil
+}
+
 // assert that SlurmRestScheduler implements SchedulerInterface at compile-time rather than run-time
 var _ SchedulerInterface = (*SlurmRestScheduler)(nil)

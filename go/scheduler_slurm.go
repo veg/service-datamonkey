@@ -104,5 +104,35 @@ func (s *SlurmScheduler) checkJobSuccess(job JobInterface) bool {
 	return exitCode == "0:0"
 }
 
+// CheckHealth checks if the Slurm scheduler is operational
+func (s *SlurmScheduler) CheckHealth() (bool, string, error) {
+	// Run sinfo to check if Slurm is operational
+	cmd := exec.Command("sinfo", "--version")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return false, "Slurm command-line tools unavailable", 
+			fmt.Errorf("failed to execute sinfo: %v, output: %s", err, string(output))
+	}
+
+	// Check if the partition exists and is available
+	if s.Config.Partition != "" {
+		cmd = exec.Command("sinfo", "-p", s.Config.Partition, "--noheader", "--format=%P,%a")
+		output, err = cmd.CombinedOutput()
+		if err != nil {
+			return false, fmt.Sprintf("Partition %s check failed", s.Config.Partition), 
+				fmt.Errorf("failed to check partition: %v, output: %s", err, string(output))
+		}
+
+		// Check if the partition is up
+		outputStr := string(output)
+		if !strings.Contains(outputStr, "up") {
+			return false, fmt.Sprintf("Partition %s is not available", s.Config.Partition), 
+				fmt.Errorf("partition %s is not available: %s", s.Config.Partition, outputStr)
+		}
+	}
+
+	return true, "Slurm scheduler is operational", nil
+}
+
 // assert that SlurmScheduler implements SchedulerInterface at compile-time rather than run-time
 var _ SchedulerInterface = (*SlurmScheduler)(nil)

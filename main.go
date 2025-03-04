@@ -100,6 +100,7 @@ func initAPIHandlers(scheduler sw.SchedulerInterface, datasetTracker sw.DatasetT
 		FELAPI:             *sw.NewFELAPI("", "", scheduler, dataDir),
 		BUSTEDAPI:          *sw.NewBUSTEDAPI("", "", scheduler, dataDir),
 		FileUploadAndQCAPI: *sw.NewFileUploadAndQCAPI(datasetTracker),
+		HealthAPI:          sw.HealthAPI{Scheduler: scheduler},
 	}
 }
 

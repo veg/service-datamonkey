@@ -151,5 +151,42 @@ func (s *TorqueScheduler) checkJobSuccess(job JobInterface) bool {
 	return true
 }
 
+// CheckHealth checks if the Torque scheduler is operational
+func (s *TorqueScheduler) CheckHealth() (bool, string, error) {
+	// Run pbsnodes to check if Torque is operational
+	cmd := exec.Command("pbsnodes", "-a")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return false, "Torque command-line tools unavailable", 
+			fmt.Errorf("failed to execute pbsnodes: %v, output: %s", err, string(output))
+	}
+
+	// Check if there are any available nodes
+	outputStr := string(output)
+	if len(outputStr) == 0 || !strings.Contains(outputStr, "state =") {
+		return false, "No compute nodes available", 
+			fmt.Errorf("no compute nodes found in pbsnodes output")
+	}
+
+	// Check if the queue exists and is enabled
+	if s.Config.Queue != "" {
+		cmd = exec.Command("qstat", "-Q", s.Config.Queue)
+		output, err = cmd.CombinedOutput()
+		if err != nil {
+			return false, fmt.Sprintf("Queue %s check failed", s.Config.Queue), 
+				fmt.Errorf("failed to check queue: %v, output: %s", err, string(output))
+		}
+
+		// Check if the queue is enabled
+		outputStr = string(output)
+		if !strings.Contains(outputStr, s.Config.Queue) {
+			return false, fmt.Sprintf("Queue %s not found", s.Config.Queue), 
+				fmt.Errorf("queue %s not found in qstat output", s.Config.Queue)
+		}
+	}
+
+	return true, "Torque scheduler is operational", nil
+}
+
 // assert that TorqueScheduler implements SchedulerInterface at compile-time rather than run-time
 var _ SchedulerInterface = (*TorqueScheduler)(nil)

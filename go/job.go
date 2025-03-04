@@ -33,6 +33,7 @@ type SchedulerInterface interface {
 	Submit(job JobInterface) error
 	Cancel(job JobInterface) error
 	GetStatus(job JobInterface) (JobStatusValue, error)
+	CheckHealth() (bool, string, error) // Returns: isHealthy, details, error
 }
 
 // ComputeMethodInterface defines method-specific operations
