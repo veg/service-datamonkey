@@ -58,38 +58,6 @@ The following environment variables are available:
 - `SLURM_JWT_EXPIRATION_SECS`: Expiration time in seconds for JWT tokens. Defaults to 86400 (24 hours).
 - `SERVICE_DATAMONKEY_PORT`: Specifies the port to use for the service. Default is `9300`.
 
-### Slurm Authentication
-
-The service uses JWT (JSON Web Token) authentication to communicate with the Slurm REST API. The service automatically generates and refreshes these tokens, eliminating the need for manual token management.
-
-### Automatic Token Refresh
-
-The service includes an automatic token refresh mechanism that:
-
-1. Generates a Slurm JWT authentication token on startup
-2. Periodically refreshes the token (every 12 hours by default)
-3. Uses thread-safe access to the token for all Slurm API requests
-
-This eliminates the need to manually update the token or restart the service when tokens expire. The token refresh mechanism:
-
-- Runs in a background goroutine
-- Is safely shut down when the service exits
-- Uses mutex protection to ensure thread safety
-- Logs token refresh successes and failures
-
-#### JWT Token Generation
-
-The service generates JWT tokens directly using the Slurm JWT key file:
-
-- `SLURM_JWT_KEY_PATH`: Path to the JWT key file (e.g., `/var/spool/slurm/statesave/jwt.key`)
-- `SLURM_JWT_USERNAME`: Username for the token
-- `SLURM_JWT_EXPIRATION_SECS`: Token lifetime in seconds (default: 86400 seconds / 24 hours)
-
-The JWT token is generated with the following claims:
-- `exp`: Expiration time (current time + expiration seconds)
-- `iat`: Issued at time (current time)
-- `sun`: Slurm username
-
 ### Example
 
 Sensible defaults are set in the docker-compose.yml file.
@@ -109,6 +77,89 @@ export SLURM_JWT_EXPIRATION_SECS=86400
 export SCHEDULER_TYPE=SlurmRestScheduler
 export SERVICE_DATAMONKEY_PORT=9300
 ```
+
+## Adding New HyPhy Methods and Parameters
+
+This section describes how to add new HyPhy methods or extend existing methods with new parameters.
+
+### Adding a New HyPhy Method
+
+To add a new HyPhy method after it has been added to api-datamonkey and `make update` run in this repository, follow these steps:
+
+1. **Define the method type constant** in `hyphy_method.go`:
+   ```go
+   const (
+       MethodFEL    HyPhyMethodType = "fel"
+       MethodBUSTED HyPhyMethodType = "busted"
+       MethodNEW    HyPhyMethodType = "new-method" // Add your new method here
+   )
+   ```
+
+2. **Update the generated API implementation file** (e.g., `api_new_method.go`) following the pattern of existing methods. This should be as simple as copying and pasting the existing method and modifying it slightly to add your new method. Alternatively, point an LLM at the existing methods as an example to generate the new method.
+  
+
+### Adding New Parameters to Existing Methods
+
+This is slightly more involved than adding a new method, but is also a good task for an LLM. If you need to add support for new parameters to existing HyPhy methods, follow these steps:
+
+1. **Update the HyPhy request interface, struct and accessor methods** in `hyphy_request_adapter.go` to include the new parameter:
+   ```go
+   type HyPhyRequest interface {
+       // Existing methods...
+       
+       // Add new parameter methods
+       GetNewParameter() string
+       IsNewParameterSet() bool
+   }
+   ```
+
+   ```go
+   type requestAdapter struct {
+       // Existing fields...
+       
+       // Add new parameter fields
+       newParameter     string
+       newParameterSet  bool
+   }
+   ```
+
+   ```go
+   func (r *requestAdapter) GetNewParameter() string {
+       return r.newParameter
+   }
+
+   func (r *requestAdapter) IsNewParameterSet() bool {
+       return r.newParameterSet
+   }
+   ```
+
+2. **Update the AdaptRequest function** to handle the new parameter:
+   ```go
+   func AdaptRequest(req interface{}) (HyPhyRequest, error) {
+       // Existing code...
+       
+       // Check for the new parameter
+       newParamField := reqValue.FieldByName("NewParameter")
+       if newParamField.IsValid() {
+           adapter.newParameter = newParamField.String()
+           adapter.newParameterSet = true
+       }
+       
+       // Rest of the function...
+   }
+   ```
+
+3. **Update the HyPhy method command generation** in `hyphy_method.go` to include the new parameter:
+   ```go
+   // In the GetCommand method of HyPhyMethod
+   
+   // Add new parameter only if it was explicitly set
+   if hyPhyReq.IsNewParameterSet() {
+       newParam := hyPhyReq.GetNewParameter()
+       cmd += fmt.Sprintf(" --new-parameter %s", newParam)
+   }
+   ```
+   *NOTE* add appropriate validation for new parameters in the `ValidateInput` method of `HyPhyMethod`.
 
 ## Testing
 

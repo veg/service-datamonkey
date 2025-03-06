@@ -156,6 +156,7 @@ func TestSchedulerJobSubmission(t *testing.T) {
 	// This test would normally submit a job to Slurm
 	// Since we can't do that in a unit test, we'll just check that the code doesn't panic
 	// In a real integration test, we would check that the job was submitted correctly
+	t.Log(jobSpec)
 	t.Log("This test would normally submit a job to Slurm")
 }
 
