@@ -82,7 +82,7 @@ func initSlurmConfig() sw.SlurmRestConfig {
 
 	// Get token refresh configuration with sensible defaults
 	tokenRefreshHours := 12
-	
+
 	// Configure JWT token generation
 	jwtKeyPath := getEnvWithFatal("SLURM_JWT_KEY_PATH")
 	jwtUsername := getEnvWithFatal("SLURM_JWT_USERNAME")

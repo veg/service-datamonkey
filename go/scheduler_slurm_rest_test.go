@@ -1,4 +1,4 @@
-package openapi
+package datamonkey
 
 import (
 	"io/ioutil"

@@ -1,4 +1,4 @@
-package openapi
+package datamonkey
 
 // MethodRequest defines the interface for HyPhy method requests
 type MethodRequest interface {

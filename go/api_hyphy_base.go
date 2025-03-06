@@ -4,7 +4,7 @@
  * Base implementation for HyPhy method APIs
  */
 
-package openapi
+package datamonkey
 
 import (
 	"encoding/json"
