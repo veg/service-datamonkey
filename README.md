@@ -45,25 +45,50 @@ cp .env.example .env
 The following environment variables are available:
 
 - `DATASET_TRACKER_TYPE`: Specifies the type of dataset tracker to use. Default is `FileDatasetTracker`.
-- `DATASET_TRACKER_LOCATION`: Specifies the directory where the dataset tracker will store its files. Default is `/data/uploads`.
+- `DATASET_LOCATION`: Specifies the directory where the dataset tracker will store its files. Default is `/data/uploads`.
 - `JOB_TRACKER_TYPE`: Specifies the type of job tracker to use. Default is `FileJobTracker`.
 - `JOB_TRACKER_LOCATION`: Specifies the directory where the job tracker will store its files. Default is `/data/uploads`.
 - `SCHEDULER_TYPE`: Specifies the type of scheduler to use. Default is `SlurmRestScheduler`.
-- `SLURM_REST_URL`: Base URL for the Slurm REST API. Default is `http://c2:9200`.
-- `SLURM_REST_API_PATH`: API path for the Slurm REST API. Default is `/slurmdb/v0.0.37`.
-- `SLURM_QUEUE_NAME`: Name of the Slurm queue to use. Default is `normal`.
-- `SLURM_AUTH_TOKEN`: Authentication token for the Slurm REST API. **Required** - No default value.
+- `SLURM_REST_URL`: Base URL for the Slurm REST API (required).
+- `SLURM_REST_API_PATH`: API path for job status (required).
+- `SLURM_REST_SUBMIT_API_PATH`: API path for job submission. Defaults to the value of `SLURM_REST_API_PATH` if not set.
+- `SLURM_QUEUE_NAME`: Name of the Slurm queue to use (required).
+- `SLURM_JWT_KEY_PATH`: Path to the JWT key file for generating Slurm tokens (required).
+- `SLURM_JWT_USERNAME`: Username for JWT token generation (required).
+- `SLURM_JWT_EXPIRATION_SECS`: Expiration time in seconds for JWT tokens. Defaults to 86400 (24 hours).
 - `SERVICE_DATAMONKEY_PORT`: Specifies the port to use for the service. Default is `9300`.
 
 ### Slurm Authentication
 
-The Slurm auth token needs to be updated each time you restart the service. After starting the service, run:
-```bash
-# Get the token and add it to your .env file
-echo "SLURM_AUTH_TOKEN=$(docker compose exec c2 scontrol token)" >> .env
-```
+The service uses JWT (JSON Web Token) authentication to communicate with the Slurm REST API. The service automatically generates and refreshes these tokens, eliminating the need for manual token management.
 
-This will automatically append the current Slurm auth token to your .env file. If you already have a SLURM_AUTH_TOKEN line in your .env file, you should update it manually instead.
+### Automatic Token Refresh
+
+The service includes an automatic token refresh mechanism that:
+
+1. Generates a Slurm JWT authentication token on startup
+2. Periodically refreshes the token (every 12 hours by default)
+3. Uses thread-safe access to the token for all Slurm API requests
+
+This eliminates the need to manually update the token or restart the service when tokens expire. The token refresh mechanism:
+
+- Runs in a background goroutine
+- Is safely shut down when the service exits
+- Uses mutex protection to ensure thread safety
+- Logs token refresh successes and failures
+
+#### JWT Token Generation
+
+The service generates JWT tokens directly using the Slurm JWT key file:
+
+- `SLURM_JWT_KEY_PATH`: Path to the JWT key file (e.g., `/var/spool/slurm/statesave/jwt.key`)
+- `SLURM_JWT_USERNAME`: Username for the token
+- `SLURM_JWT_EXPIRATION_SECS`: Token lifetime in seconds (default: 86400 seconds / 24 hours)
+
+The JWT token is generated with the following claims:
+- `exp`: Expiration time (current time + expiration seconds)
+- `iat`: Issued at time (current time)
+- `sun`: Slurm username
 
 ### Example
 
@@ -71,20 +96,18 @@ Sensible defaults are set in the docker-compose.yml file.
 To run the application with alternative desired environment variables, you can set them as follows:
 ```bash
 export DATASET_TRACKER_TYPE=FileDatasetTracker
-export DATASET_TRACKER_LOCATION=/data/uploads
+export DATASET_LOCATION=/data/uploads
 export JOB_TRACKER_TYPE=FileJobTracker
 export JOB_TRACKER_LOCATION=/data/uploads
 export SLURM_REST_URL=http://c2:9200
 export SLURM_REST_API_PATH=/slurmdb/v0.0.37
+export SLURM_REST_SUBMIT_API_PATH=/slurm/v0.0.37
 export SLURM_QUEUE_NAME=normal
-export SLURM_AUTH_TOKEN=your_auth_token  # Get this from: docker compose exec c2 scontrol token
+export SLURM_JWT_KEY_PATH=/var/spool/slurm/statesave/jwt.key
+export SLURM_JWT_USERNAME=your_username
+export SLURM_JWT_EXPIRATION_SECS=86400
 export SCHEDULER_TYPE=SlurmRestScheduler
 export SERVICE_DATAMONKEY_PORT=9300
-```
-
-**Note**: The Slurm auth token needs to be updated each time you restart the service. You can get a new token by running:
-```bash
-export $(docker compose exec c2 scontrol token)
 ```
 
 ## Testing
@@ -94,11 +117,8 @@ export $(docker compose exec c2 scontrol token)
 In the root directory of the project, where you started the service, do the following:
 
 ```
-export $(docker compose exec c2 scontrol token)
 curl -k -vvvv -H X-SLURM-USER-TOKEN:${SLURM_JWT} -X GET 'http://localhost:9300/api/v1/health'
 ```
-
-Please note Slurm user token needs updating each time you re-start the service.
 
 ### Upload input files for jobs
 
@@ -113,7 +133,6 @@ Datasets uploaded will persist across re-starts of containers, etc. To clear the
 **PLEASE NOTE THAT CURRENTLY THIS WILL REMOVE JOB RESULTS AND LOGS AS WELL**
 
 If instead you'd like to remove specific files: `docker compose exec c2 rm /data/uploads/[filename]`
-
 
 ### Starting jobs
 

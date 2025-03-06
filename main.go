@@ -15,6 +15,8 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
+	"time"
 
 	sw "github.com/d-callan/service-datamonkey/go"
 )
@@ -39,11 +41,12 @@ func getEnvWithFatal(key string) string {
 // initDatasetTracker initializes and returns a dataset tracker based on environment configuration
 func initDatasetTracker() sw.DatasetTracker {
 	trackerType := getEnvWithDefault("DATASET_TRACKER_TYPE", "FileDatasetTracker")
-	trackerDir := getEnvWithDefault("DATASET_TRACKER_LOCATION", "/data/uploads")
+	// for now we assume to put the tracker file, if needed, in the same directory as the datasets
+	dataDir := getEnvWithDefault("DATASET_LOCATION", "/data/uploads")
 
 	switch trackerType {
 	case "FileDatasetTracker":
-		return sw.NewFileDatasetTracker(filepath.Join(trackerDir, "datasets.json"))
+		return sw.NewFileDatasetTracker(filepath.Join(dataDir, "datasets.json"), dataDir)
 	case "OtherTracker":
 		log.Fatalf("OtherTracker is not implemented")
 		return nil
@@ -72,11 +75,30 @@ func initJobTracker() sw.JobTracker {
 
 // initSlurmConfig initializes and returns Slurm configuration
 func initSlurmConfig() sw.SlurmRestConfig {
+	apiPath := getEnvWithFatal("SLURM_REST_API_PATH")
+	// Use SLURM_REST_SUBMIT_API_PATH if set, otherwise fall back to SLURM_REST_API_PATH
+	submitApiPath := getEnvWithDefault("SLURM_REST_SUBMIT_API_PATH", apiPath)
+	baseURL := getEnvWithFatal("SLURM_REST_URL")
+
+	// Get token refresh configuration with sensible defaults
+	tokenRefreshHours := 12
+	
+	// Configure JWT token generation
+	jwtKeyPath := getEnvWithFatal("SLURM_JWT_KEY_PATH")
+	jwtUsername := getEnvWithFatal("SLURM_JWT_USERNAME")
+	jwtExpirationStr := getEnvWithDefault("SLURM_JWT_EXPIRATION_SECS", "86400")
+	jwtExpirationSecs, _ := strconv.ParseInt(jwtExpirationStr, 10, 64)
+
 	return sw.SlurmRestConfig{
-		BaseURL:   getEnvWithFatal("SLURM_REST_URL"),
-		APIPath:   getEnvWithFatal("SLURM_REST_API_PATH"),
-		QueueName: getEnvWithFatal("SLURM_QUEUE_NAME"),
-		AuthToken: getEnvWithFatal("SLURM_AUTH_TOKEN"),
+		BaseURL:              baseURL,
+		APIPath:              apiPath,
+		SubmitAPIPath:        submitApiPath,
+		QueueName:            getEnvWithFatal("SLURM_QUEUE_NAME"),
+		AuthToken:            "", // Initial token will be generated
+		TokenRefreshInterval: time.Duration(tokenRefreshHours) * time.Hour,
+		JWTKeyPath:           jwtKeyPath,
+		JWTUsername:          jwtUsername,
+		JWTExpirationSecs:    jwtExpirationSecs,
 	}
 }
 
@@ -95,10 +117,15 @@ func initScheduler(jobTracker sw.JobTracker) sw.SchedulerInterface {
 }
 
 // initAPIHandlers initializes the API handlers with the given components
-func initAPIHandlers(scheduler sw.SchedulerInterface, datasetTracker sw.DatasetTracker, dataDir string) sw.ApiHandleFunctions {
+func initAPIHandlers(scheduler sw.SchedulerInterface, datasetTracker sw.DatasetTracker) sw.ApiHandleFunctions {
+	// Get HyPhy executable path from environment or use default
+	hyPhyPath := getEnvWithDefault("HYPHY_PATH", "hyphy")
+	// TODO: change this default so that upload files and log/ results are stored in a different directory
+	basePath := getEnvWithDefault("HYPHY_BASE_PATH", "/data/uploads")
+
 	return sw.ApiHandleFunctions{
-		FELAPI:             *sw.NewFELAPI("", "", scheduler, dataDir),
-		BUSTEDAPI:          *sw.NewBUSTEDAPI("", "", scheduler, dataDir),
+		FELAPI:             *sw.NewFELAPI(basePath, hyPhyPath, scheduler, datasetTracker),
+		BUSTEDAPI:          *sw.NewBUSTEDAPI(basePath, hyPhyPath, scheduler, datasetTracker),
 		FileUploadAndQCAPI: *sw.NewFileUploadAndQCAPI(datasetTracker),
 		HealthAPI:          sw.HealthAPI{Scheduler: scheduler},
 	}
@@ -109,10 +136,16 @@ func main() {
 	datasetTracker := initDatasetTracker()
 	jobTracker := initJobTracker()
 	scheduler := initScheduler(jobTracker)
-	dataDir := getEnvWithDefault("DATASET_TRACKER_LOCATION", "/data/uploads")
+
+	// Ensure proper shutdown of components
+	if slurmScheduler, ok := scheduler.(*sw.SlurmRestScheduler); ok {
+		// Set up graceful shutdown
+		defer slurmScheduler.Shutdown()
+		log.Println("Token refresh service initialized")
+	}
 
 	// Initialize API handlers
-	routes := initAPIHandlers(scheduler, datasetTracker, dataDir)
+	routes := initAPIHandlers(scheduler, datasetTracker)
 
 	// Start server
 	port := getEnvWithDefault("SERVICE_DATAMONKEY_PORT", "9300")

@@ -23,9 +23,9 @@ type FELAPI struct {
 }
 
 // NewFELAPI creates a new FELAPI instance
-func NewFELAPI(basePath, hyPhyPath string, scheduler SchedulerInterface, datasetDir string) *FELAPI {
+func NewFELAPI(basePath, hyPhyPath string, scheduler SchedulerInterface, datasetTracker DatasetTracker) *FELAPI {
 	return &FELAPI{
-		HyPhyBaseAPI: NewHyPhyBaseAPI(basePath, hyPhyPath, scheduler, datasetDir),
+		HyPhyBaseAPI: NewHyPhyBaseAPI(basePath, hyPhyPath, scheduler, datasetTracker),
 	}
 }
 
@@ -43,7 +43,7 @@ func (api *FELAPI) GetFELJob(c *gin.Context) {
 		return
 	}
 
-	result, err := api.HandleGetJob(c, adapted)
+	result, err := api.HandleGetJob(c, adapted, MethodFEL)
 	if err != nil {
 		if err.Error() == "job is not complete" {
 			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
@@ -79,7 +79,7 @@ func (api *FELAPI) StartFELJob(c *gin.Context) {
 		return
 	}
 
-	result, err := api.HandleStartJob(c, adapted)
+	result, err := api.HandleStartJob(c, adapted, MethodFEL)
 	if err != nil {
 		if err.Error() == "authentication token required" {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})

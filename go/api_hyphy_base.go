@@ -9,37 +9,35 @@ package openapi
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
+	"path/filepath"
 
 	"github.com/gin-gonic/gin"
 )
 
 // HyPhyBaseAPI provides shared implementation for HyPhy method APIs
 type HyPhyBaseAPI struct {
-	BasePath   string
-	HyPhyPath  string
-	Scheduler  SchedulerInterface
-	DatasetDir string
+	BasePath       string
+	HyPhyPath      string
+	Scheduler      SchedulerInterface
+	DatasetTracker DatasetTracker
 }
 
+// TODO: BasePath is where output and log files are stored, may need to split into multiple directories
 // NewHyPhyBaseAPI creates a new HyPhyBaseAPI instance
-func NewHyPhyBaseAPI(basePath, hyPhyPath string, scheduler SchedulerInterface, datasetDir string) HyPhyBaseAPI {
+func NewHyPhyBaseAPI(basePath, hyPhyPath string, scheduler SchedulerInterface, datasetTracker DatasetTracker) HyPhyBaseAPI {
 	return HyPhyBaseAPI{
-		BasePath:   basePath,
-		HyPhyPath:  hyPhyPath,
-		Scheduler:  scheduler,
-		DatasetDir: datasetDir,
+		BasePath:       basePath,
+		HyPhyPath:      hyPhyPath,
+		Scheduler:      scheduler,
+		DatasetTracker: datasetTracker,
 	}
 }
 
 // HandleGetJob handles retrieving job status and results for any HyPhy method
-func (api *HyPhyBaseAPI) HandleGetJob(c *gin.Context, request HyPhyRequest) (interface{}, error) {
-	// Create HyPhyMethod instance
-	method, err := NewHyPhyMethod(request, api.BasePath, api.HyPhyPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create HyPhy method: %v", err)
-	}
+func (api *HyPhyBaseAPI) HandleGetJob(c *gin.Context, request HyPhyRequest, methodType HyPhyMethodType) (interface{}, error) {
+	// Create HyPhyMethod instance with explicit method type
+	method := NewHyPhyMethod(request, api.BasePath, api.HyPhyPath, methodType, api.DatasetTracker.GetDatasetDir())
 
 	// Create job instance
 	job := NewHyPhyJob(request, method, api.Scheduler)
@@ -70,23 +68,36 @@ func (api *HyPhyBaseAPI) HandleGetJob(c *gin.Context, request HyPhyRequest) (int
 }
 
 // HandleStartJob handles starting a new job for any HyPhy method
-func (api *HyPhyBaseAPI) HandleStartJob(c *gin.Context, request HyPhyRequest) (interface{}, error) {
-	// Create dataset instance
-	dataset := NewBaseDataset(DatasetMetadata{
-		Name: request.GetAlignment(),
-		Type: "alignment",
-	}, []byte(request.GetAlignment()))
+func (api *HyPhyBaseAPI) HandleStartJob(c *gin.Context, request HyPhyRequest, methodType HyPhyMethodType) (interface{}, error) {
+	// Get dataset from tracker
+	dataset, err := api.DatasetTracker.Get(request.GetAlignment())
+	if err != nil {
+		return nil, fmt.Errorf("failed to get dataset: %v", err)
+	}
+
+	// TODO: why do we need the content here? just pass the dataset name to the cmd
+	// Load the dataset content from the file system
+	// The dataset content is not stored in the tracker, so we need to load it from the file
+	datasetPath := filepath.Join(api.DatasetTracker.GetDatasetDir(), dataset.GetId())
+	content, err := os.ReadFile(datasetPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read dataset content: %v", err)
+	}
+
+	// Update the dataset with the content
+	baseDataset, ok := dataset.(*BaseDataset)
+	if !ok {
+		return nil, fmt.Errorf("unexpected dataset type")
+	}
+	baseDataset.Content = content
 
 	// Validate dataset exists and is the correct type
 	if err := dataset.Validate(); err != nil {
 		return nil, fmt.Errorf("invalid dataset: %v", err)
 	}
 
-	// Create HyPhyMethod instance
-	method, err := NewHyPhyMethod(request, api.BasePath, api.HyPhyPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create HyPhy method: %v", err)
-	}
+	// Create HyPhyMethod instance with explicit method type
+	method := NewHyPhyMethod(request, api.BasePath, api.HyPhyPath, methodType, api.DatasetTracker.GetDatasetDir())
 
 	// Validate method parameters
 	if err := method.ValidateInput(dataset); err != nil {
@@ -104,20 +115,6 @@ func (api *HyPhyBaseAPI) HandleStartJob(c *gin.Context, request HyPhyRequest) (i
 			"jobId":  job.GetId(),
 			"status": status,
 		}, nil
-	}
-
-	// Get auth token from header
-	authToken := c.GetHeader("X-SLURM-USER-TOKEN")
-	if authToken == "" {
-		log.Println("Error: X-SLURM-USER-TOKEN header not present")
-		return nil, fmt.Errorf("authentication token required")
-	}
-
-	// Update scheduler config with auth token
-	if slurmScheduler, ok := api.Scheduler.(*SlurmRestScheduler); ok {
-		slurmScheduler.Config.AuthToken = authToken
-	} else {
-		return nil, fmt.Errorf("unsupported scheduler type")
 	}
 
 	// Submit job

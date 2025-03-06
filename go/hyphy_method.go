@@ -22,29 +22,18 @@ type HyPhyMethod struct {
 	HyPhyPath  string
 	MethodType HyPhyMethodType
 	Request    interface{}
+	DataDir    string
 }
 
 // NewHyPhyMethod creates a new HyPhyMethod instance
-func NewHyPhyMethod(request interface{}, basePath, hyPhyPath string) (*HyPhyMethod, error) {
-	// Use reflection to determine method type from request type
-	reqType := reflect.TypeOf(request).String()
-	var methodType HyPhyMethodType
-
-	switch reqType {
-	case "*openapi.FelRequest":
-		methodType = MethodFEL
-	case "*openapi.BustedRequest":
-		methodType = MethodBUSTED
-	default:
-		return nil, fmt.Errorf("unknown request type: %s", reqType)
-	}
-
+func NewHyPhyMethod(request interface{}, basePath, hyPhyPath string, methodType HyPhyMethodType, dataDir string) *HyPhyMethod {
 	return &HyPhyMethod{
 		BasePath:   basePath,
 		HyPhyPath:  hyPhyPath,
 		MethodType: methodType,
 		Request:    request,
-	}, nil
+		DataDir:    dataDir,
+	}
 }
 
 // getCommandArg converts a field value to a command line argument
@@ -94,7 +83,8 @@ func getCommandArg(field reflect.StructField, value reflect.Value, argPrefix str
 		// Handle GeneticCode struct
 		if field.Type == reflect.TypeOf(GeneticCode{}) {
 			if !value.IsZero() {
-				return fmt.Sprintf(" --code %s", value.Interface())
+				// Convert GeneticCode to string using the field name
+				return fmt.Sprintf(" --code %v", value.Interface())
 			}
 		}
 	}
@@ -103,7 +93,115 @@ func getCommandArg(field reflect.StructField, value reflect.Value, argPrefix str
 
 // GetCommand returns the command to run the HyPhy analysis
 func (m *HyPhyMethod) GetCommand() string {
-	cmd := fmt.Sprintf("%s %s --alignment ${DATASET_PATH}", m.HyPhyPath, m.MethodType)
+	// Get the dataset ID from the request
+	var datasetId string
+	if hyPhyReq, ok := m.Request.(HyPhyRequest); ok {
+		datasetId = hyPhyReq.GetAlignment()
+	} else {
+		// Extract dataset ID from request using reflection
+		reqValue := reflect.ValueOf(m.Request).Elem()
+		datasetIdField := reqValue.FieldByName("DatasetId")
+		if datasetIdField.IsValid() {
+			datasetId = datasetIdField.String()
+		} else {
+			// Fallback to using the alignment field
+			alignmentField := reqValue.FieldByName("Alignment")
+			if alignmentField.IsValid() {
+				datasetId = alignmentField.String()
+			}
+		}
+	}
+
+	// Construct the dataset path
+	datasetPath := filepath.Join(m.DataDir, datasetId)
+
+	// Start with the base command
+	cmd := fmt.Sprintf("%s %s --alignment %s", m.HyPhyPath, m.MethodType, datasetPath)
+
+	// Check if the request implements HyPhyRequest
+	if hyPhyReq, ok := m.Request.(HyPhyRequest); ok {
+		// Add tree parameter only if it was explicitly set
+		if hyPhyReq.IsTreeSet() {
+			tree := hyPhyReq.GetTree()
+			cmd += fmt.Sprintf(" --tree %s", filepath.Join(m.DataDir, tree))
+		}
+
+		// Add genetic code parameter only if it was explicitly set
+		if hyPhyReq.IsGeneticCodeSet() {
+			geneticCode := hyPhyReq.GetGeneticCode()
+			cmd += fmt.Sprintf(" --code %v", geneticCode)
+		}
+
+		// Add branches parameter only if it was explicitly set
+		if hyPhyReq.IsBranchesSet() {
+			branches := hyPhyReq.GetBranches()
+			if len(branches) > 0 {
+				cmd += fmt.Sprintf(" --branches %s", strings.Join(branches, ","))
+			}
+		}
+
+		// Add CI parameter only if it was explicitly set
+		if hyPhyReq.IsCISet() {
+			ci := hyPhyReq.GetCI()
+			cmd += fmt.Sprintf(" --ci %v", ci)
+		}
+
+		// Add SRV parameter only if it was explicitly set
+		if hyPhyReq.IsSRVSet() {
+			srv := hyPhyReq.GetSRV()
+			cmd += fmt.Sprintf(" --srv %v", srv)
+		}
+
+		// Add resample parameter only if it was explicitly set
+		if hyPhyReq.IsResampleSet() {
+			resample := hyPhyReq.GetResample()
+			cmd += fmt.Sprintf(" --resample %v", resample)
+		}
+
+		// Add multiple-hits parameter only if it was explicitly set
+		if hyPhyReq.IsMultipleHitsSet() {
+			multipleHits := hyPhyReq.GetMultipleHits()
+			cmd += fmt.Sprintf(" --multiple-hits %s", multipleHits)
+		}
+
+		// Add site-multihit parameter only if it was explicitly set
+		if hyPhyReq.IsSiteMultihitSet() {
+			siteMultihit := hyPhyReq.GetSiteMultihit()
+			cmd += fmt.Sprintf(" --site-multihit %s", siteMultihit)
+		}
+
+		// Add rates parameter only if it was explicitly set
+		if hyPhyReq.IsRatesSet() {
+			rates := hyPhyReq.GetRates()
+			cmd += fmt.Sprintf(" --rates %v", rates)
+		}
+
+		// Add syn-rates parameter only if it was explicitly set
+		if hyPhyReq.IsSynRatesSet() {
+			synRates := hyPhyReq.GetSynRates()
+			cmd += fmt.Sprintf(" --syn-rates %v", synRates)
+		}
+
+		// Add grid-size parameter only if it was explicitly set
+		if hyPhyReq.IsGridSizeSet() {
+			gridSize := hyPhyReq.GetGridSize()
+			cmd += fmt.Sprintf(" --grid-size %v", gridSize)
+		}
+
+		// Add starting-points parameter only if it was explicitly set
+		if hyPhyReq.IsStartingPointsSet() {
+			startingPoints := hyPhyReq.GetStartingPoints()
+			cmd += fmt.Sprintf(" --starting-points %v", startingPoints)
+		}
+
+		// Add error-sink parameter only if it was explicitly set
+		if hyPhyReq.IsErrorSinkSet() {
+			errorSink := hyPhyReq.GetErrorSink()
+			cmd += fmt.Sprintf(" --error-sink %v", errorSink)
+		}
+
+		return cmd
+	}
 
 	// Use reflection to iterate over request fields
 	reqValue := reflect.ValueOf(m.Request).Elem()
@@ -112,6 +210,11 @@ func (m *HyPhyMethod) GetCommand() string {
 	for i := 0; i < reqType.NumField(); i++ {
 		field := reqType.Field(i)
 		value := reqValue.Field(i)
+
+		// Skip alignment and dataset ID fields as they're handled separately
+		if field.Name == "Alignment" || field.Name == "DatasetId" {
+			continue
+		}
 
 		// Add argument if field has a value
 		if arg := getCommandArg(field, value, string(m.MethodType)); arg != "" {
@@ -125,9 +228,21 @@ func (m *HyPhyMethod) GetCommand() string {
 // ValidateInput validates the input dataset and method-specific parameters
 func (m *HyPhyMethod) ValidateInput(dataset DatasetInterface) error {
 	metadata := dataset.GetMetadata()
-	if metadata.Type != "fasta" && metadata.Type != "nexus" {
+	if metadata.Type != "fasta" && metadata.Type != "nexus" && metadata.Type != "fas" {
 		return fmt.Errorf("invalid dataset type for %s analysis: %s. Expected 'fasta' or 'nexus'",
 			m.MethodType, metadata.Type)
+	}
+
+	// TODO: validate using reflection. if the request implements HyPhyRequest,
+	// look for any parameter that any hyphy method might have and if it exists,
+	// validate it
+	// TODO: do we need to validate the dataset? or is validated elsewhere?
+
+	// Check if the request implements HyPhyRequest
+	if _, ok := m.Request.(HyPhyRequest); ok {
+		// For HyPhyRequest, we can't validate additional parameters
+		// We'll assume they're valid for now
+		return nil
 	}
 
 	switch req := m.Request.(type) {

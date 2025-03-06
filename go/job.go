@@ -26,6 +26,7 @@ type JobInterface interface {
 	GetOutputPath() string
 	GetLogPath() string
 	Validate() error
+	GetMethod() ComputeMethodInterface
 }
 
 // SchedulerInterface abstracts job scheduler operations
@@ -139,4 +140,9 @@ func (j *BaseJob) Cancel() error {
 
 	j.UpdatedAt = time.Now()
 	return nil
+}
+
+// GetMethod returns the compute method
+func (j *BaseJob) GetMethod() ComputeMethodInterface {
+	return j.Method
 }

@@ -23,9 +23,9 @@ type BUSTEDAPI struct {
 }
 
 // NewBUSTEDAPI creates a new BUSTEDAPI instance
-func NewBUSTEDAPI(basePath, hyPhyPath string, scheduler SchedulerInterface, datasetDir string) *BUSTEDAPI {
+func NewBUSTEDAPI(basePath, hyPhyPath string, scheduler SchedulerInterface, datasetTracker DatasetTracker) *BUSTEDAPI {
 	return &BUSTEDAPI{
-		HyPhyBaseAPI: NewHyPhyBaseAPI(basePath, hyPhyPath, scheduler, datasetDir),
+		HyPhyBaseAPI: NewHyPhyBaseAPI(basePath, hyPhyPath, scheduler, datasetTracker),
 	}
 }
 
@@ -43,7 +43,7 @@ func (api *BUSTEDAPI) GetBUSTEDJob(c *gin.Context) {
 		return
 	}
 
-	result, err := api.HandleGetJob(c, adapted)
+	result, err := api.HandleGetJob(c, adapted, MethodBUSTED)
 	if err != nil {
 		if err.Error() == "job is not complete" {
 			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
@@ -79,7 +79,7 @@ func (api *BUSTEDAPI) StartBUSTEDJob(c *gin.Context) {
 		return
 	}
 
-	result, err := api.HandleStartJob(c, adapted)
+	result, err := api.HandleStartJob(c, adapted, MethodBUSTED)
 	if err != nil {
 		if err.Error() == "authentication token required" {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})

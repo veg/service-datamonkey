@@ -11,7 +11,6 @@
 package openapi
 
 import (
-	"crypto/md5"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -149,22 +148,12 @@ func (api *FileUploadAndQCAPI) PostDataset(c *gin.Context) {
 		}
 	}
 
-	// Compute a unique filename using a hash of the file's name and type
-	hash := md5.Sum([]byte(file.Meta.Name + file.Meta.Type))
-	filename := fmt.Sprintf("/data/uploads/%x", hash)
-	id := fmt.Sprintf("%x", hash)
-
-	// Write the file to disk or download it from the URL
+	// Read the file content first
 	var content []byte
 	if file.File != nil {
-		log.Printf("Writing file %s to disk", file.Meta.Name)
+		log.Printf("Reading file %s", file.Meta.Name)
 		file.File.Seek(0, 0)
 		content, err = io.ReadAll(file.File)
-		if err != nil {
-			c.JSON(500, gin.H{"error": err.Error()})
-			return
-		}
-		err = os.WriteFile(filename, content, 0644)
 		if err != nil {
 			c.JSON(500, gin.H{"error": err.Error()})
 			return
@@ -182,14 +171,9 @@ func (api *FileUploadAndQCAPI) PostDataset(c *gin.Context) {
 			c.JSON(500, gin.H{"error": err.Error()})
 			return
 		}
-		err = os.WriteFile(filename, content, 0644)
-		if err != nil {
-			c.JSON(500, gin.H{"error": err.Error()})
-			return
-		}
 	}
 
-	// Create and store the dataset
+	// Create the dataset with the content
 	dataset := NewBaseDataset(DatasetMetadata{
 		Name:        file.Meta.Name,
 		Description: file.Meta.Description,
@@ -198,10 +182,21 @@ func (api *FileUploadAndQCAPI) PostDataset(c *gin.Context) {
 		Updated:     time.Now(),
 	}, content)
 
+	// Now use the dataset ID (content hash) as the filename
+	filename := fmt.Sprintf("%s/%s", api.datasetTracker.GetDatasetDir(), dataset.GetId())
+
+	// Write the file to disk
+	err = os.WriteFile(filename, content, 0644)
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Store the dataset in the tracker
 	if err := api.datasetTracker.Store(dataset); err != nil {
 		c.JSON(500, gin.H{"error": fmt.Sprintf("Failed to store dataset: %v", err)})
 		return
 	}
 
-	c.JSON(200, gin.H{"status": "File uploaded successfully", "file": id})
+	c.JSON(200, gin.H{"status": "File uploaded successfully", "file": dataset.GetId()})
 }

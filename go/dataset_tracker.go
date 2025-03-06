@@ -27,19 +27,31 @@ type DatasetTracker interface {
 
 	// DeleteAll completely removes the tracker file
 	DeleteAll() error
+
+	// GetDatasetDir returns the directory where datasets are stored
+	// TODO: some day if this isnt in a typical file-based storage system, we should change this name
+	// for now i figure even if the tracker uses a db, it still needs to know where the datasets are stored
+	GetDatasetDir() string
 }
 
 // FileDatasetTracker implements DatasetTracker using a file-based storage
 type FileDatasetTracker struct {
 	filePath string
+	dataDir  string
 	mu       sync.RWMutex
 }
 
 // NewFileDatasetTracker creates a new FileDatasetTracker instance
-func NewFileDatasetTracker(filePath string) *FileDatasetTracker {
+func NewFileDatasetTracker(filePath string, dataDir string) *FileDatasetTracker {
 	return &FileDatasetTracker{
 		filePath: filePath,
+		dataDir:  dataDir,
 	}
+}
+
+// GetDatasetDir returns the directory where datasets are stored
+func (t *FileDatasetTracker) GetDatasetDir() string {
+	return t.dataDir
 }
 
 // Store stores a dataset in the tracker

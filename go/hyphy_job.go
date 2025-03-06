@@ -13,9 +13,27 @@ type HyPhyJob struct {
 
 // NewHyPhyJob creates a new HyPhy job instance
 func NewHyPhyJob(request interface{}, method *HyPhyMethod, scheduler SchedulerInterface) *HyPhyJob {
-	// Extract dataset ID from request using reflection
-	reqValue := reflect.ValueOf(request).Elem()
-	datasetId := reqValue.FieldByName("DatasetId").String()
+	var datasetId string
+
+	// Check if the request is a HyPhyRequest interface
+	if hyPhyReq, ok := request.(HyPhyRequest); ok {
+		// For HyPhyRequest, we don't have a direct way to get the datasetId
+		// We'll use the alignment as the datasetId for now
+		datasetId = hyPhyReq.GetAlignment()
+	} else {
+		// Extract dataset ID from request using reflection
+		reqValue := reflect.ValueOf(request).Elem()
+		datasetIdField := reqValue.FieldByName("DatasetId")
+		if datasetIdField.IsValid() {
+			datasetId = datasetIdField.String()
+		} else {
+			// Fallback to using the alignment field
+			alignmentField := reqValue.FieldByName("Alignment")
+			if alignmentField.IsValid() {
+				datasetId = alignmentField.String()
+			}
+		}
+	}
 
 	// Create base job
 	baseJob := NewBaseJob(datasetId, scheduler, method)
