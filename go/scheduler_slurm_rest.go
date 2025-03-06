@@ -146,11 +146,16 @@ func (s *SlurmRestScheduler) generateJWTToken() (string, error) {
 	return signedToken, nil
 }
 
-// getAuthToken safely retrieves the current auth token
+// getAuthToken returns the current auth token with mutex protection
 func (s *SlurmRestScheduler) getAuthToken() string {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.Config.AuthToken
+}
+
+// GetAuthToken returns the current auth token with mutex protection (for testing)
+func (s *SlurmRestScheduler) GetAuthToken() string {
+	return s.getAuthToken()
 }
 
 // Shutdown stops the token refresh goroutine

@@ -2,10 +2,13 @@ package openapi
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"os"
 	"strings"
 	"sync"
+
+	"github.com/redis/go-redis/v9"
 )
 
 // JobTracker defines the interface for tracking job mappings
@@ -122,5 +125,119 @@ func (t *FileJobTracker) DeleteJobMapping(jobID string) error {
 	return nil
 }
 
-// Ensure FileJobTracker implements JobTracker interface
-var _ JobTracker = (*FileJobTracker)(nil)
+// InMemoryJobTracker implements JobTracker using in-memory storage
+type InMemoryJobTracker struct {
+	mappings map[string]string
+	mu       sync.RWMutex
+}
+
+// NewInMemoryJobTracker creates a new InMemoryJobTracker instance
+func NewInMemoryJobTracker() *InMemoryJobTracker {
+	return &InMemoryJobTracker{
+		mappings: make(map[string]string),
+	}
+}
+
+// StoreJobMapping stores a mapping between our job ID and the scheduler's job ID
+func (t *InMemoryJobTracker) StoreJobMapping(jobID string, schedulerJobID string) error {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	
+	t.mappings[jobID] = schedulerJobID
+	return nil
+}
+
+// GetSchedulerJobID retrieves the scheduler's job ID for our job ID
+func (t *InMemoryJobTracker) GetSchedulerJobID(jobID string) (string, error) {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	
+	schedulerJobID, ok := t.mappings[jobID]
+	if !ok {
+		return "", fmt.Errorf("job ID not found in tracker")
+	}
+	
+	return schedulerJobID, nil
+}
+
+// DeleteJobMapping removes a job mapping
+func (t *InMemoryJobTracker) DeleteJobMapping(jobID string) error {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	
+	delete(t.mappings, jobID)
+	return nil
+}
+
+// RedisJobTracker implements JobTracker using Redis
+type RedisJobTracker struct {
+	client *redis.Client
+	prefix string
+}
+
+// NewRedisJobTracker creates a new RedisJobTracker instance
+func NewRedisJobTracker(redisURL string) (*RedisJobTracker, error) {
+	opts, err := redis.ParseURL(redisURL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse Redis URL: %v", err)
+	}
+	
+	client := redis.NewClient(opts)
+	
+	// Test the connection
+	ctx := context.Background()
+	if err := client.Ping(ctx).Err(); err != nil {
+		return nil, fmt.Errorf("failed to connect to Redis: %v", err)
+	}
+	
+	return &RedisJobTracker{
+		client: client,
+		prefix: "job_mapping:",
+	}, nil
+}
+
+// StoreJobMapping stores a mapping between our job ID and the scheduler's job ID
+func (t *RedisJobTracker) StoreJobMapping(jobID string, schedulerJobID string) error {
+	ctx := context.Background()
+	key := t.prefix + jobID
+	
+	if err := t.client.Set(ctx, key, schedulerJobID, 0).Err(); err != nil {
+		return fmt.Errorf("failed to store job mapping in Redis: %v", err)
+	}
+	
+	return nil
+}
+
+// GetSchedulerJobID retrieves the scheduler's job ID for our job ID
+func (t *RedisJobTracker) GetSchedulerJobID(jobID string) (string, error) {
+	ctx := context.Background()
+	key := t.prefix + jobID
+	
+	schedulerJobID, err := t.client.Get(ctx, key).Result()
+	if err == redis.Nil {
+		return "", fmt.Errorf("job ID not found in tracker")
+	} else if err != nil {
+		return "", fmt.Errorf("failed to get job mapping from Redis: %v", err)
+	}
+	
+	return schedulerJobID, nil
+}
+
+// DeleteJobMapping removes a job mapping
+func (t *RedisJobTracker) DeleteJobMapping(jobID string) error {
+	ctx := context.Background()
+	key := t.prefix + jobID
+	
+	if err := t.client.Del(ctx, key).Err(); err != nil {
+		return fmt.Errorf("failed to delete job mapping from Redis: %v", err)
+	}
+	
+	return nil
+}
+
+// Ensure implementations satisfy the JobTracker interface
+var (
+	_ JobTracker = (*FileJobTracker)(nil)
+	_ JobTracker = (*InMemoryJobTracker)(nil)
+	_ JobTracker = (*RedisJobTracker)(nil)
+)
