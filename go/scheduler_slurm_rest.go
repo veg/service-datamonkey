@@ -130,8 +130,8 @@ func (s *SlurmRestScheduler) generateJWTToken() (string, error) {
 	// Create the JWT claims
 	now := time.Now()
 	claims := jwt.MapClaims{
-		"exp": now.Add(time.Duration(s.Config.JWTExpirationSecs) * time.Second).Unix(),
 		"iat": now.Unix(),
+		"exp": now.Add(time.Duration(s.Config.JWTExpirationSecs) * time.Second).Unix(),
 		"sun": s.Config.JWTUsername,
 	}
 
@@ -142,6 +142,7 @@ func (s *SlurmRestScheduler) generateJWTToken() (string, error) {
 		return "", fmt.Errorf("failed to sign JWT token: %v", err)
 	}
 
+	log.Printf("Generated JWT token: %s", signedToken)
 	// Format the token as expected by Slurm
 	return signedToken, nil
 }
@@ -293,11 +294,15 @@ func (s *SlurmRestScheduler) GetStatus(job JobInterface) (JobStatusValue, error)
 		if !ok {
 			continue
 		}
+		fmt.Println(jobMap["name"])
 		if jobMap["name"] == job.GetId() {
+			fmt.Println("found it")
+			fmt.Println(jobMap["state"])
 			state, ok := jobMap["state"].(map[string]interface{})
 			if !ok {
 				continue
 			}
+			fmt.Println(state["current"])
 			current, ok := state["current"].(string)
 			if !ok {
 				continue

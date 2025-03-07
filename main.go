@@ -15,7 +15,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"strconv"
 	"time"
 
 	sw "github.com/d-callan/service-datamonkey/go"
@@ -83,11 +82,10 @@ func initSlurmConfig() sw.SlurmRestConfig {
 	// Get token refresh configuration with sensible defaults
 	tokenRefreshHours := 12
 
-	// Configure JWT token generation
-	jwtKeyPath := getEnvWithFatal("SLURM_JWT_KEY_PATH")
-	jwtUsername := getEnvWithFatal("SLURM_JWT_USERNAME")
-	jwtExpirationStr := getEnvWithDefault("SLURM_JWT_EXPIRATION_SECS", "86400")
-	jwtExpirationSecs, _ := strconv.ParseInt(jwtExpirationStr, 10, 64)
+	// Configure JWT token generation with hardcoded values for username and expiration
+	jwtKeyPath := getEnvWithDefault("JWT_KEY_PATH", "/var/spool/slurm/statesave/jwt_hs256.key")
+	jwtUsername := "slurm"
+	jwtExpirationSecs := int64(86400) // 24 hours
 
 	return sw.SlurmRestConfig{
 		BaseURL:              baseURL,

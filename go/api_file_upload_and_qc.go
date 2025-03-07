@@ -79,20 +79,30 @@ func (api *FileUploadAndQCAPI) PostDataset(c *gin.Context) {
 	var file UploadRequest
 	if len(form.File["file"]) > 0 {
 		fileHeader := form.File["file"][0]
-		file.File, err = os.Create(fileHeader.Filename)
+
+		// Create a temporary file in the system's temp directory
+		tempFile, err := os.CreateTemp("", "upload-*")
 		if err != nil {
-			c.JSON(400, gin.H{"error": err.Error()})
+			log.Printf("Error creating temporary file: %v", err)
+			c.JSON(500, gin.H{"error": fmt.Sprintf("Failed to create temporary file: %v", err)})
 			return
 		}
+		file.File = tempFile
+
+		// Open the uploaded file
 		f, err := fileHeader.Open()
 		if err != nil {
+			log.Printf("Error opening uploaded file: %v", err)
 			c.JSON(400, gin.H{"error": err.Error()})
 			return
 		}
 		defer f.Close()
-		// Use the multipart.File object directly to read its contents
+
+		// Copy the contents to the temporary file
+		log.Printf("Copying uploaded file to temporary file: %s", tempFile.Name())
 		_, err = io.Copy(file.File, f)
 		if err != nil {
+			log.Printf("Error copying file: %v", err)
 			c.JSON(400, gin.H{"error": err.Error()})
 			return
 		}

@@ -6,30 +6,29 @@ services:
     hostname: service-datamonkey
     container_name: service-datamonkey
     volumes:
-      - uploaded_data:/data/uploads
+      - application_data:/data/uploads
+      - ${JWT_KEY_VOLUME:-}
     expose: 
       - 9300
     ports: 
       - 9300:9300
+    environment:
+      - DATASET_TRACKER_TYPE=${DATASET_TRACKER_TYPE:-FileDatasetTracker}
+      - DATASET_LOCATION=${DATASET_LOCATION:-/data/uploads}
+      - JOB_TRACKER_TYPE=${JOB_TRACKER_TYPE:-FileJobTracker}
+      - JOB_TRACKER_LOCATION=${JOB_TRACKER_LOCATION:-/data/uploads}
+      - SCHEDULER_TYPE=${SCHEDULER_TYPE:-SlurmRestScheduler}
+      - SLURM_REST_URL=${SLURM_REST_URL:-http://c2:9200}
+      - SLURM_REST_API_PATH=${SLURM_REST_API_PATH:-/slurmdb/v0.0.37}
+      - SLURM_REST_SUBMIT_API_PATH=${SLURM_REST_SUBMIT_API_PATH:-/slurm/v0.0.37}
+      - SLURM_QUEUE_NAME=${SLURM_QUEUE_NAME:-normal}
+      - SERVICE_DATAMONKEY_PORT=${SERVICE_DATAMONKEY_PORT:-9300}
+      - HYPHY_PATH=${HYPHY_PATH:-hyphy}
+      - HYPHY_BASE_PATH=${HYPHY_BASE_PATH:-/data/uploads}
+      # JWT configuration
+      - JWT_KEY_PATH=${JWT_KEY_PATH:-/var/spool/slurm/statesave/jwt_hs256.key}
     depends_on:
       - c2
-    environment:
-      DATASET_TRACKER_TYPE: ${DATASET_TRACKER_TYPE}
-      DATASET_LOCATION: ${DATASET_LOCATION}
-      SLURM_REST_URL: ${SLURM_REST_URL}
-      SLURM_REST_API_PATH: ${SLURM_REST_API_PATH}
-      SLURM_REST_SUBMIT_API_PATH: ${SLURM_REST_SUBMIT_API_PATH}
-      SLURM_QUEUE_NAME: ${SLURM_QUEUE_NAME}
-      # JWT token generation configuration
-      SLURM_JWT_KEY_PATH: ${SLURM_JWT_KEY_PATH}
-      SLURM_JWT_USERNAME: ${SLURM_JWT_USERNAME}
-      SLURM_JWT_EXPIRATION_SECS: ${SLURM_JWT_EXPIRATION_SECS:-86400}
-      SCHEDULER_TYPE: ${SCHEDULER_TYPE}
-      SERVICE_DATAMONKEY_PORT: ${SERVICE_DATAMONKEY_PORT}
-      JOB_TRACKER_TYPE: ${JOB_TRACKER_TYPE}
-      JOB_TRACKER_LOCATION: ${JOB_TRACKER_LOCATION}
-      HYPHY_PATH: ${HYPHY_PATH}
-      HYPHY_BASE_PATH: ${HYPHY_BASE_PATH}
 
   mysql:
     image: mariadb:10.10
@@ -52,10 +51,13 @@ services:
     command: [ "slurmdbd" ]
     container_name: slurmdbd
     hostname: slurmdbd
+    environment:
+      JWT_KEY_PATH: ${JWT_KEY_PATH:-/var/spool/slurm/statesave/jwt_hs256.key}
     volumes:
       - etc_munge:/etc/munge
       - etc_slurm:/etc/slurm
       - var_log_slurm:/var/log/slurm
+      - ${JWT_KEY_VOLUME:-}
     expose:
       - "6819"
     depends_on:
@@ -66,11 +68,14 @@ services:
     command: [ "slurmctld" ]
     container_name: slurmctld
     hostname: slurmctld
+    environment:
+      JWT_KEY_PATH: ${JWT_KEY_PATH:-/var/spool/slurm/statesave/jwt_hs256.key}
     volumes:
       - etc_munge:/etc/munge
       - etc_slurm:/etc/slurm
       - slurm_jobdir:/data
       - var_log_slurm:/var/log/slurm
+      - ${JWT_KEY_VOLUME:-}
     expose:
       - "6817"
     depends_on:
@@ -81,12 +86,15 @@ services:
     command: [ "slurmd" ]
     hostname: c1
     container_name: c1
+    environment:
+      JWT_KEY_PATH: ${JWT_KEY_PATH:-/var/spool/slurm/statesave/jwt_hs256.key}
     volumes:
       - etc_munge:/etc/munge
       - etc_slurm:/etc/slurm
       - slurm_jobdir:/data
       - var_log_slurm:/var/log/slurm
-      - uploaded_data:/data/uploads
+      - application_data:/data/uploads
+      - ${JWT_KEY_VOLUME:-}
     expose:
       - "6818"
     depends_on:
@@ -98,12 +106,15 @@ services:
     command: [ "/usr/share/bin/slurmrestd.sh" ]
     hostname: c2
     container_name: c2
+    environment:
+      JWT_KEY_PATH: ${JWT_KEY_PATH:-/var/spool/slurm/statesave/jwt_hs256.key}
     volumes:
       - etc_munge:/etc/munge
       - etc_slurm:/etc/slurm
       - slurm_jobdir:/data
       - var_log_slurm:/var/log/slurm
-      - uploaded_data:/data/uploads
+      - application_data:/data/uploads
+      - ${JWT_KEY_VOLUME:-}
     expose:
       - "6818"
       - "9200"
@@ -114,7 +125,7 @@ services:
 
 networks:
   default:
-    name: slurm_rest_api
+    name: datamonkey
     driver: bridge
     
 volumes:
@@ -123,4 +134,4 @@ volumes:
   slurm_jobdir:
   var_lib_mysql:
   var_log_slurm:
-  uploaded_data:
+  application_data:

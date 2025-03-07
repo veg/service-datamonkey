@@ -295,12 +295,12 @@ func (m *HyPhyMethod) ParseResult(output string) (interface{}, error) {
 
 // GetOutputPath returns the path where results should be stored
 func (m *HyPhyMethod) GetOutputPath(jobId string) string {
-	return filepath.Join(m.BasePath, "results", fmt.Sprintf("%s_%s.json", m.MethodType, jobId))
+	return filepath.Join(m.BasePath, fmt.Sprintf("%s_%s_results.json", m.MethodType, jobId))
 }
 
 // GetLogPath returns the path where logs should be stored
 func (m *HyPhyMethod) GetLogPath(jobId string) string {
-	return filepath.Join(m.BasePath, "logs", fmt.Sprintf("%s_%s.log", m.MethodType, jobId))
+	return filepath.Join(m.BasePath, fmt.Sprintf("%s_%s.log", m.MethodType, jobId))
 }
 
 // assert that HyPhyMethod implements ComputeMethodInterface at compile-time rather than run-time
