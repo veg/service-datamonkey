@@ -122,6 +122,7 @@ func initAPIHandlers(scheduler sw.SchedulerInterface, datasetTracker sw.DatasetT
 	basePath := getEnvWithDefault("HYPHY_BASE_PATH", "/data/uploads")
 
 	return sw.ApiHandleFunctions{
+		ABSRELAPI:           *sw.NewABSRELAPI(basePath, hyPhyPath, scheduler, datasetTracker),
 		FELAPI:             *sw.NewFELAPI(basePath, hyPhyPath, scheduler, datasetTracker),
 		BUSTEDAPI:          *sw.NewBUSTEDAPI(basePath, hyPhyPath, scheduler, datasetTracker),
 		FileUploadAndQCAPI: *sw.NewFileUploadAndQCAPI(datasetTracker),

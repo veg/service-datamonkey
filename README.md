@@ -95,8 +95,23 @@ To add a new HyPhy method after it has been added to api-datamonkey and `make up
    )
    ```
 
-2. **Update the generated API implementation file** (e.g., `api_new_method.go`) following the pattern of existing methods. This should be as simple as copying and pasting the existing method and modifying it slightly to add your new method. Alternatively, point an LLM at the existing methods as an example to generate the new method.
-  
+   and update the ParseResult method to handle your new method. Example:
+   ```
+   case MethodNewMethod:
+		var result NewMethodResult
+		err := json.Unmarshal([]byte(output), &result)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse new method result: %v", err)
+		}
+		return result, nil
+   ```
+
+2. **Create an API implementation file** (e.g., `api_new_method.go`) following the pattern of existing methods. This should be as simple as copying and pasting the existing method and modifying it slightly to add your new method. Alternatively, point an LLM at the existing methods as an example to generate the new method.
+
+3. **Add a handler for the new route** in `main.go` by adding a line to initAPIHandlers like so:
+   ```
+   NEWMETHODAPI:             *sw.NewNEWMETHODAPI(basePath, hyPhyPath, scheduler, datasetTracker),
+   ```
 
 ### Adding New Parameters to Existing Methods
 

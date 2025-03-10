@@ -14,6 +14,7 @@ type HyPhyMethodType string
 const (
 	MethodFEL    HyPhyMethodType = "fel"
 	MethodBUSTED HyPhyMethodType = "busted"
+	MethodABSREL HyPhyMethodType = "absrel"
 )
 
 // HyPhyMethod implements ComputeMethodInterface for all HyPhy analyses
@@ -290,6 +291,14 @@ func (m *HyPhyMethod) ParseResult(output string) (interface{}, error) {
 		err := json.Unmarshal([]byte(output), &result)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse BUSTED result: %v", err)
+		}
+		return result, nil
+
+	case MethodABSREL:
+		var result AbsrelResult
+		err := json.Unmarshal([]byte(output), &result)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse ABSREL result: %v", err)
 		}
 		return result, nil
 
