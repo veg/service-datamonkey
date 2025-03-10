@@ -378,37 +378,26 @@ components:
       pattern: "^[a-zA-Z0-9]+$"
       type: string
     GeneticCode:
+      default: Universal
       description: |
         Available Genetic Codes
       enum:
-      - value: Universal
-        display_name: Universal code
-      - value: Vertebrate mtDNA
-        display_name: Vertebrate mitochondrial DNA code
-      - value: Yeast mtDNA
-        display_name: Yeast mitochondrial DNA code
-      - value: Mold/Protozoan mtDNA
-        display_name: "Mold, Protozoan and Coelenterate mt; Mycloplasma/Spiroplasma"
-      - value: Invertebrate mtDNA
-        display_name: Invertebrate mitochondrial DNA code
-      - value: Ciliate Nuclear
-        display_name: "Ciliate, Dasycladacean and Hexamita Nuclear code"
-      - value: Echinoderm mtDNA
-        display_name: Echinoderm mitochondrial DNA code
-      - value: Eupltoid Nuclear
-        display_name: Euplotid Nuclear code
-      - value: Alt. Yeast Nuclear
-        display_name: Alternative Yeast Nuclear code
-      - value: Ascidian mtDNA
-        display_name: Ascidian mitochondrial DNA code
-      - value: Flatworm mtDNA
-        display_name: Flatworm mitochondrial DNA code
-      - value: Blepharisma Nuclear
-        display_name: Blepharisma Nuclear code
-      type: object
+      - Universal
+      - Vertebrate mtDNA
+      - Yeast mtDNA
+      - Mold/Protozoan mtDNA
+      - Invertebrate mtDNA
+      - Ciliate Nuclear
+      - Echinoderm mtDNA
+      - Eupltoid Nuclear
+      - Alt. Yeast Nuclear
+      - Ascidian mtDNA
+      - Flatworm mtDNA
+      - Blepharisma Nuclear
+      type: string
     FelRequest:
       example:
-        genetic_code: "{}"
+        genetic_code: Universal
         site_multihit: Estimate
         ci: false
         srv: true
@@ -658,7 +647,7 @@ components:
       type: object
     BustedRequest:
       example:
-        genetic_code: "{}"
+        genetic_code: Universal
         srv: "Yes"
         syn_rates: 6
         multiple_hits: None
@@ -842,7 +831,7 @@ components:
       type: object
     AbsrelRequest:
       example:
-        genetic_code: "{}"
+        genetic_code: Universal
         srv: true
         multiple_hits: None
         tree: tree

@@ -60,6 +60,13 @@ func getCommandArg(field reflect.StructField, value reflect.Value, argPrefix str
 		if str := value.String(); str != "" {
 			return fmt.Sprintf(" --%s %s", argName, str)
 		}
+		// Handle GeneticCode type
+		if field.Type == reflect.TypeOf(GeneticCode("")) {
+			if !value.IsZero() {
+				// Convert GeneticCode to string
+				return fmt.Sprintf(" --code %v", value.Interface())
+			}
+		}
 	case reflect.Int, reflect.Int32, reflect.Int64:
 		if num := value.Int(); num > 0 {
 			return fmt.Sprintf(" --%s %d", argName, num)
@@ -80,12 +87,10 @@ func getCommandArg(field reflect.StructField, value reflect.Value, argPrefix str
 			}
 		}
 	case reflect.Struct:
-		// Handle GeneticCode struct
-		if field.Type == reflect.TypeOf(GeneticCode{}) {
-			if !value.IsZero() {
-				// Convert GeneticCode to string using the field name
-				return fmt.Sprintf(" --code %v", value.Interface())
-			}
+		// Handle other structs
+		if !value.IsZero() {
+			// Convert struct to string using the field name
+			return fmt.Sprintf(" --%s %v", argName, value.Interface())
 		}
 	}
 	return ""

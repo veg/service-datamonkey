@@ -52,7 +52,7 @@ update:
 .PHONY: build
 build:
 	@echo Building $(local_name):$(tag)
-	@docker build -t $(local_name):$(tag) .
+	@docker build -t $(local_name):$(tag) . --no-cache
 
 
 .PHONY: start

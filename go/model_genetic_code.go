@@ -9,7 +9,21 @@
  */
 
 package datamonkey
+// GeneticCode : Available Genetic Codes 
+type GeneticCode string
 
-// GeneticCode - Available Genetic Codes 
-type GeneticCode struct {
-}
+// List of GeneticCode
+const (
+	UNIVERSAL GeneticCode = "Universal"
+	VERTEBRATE_MT_DNA GeneticCode = "Vertebrate mtDNA"
+	YEAST_MT_DNA GeneticCode = "Yeast mtDNA"
+	MOLD_PROTOZOAN_MT_DNA GeneticCode = "Mold/Protozoan mtDNA"
+	INVERTEBRATE_MT_DNA GeneticCode = "Invertebrate mtDNA"
+	CILIATE_NUCLEAR GeneticCode = "Ciliate Nuclear"
+	ECHINODERM_MT_DNA GeneticCode = "Echinoderm mtDNA"
+	EUPLTOID_NUCLEAR GeneticCode = "Eupltoid Nuclear"
+	ALT__YEAST_NUCLEAR GeneticCode = "Alt. Yeast Nuclear"
+	ASCIDIAN_MT_DNA GeneticCode = "Ascidian mtDNA"
+	FLATWORM_MT_DNA GeneticCode = "Flatworm mtDNA"
+	BLEPHARISMA_NUCLEAR GeneticCode = "Blepharisma Nuclear"
+)

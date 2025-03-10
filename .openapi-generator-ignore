@@ -28,8 +28,12 @@
 # change port
 Dockerfile
 
-# Ignore main.go
+# Ignore main.go, where we manage service env vars, config etc
 main.go
 
 # business logic in these files. 
 go/api_*.go
+
+# manage deps, etc manaually
+go.mod
+go.sum

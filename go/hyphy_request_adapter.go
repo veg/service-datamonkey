@@ -250,8 +250,8 @@ func AdaptRequest(req interface{}) (HyPhyRequest, error) {
 	}
 
 	if field := v.FieldByName("GeneticCode"); field.IsValid() {
-		if gcStruct, ok := field.Interface().(GeneticCode); ok {
-			adapter.geneticCode = gcStruct.Value
+		if gcString, ok := field.Interface().(GeneticCode); ok {
+			adapter.geneticCode = string(gcString)
 			adapter.geneticCodeSet = true
 		}
 	}
