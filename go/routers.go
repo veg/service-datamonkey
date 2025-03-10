@@ -63,6 +63,8 @@ func DefaultHandleFunc(c *gin.Context) {
 
 type ApiHandleFunctions struct {
 
+	// Routes for the ABSRELAPI part of the API
+	ABSRELAPI ABSRELAPI
 	// Routes for the BUSTEDAPI part of the API
 	BUSTEDAPI BUSTEDAPI
 	// Routes for the FELAPI part of the API
@@ -75,6 +77,18 @@ type ApiHandleFunctions struct {
 
 func getRoutes(handleFunctions ApiHandleFunctions) []Route {
 	return []Route{ 
+		{
+			"GetABSRELJob",
+			http.MethodPost,
+			"/api/v1/methods/absrel-result",
+			handleFunctions.ABSRELAPI.GetABSRELJob,
+		},
+		{
+			"StartABSRELJob",
+			http.MethodPost,
+			"/api/v1/methods/absrel-start",
+			handleFunctions.ABSRELAPI.StartABSRELJob,
+		},
 		{
 			"GetBUSTEDJob",
 			http.MethodPost,

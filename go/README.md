@@ -1,4 +1,4 @@
-# Go API Server for openapi
+# Go API Server for datamonkey
 
 Datamonkey is a free public server for comparative analysis of sequence alignments using state-of-the-art statistical models. <br> This is the OpenAPI definition for the Datamonkey API.
 
@@ -14,7 +14,7 @@ To see how to make this your own, look here:
 [README](https://openapi-generator.tech)
 
 - API version: 1.0.0
-- Build date: 2025-02-21T23:23:22.702809914-05:00[America/New_York]
+- Build date: 2025-03-10T10:50:32.039452888-04:00[America/New_York]
 - Generator version: 7.11.0
 For more information, please visit [http://github.com/veg/api-datamonkey](http://github.com/veg/api-datamonkey)
 
@@ -28,12 +28,12 @@ go run main.go
 
 To run the server in a docker container
 ```
-docker build --network=host -t openapi .
+docker build --network=host -t datamonkey .
 ```
 
 Once the image is built, just run
 ```
-docker run --rm -it openapi
+docker run --rm -it datamonkey
 ```
 
 ### Known Issue

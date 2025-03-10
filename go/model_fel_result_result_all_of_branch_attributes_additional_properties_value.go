@@ -10,9 +10,11 @@
 
 package datamonkey
 
-type BustedResultResultAllOfBranchAttributes struct {
+type FelResultResultAllOfBranchAttributesAdditionalPropertiesValue struct {
 
-	AdditionalPropertiesField map[string]BustedResultResultAllOfBranchAttributesAdditionalPropertiesValue `json:"additionalProperties,omitempty"`
+	GlobalMG94xREV float32 `json:"Global MG94xREV,omitempty"`
 
-	Attributes map[string]FelResultResultAllOfBranchAttributesAttributesValue `json:"attributes,omitempty"`
+	NucleotideGTR float32 `json:"Nucleotide GTR,omitempty"`
+
+	OriginalName string `json:"original name,omitempty"`
 }

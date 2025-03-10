@@ -30,7 +30,7 @@ type BustedResultResult struct {
 
 	BranchAttributes BustedResultResultAllOfBranchAttributes `json:"branch attributes,omitempty"`
 
-	TestResults BustedResultResultAllOfTestResults `json:"test_results,omitempty"`
+	TestResults BustedResultResultAllOfTestResults `json:"test results,omitempty"`
 
 	Substitutions map[string]map[string]BustedResultResultAllOfSubstitutionsValueValue `json:"substitutions,omitempty"`
 

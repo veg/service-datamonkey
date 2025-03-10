@@ -10,9 +10,11 @@
 
 package datamonkey
 
-type BustedResultResultAllOfBranchAttributes struct {
+type AbsrelResultResultAllOfTestResults struct {
 
-	AdditionalPropertiesField map[string]BustedResultResultAllOfBranchAttributesAdditionalPropertiesValue `json:"additionalProperties,omitempty"`
+	PValueThreshold float32 `json:"P-value threshold,omitempty"`
 
-	Attributes map[string]FelResultResultAllOfBranchAttributesAttributesValue `json:"attributes,omitempty"`
+	Tested int32 `json:"tested,omitempty"`
+
+	PositiveTestResults int32 `json:"positive test results,omitempty"`
 }

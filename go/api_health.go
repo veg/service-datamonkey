@@ -27,6 +27,7 @@ type HealthAPI struct {
 func (api *HealthAPI) GetHealth(c *gin.Context) {
 	log.Println("Checking health of Datamonkey")
 
+	// TODO: this always says healthy now?
 	// Use the scheduler interface to check health
 	isHealthy, details, err := api.Scheduler.CheckHealth()
 	if err != nil {

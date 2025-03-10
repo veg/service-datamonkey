@@ -10,9 +10,9 @@
 
 package datamonkey
 
-type BustedResultResultAllOfBranchAttributes struct {
+type AbsrelResult struct {
 
-	AdditionalPropertiesField map[string]BustedResultResultAllOfBranchAttributesAdditionalPropertiesValue `json:"additionalProperties,omitempty"`
+	JobId string `json:"job_id,omitempty" validate:"regexp=^[a-zA-Z0-9]+$"`
 
-	Attributes map[string]FelResultResultAllOfBranchAttributesAttributesValue `json:"attributes,omitempty"`
+	Result AbsrelResultResult `json:"result,omitempty"`
 }

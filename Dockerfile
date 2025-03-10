@@ -25,6 +25,7 @@ RUN mkdir -p /jwt_keys /var/spool/slurm/statesave && \
     chown slurm:slurm /jwt_keys /var/spool/slurm/statesave && \
     chmod 755 /jwt_keys /var/spool/slurm/statesave
 
+# TODO: this is specific to a scheduler type, make it dependent on the env var?
 # Create a directory for a local copy of the JWT key if needed
 RUN mkdir -p /usr/local/etc/jwt && \
     chown slurm:slurm /usr/local/etc/jwt && \

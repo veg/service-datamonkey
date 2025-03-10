@@ -294,15 +294,12 @@ func (s *SlurmRestScheduler) GetStatus(job JobInterface) (JobStatusValue, error)
 		if !ok {
 			continue
 		}
-		fmt.Println(jobMap["name"])
+
 		if jobMap["name"] == job.GetId() {
-			fmt.Println("found it")
-			fmt.Println(jobMap["state"])
 			state, ok := jobMap["state"].(map[string]interface{})
 			if !ok {
 				continue
 			}
-			fmt.Println(state["current"])
 			current, ok := state["current"].(string)
 			if !ok {
 				continue

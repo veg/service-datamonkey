@@ -13,6 +13,7 @@ package datamonkey
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -55,11 +56,39 @@ func (api *FELAPI) GetFELJob(c *gin.Context) {
 
 	// Parse the raw JSON results into FelResult
 	resultMap := result.(map[string]interface{})
+
+	// Log the raw results for debugging
+	rawResults := resultMap["results"].(json.RawMessage)
+	log.Printf("Raw results: %s", string(rawResults))
+
+	// Check if the raw results are valid JSON
+	var testMap map[string]interface{}
+	if err := json.Unmarshal(rawResults, &testMap); err != nil {
+		log.Printf("Raw results are not valid JSON: %v", err)
+	} else {
+		log.Printf("Raw results are valid JSON with %d top-level keys", len(testMap))
+		for k := range testMap {
+			log.Printf("Found top-level key: %s", k)
+		}
+	}
+
 	var felResult FelResult
-	if err := json.Unmarshal(resultMap["results"].(json.RawMessage), &felResult); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse results"})
+	if err := json.Unmarshal(rawResults, &felResult); err != nil {
+		log.Printf("Error unmarshaling results: %v", err)
+		// Try to unmarshal as a generic map to see what's in there
+		var resultAsMap map[string]interface{}
+		if mapErr := json.Unmarshal(rawResults, &resultAsMap); mapErr != nil {
+			log.Printf("Error unmarshaling as map: %v", mapErr)
+		} else {
+			log.Printf("Results as map: %+v", resultAsMap)
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to parse results: %v", err)})
 		return
 	}
+
+	// Log the parsed result structure
+	log.Printf("Parsed FelResult: %+v", felResult)
+
 	resultMap["results"] = felResult
 
 	c.JSON(http.StatusOK, resultMap)

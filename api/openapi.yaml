@@ -24,6 +24,8 @@ tags:
   name: FEL
 - description: Examples starting jobs and fetching results for BUSTED
   name: BUSTED
+- description: Examples starting jobs and fetching results for ABSREL
+  name: ABSREL
 - description: Examples uploading files to Datamonkey
   name: File Upload and QC
 - description: Check health of Datamonkey server
@@ -217,6 +219,80 @@ paths:
       summary: Get a BUSTED job result
       tags:
       - BUSTED
+  /methods/absrel-start:
+    post:
+      operationId: startABSRELJob
+      parameters:
+      - description: Pretty print response
+        explode: true
+        in: query
+        name: pretty_print
+        required: false
+        schema:
+          type: boolean
+        style: form
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AbsrelRequest'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobStatus'
+          description: Success
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvalidDataError'
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerError'
+          description: Internal Server Error
+      summary: Start and monitor an ABSREL job
+      tags:
+      - ABSREL
+  /methods/absrel-result:
+    post:
+      operationId: getABSRELJob
+      parameters:
+      - description: Pretty print response
+        explode: true
+        in: query
+        name: pretty_print
+        required: false
+        schema:
+          type: boolean
+        style: form
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AbsrelRequest'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AbsrelResult'
+          description: Success
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerError'
+          description: Internal Server Error
+      summary: Get an ABSREL job result
+      tags:
+      - ABSREL
   /datasets:
     get:
       operationId: getDatasetsList
@@ -526,20 +602,30 @@ components:
               - 0
               name: name
           branch attributes:
-            attrbitutes:
+            attributes:
               key:
-                display_order: 9
+                display order: 2
                 attribute type: attribute type
+            additionalProperties:
+              key:
+                Global MG94xREV: 9.301444243932576
+                Nucleotide GTR: 3.616076749251911
+                original name: original name
           tested:
             key:
               key: tested
           MLE:
+            headers:
+            - - headers
+              - headers
+            - - headers
+              - headers
             content:
               key:
-              - - 3.616076749251911
-                - 3.616076749251911
-              - - 3.616076749251911
-                - 3.616076749251911
+              - - 4.145608029883936
+                - 4.145608029883936
+              - - 4.145608029883936
+                - 4.145608029883936
           runtime: runtime
           analysis:
             settings:
@@ -652,20 +738,23 @@ components:
           timers:
           - "{}"
           - "{}"
+          test results:
+            p-value: 7.457744773683766
+            LRT: 6.84685269835264
           tested:
             key:
               key: tested
           Evidence Ratios:
             optimized null:
-            - - 7.457744773683766
-              - 7.457744773683766
-            - - 7.457744773683766
-              - 7.457744773683766
+            - - 6.683562403749608
+              - 6.683562403749608
+            - - 6.683562403749608
+              - 6.683562403749608
             constrained:
-            - - 6.84685269835264
-              - 6.84685269835264
-            - - 6.84685269835264
-              - 6.84685269835264
+            - - 9.369310271410669
+              - 9.369310271410669
+            - - 9.369310271410669
+              - 9.369310271410669
           runtime: runtime
           analysis:
             settings:
@@ -687,10 +776,10 @@ components:
               AIC-c: 6.027456183070403
               display order: 9.301444243932576
           Synonymous site-posteriors:
-          - - 7.386281948385884
-            - 7.386281948385884
-          - - 7.386281948385884
-            - 7.386281948385884
+          - - 1.1730742509559433
+            - 1.1730742509559433
+          - - 1.1730742509559433
+            - 1.1730742509559433
           input:
             trees:
               key: trees
@@ -701,10 +790,27 @@ components:
               - 0
               name: name
           branch attributes:
-            attrbitutes:
+            attributes:
               key:
-                display_order: 9
+                display order: 2
                 attribute type: attribute type
+            additionalProperties:
+              key:
+                Posterior prob omega class:
+                - - 7.386281948385884
+                  - 7.386281948385884
+                - - 7.386281948385884
+                  - 7.386281948385884
+                Posterior prob omega class by site:
+                - - 1.2315135367772556
+                  - 1.2315135367772556
+                - - 1.2315135367772556
+                  - 1.2315135367772556
+                Nucleotide GTR: 4.145608029883936
+                MG94xREV with separate rates for branch sets: 2.027123023002322
+                original name: original name
+                constrained: 1.0246457001441578
+                unconstrained: 1.4894159098541704
           substitutions:
             key:
               key:
@@ -712,23 +818,20 @@ components:
           background: 0.8008281904610115
           Site Log Likelihood:
             optimized null:
-            - - 1.4894159098541704
-              - 1.4894159098541704
-            - - 1.4894159098541704
-              - 1.4894159098541704
+            - - 9.965781217890562
+              - 9.965781217890562
+            - - 9.965781217890562
+              - 9.965781217890562
             constrained:
-            - - 1.2315135367772556
-              - 1.2315135367772556
-            - - 1.2315135367772556
-              - 1.2315135367772556
+            - - 4.965218492984954
+              - 4.965218492984954
+            - - 4.965218492984954
+              - 4.965218492984954
             unconstrained:
-            - - 1.0246457001441578
-              - 1.0246457001441578
-            - - 1.0246457001441578
-              - 1.0246457001441578
-          test_results:
-            p-value: 4.145608029883936
-            LRT: 2.027123023002322
+            - - 5.025004791520295
+              - 5.025004791520295
+            - - 5.025004791520295
+              - 5.025004791520295
         job_id: job_id
       properties:
         job_id:
@@ -736,6 +839,128 @@ components:
           type: string
         result:
           $ref: '#/components/schemas/BustedResult_result'
+      type: object
+    AbsrelRequest:
+      example:
+        genetic_code: "{}"
+        srv: true
+        multiple_hits: None
+        tree: tree
+        blb: 0.08008281904610115
+        alignment: alignment
+        branches:
+        - branches
+        - branches
+      properties:
+        alignment:
+          pattern: "^[a-zA-Z0-9]+$"
+          type: string
+        tree:
+          pattern: "^[a-zA-Z0-9]+$"
+          type: string
+        srv:
+          default: true
+          description: Include synonymous rate variation in the model
+          type: boolean
+        multiple_hits:
+          default: None
+          description: Specify handling of multiple nucleotide substitutions
+          enum:
+          - None
+          - Double
+          - Double+Triple
+          type: string
+        genetic_code:
+          $ref: '#/components/schemas/GeneticCode'
+        branches:
+          default: []
+          description: "Branches to include in the analysis. If empty, all branches\
+            \ are included."
+          items:
+            type: string
+          type: array
+        blb:
+          default: 1
+          description: Bag of little bootstrap alignment resampling rate
+          maximum: 1
+          minimum: 0
+          type: number
+      type: object
+    AbsrelResult:
+      example:
+        result:
+          input:
+            trees:
+              key: trees
+          timers:
+            key:
+              timer: 6
+              order: 8
+          data partitions:
+            key:
+              coverage:
+              - - 1
+                - 1
+              - - 1
+                - 1
+              name: name
+          test results:
+            tested: 4
+            P-value threshold: 2.027123023002322
+            positive test results: 7
+          branch attributes:
+            attributes:
+              key:
+                display order: 2
+                attribute type: attribute type
+            additionalProperties:
+              key:
+                Uncorrected P-value: 9.965781217890562
+                Full adaptive model: 1.1730742509559433
+                Baseline MG94xREV: 1.4894159098541704
+                Rate Distributions:
+                - - 4.965218492984954
+                  - 4.965218492984954
+                - - 4.965218492984954
+                  - 4.965218492984954
+                Nucleotide GTR: 1.0246457001441578
+                Baseline MG94xREV omega ratio: 6.84685269835264
+                Rate classes: 7
+                Corrected P-value: 9.369310271410669
+                original name: original name
+                LRT: 5.025004791520295
+          tested:
+            key:
+              key: tested
+          runtime: runtime
+          analysis:
+            settings:
+              site_filter: "{}"
+            contact: john.smith@example.com
+          fits:
+            key:
+              Log Likelihood: 6.027456183070403
+              estimated parameters: 9.301444243932576
+              Rate Distributions:
+                key:
+                  Mean: 1.4658129805029452
+                  Median: 5.962133916683182
+                  "2.5%": 5.637376656633329
+                  "97.5%": 2.3021358869347655
+              AIC-c: 0.8008281904610115
+              display order: 7.061401241503109
+              Equilibrium frequencies:
+              - - 3.616076749251911
+                - 3.616076749251911
+              - - 3.616076749251911
+                - 3.616076749251911
+        job_id: job_id
+      properties:
+        job_id:
+          pattern: "^[a-zA-Z0-9]+$"
+          type: string
+        result:
+          $ref: '#/components/schemas/AbsrelResult_result'
       type: object
     DatasetMeta:
       properties:
@@ -885,17 +1110,11 @@ components:
         estimated parameters:
           type: number
       type: object
-    FelResult_result_allOf_branch_attributes_attrbitutes_value:
+    FelResult_result_allOf_branch_attributes_additionalProperties_value:
       example:
-        display_order: 9
-        attribute type: attribute type
-      properties:
-        attribute type:
-          type: string
-        display_order:
-          type: integer
-      type: object
-    FelResult_result_allOf_branch_attributes_value_value:
+        Global MG94xREV: 9.301444243932576
+        Nucleotide GTR: 3.616076749251911
+        original name: original name
       properties:
         Global MG94xREV:
           type: number
@@ -904,31 +1123,57 @@ components:
         original name:
           type: string
       type: object
-    FelResult_result_allOf_branch_attributes:
-      additionalProperties:
-        additionalProperties:
-          $ref: '#/components/schemas/FelResult_result_allOf_branch_attributes_value_value'
-        type: object
+    FelResult_result_allOf_branch_attributes_attributes_value:
       example:
-        attrbitutes:
-          key:
-            display_order: 9
-            attribute type: attribute type
+        display order: 2
+        attribute type: attribute type
       properties:
-        attrbitutes:
+        attribute type:
+          type: string
+        display order:
+          type: integer
+      type: object
+    FelResult_result_allOf_branch_attributes:
+      example:
+        attributes:
+          key:
+            display order: 2
+            attribute type: attribute type
+        additionalProperties:
+          key:
+            Global MG94xREV: 9.301444243932576
+            Nucleotide GTR: 3.616076749251911
+            original name: original name
+      properties:
+        additionalProperties:
           additionalProperties:
-            $ref: '#/components/schemas/FelResult_result_allOf_branch_attributes_attrbitutes_value'
+            $ref: '#/components/schemas/FelResult_result_allOf_branch_attributes_additionalProperties_value'
+          type: object
+        attributes:
+          additionalProperties:
+            $ref: '#/components/schemas/FelResult_result_allOf_branch_attributes_attributes_value'
           type: object
       type: object
     FelResult_result_allOf_MLE:
       example:
+        headers:
+        - - headers
+          - headers
+        - - headers
+          - headers
         content:
           key:
-          - - 3.616076749251911
-            - 3.616076749251911
-          - - 3.616076749251911
-            - 3.616076749251911
+          - - 4.145608029883936
+            - 4.145608029883936
+          - - 4.145608029883936
+            - 4.145608029883936
       properties:
+        headers:
+          items:
+            items:
+              type: string
+            type: array
+          type: array
         content:
           additionalProperties:
             items:
@@ -965,20 +1210,30 @@ components:
             - 0
             name: name
         branch attributes:
-          attrbitutes:
+          attributes:
             key:
-              display_order: 9
+              display order: 2
               attribute type: attribute type
+          additionalProperties:
+            key:
+              Global MG94xREV: 9.301444243932576
+              Nucleotide GTR: 3.616076749251911
+              original name: original name
         tested:
           key:
             key: tested
         MLE:
+          headers:
+          - - headers
+            - headers
+          - - headers
+            - headers
           content:
             key:
-            - - 3.616076749251911
-              - 3.616076749251911
-            - - 3.616076749251911
-              - 3.616076749251911
+            - - 4.145608029883936
+              - 4.145608029883936
+            - - 4.145608029883936
+              - 4.145608029883936
         runtime: runtime
         analysis:
           settings:
@@ -1068,7 +1323,23 @@ components:
         estimated parameters:
           type: number
       type: object
-    BustedResult_result_allOf_branch_attributes_value_value:
+    BustedResult_result_allOf_branch_attributes_additionalProperties_value:
+      example:
+        Posterior prob omega class:
+        - - 7.386281948385884
+          - 7.386281948385884
+        - - 7.386281948385884
+          - 7.386281948385884
+        Posterior prob omega class by site:
+        - - 1.2315135367772556
+          - 1.2315135367772556
+        - - 1.2315135367772556
+          - 1.2315135367772556
+        Nucleotide GTR: 4.145608029883936
+        MG94xREV with separate rates for branch sets: 2.027123023002322
+        original name: original name
+        constrained: 1.0246457001441578
+        unconstrained: 1.4894159098541704
       properties:
         MG94xREV with separate rates for branch sets:
           type: number
@@ -1094,25 +1365,42 @@ components:
           type: number
       type: object
     BustedResult_result_allOf_branch_attributes:
-      additionalProperties:
-        additionalProperties:
-          $ref: '#/components/schemas/BustedResult_result_allOf_branch_attributes_value_value'
-        type: object
       example:
-        attrbitutes:
+        attributes:
           key:
-            display_order: 9
+            display order: 2
             attribute type: attribute type
+        additionalProperties:
+          key:
+            Posterior prob omega class:
+            - - 7.386281948385884
+              - 7.386281948385884
+            - - 7.386281948385884
+              - 7.386281948385884
+            Posterior prob omega class by site:
+            - - 1.2315135367772556
+              - 1.2315135367772556
+            - - 1.2315135367772556
+              - 1.2315135367772556
+            Nucleotide GTR: 4.145608029883936
+            MG94xREV with separate rates for branch sets: 2.027123023002322
+            original name: original name
+            constrained: 1.0246457001441578
+            unconstrained: 1.4894159098541704
       properties:
-        attrbitutes:
+        additionalProperties:
           additionalProperties:
-            $ref: '#/components/schemas/FelResult_result_allOf_branch_attributes_attrbitutes_value'
+            $ref: '#/components/schemas/BustedResult_result_allOf_branch_attributes_additionalProperties_value'
+          type: object
+        attributes:
+          additionalProperties:
+            $ref: '#/components/schemas/FelResult_result_allOf_branch_attributes_attributes_value'
           type: object
       type: object
     BustedResult_result_allOf_test_results:
       example:
-        p-value: 4.145608029883936
-        LRT: 2.027123023002322
+        p-value: 7.457744773683766
+        LRT: 6.84685269835264
       properties:
         LRT:
           type: number
@@ -1131,20 +1419,20 @@ components:
     BustedResult_result_allOf_Site_Log_Likelihood:
       example:
         optimized null:
-        - - 1.4894159098541704
-          - 1.4894159098541704
-        - - 1.4894159098541704
-          - 1.4894159098541704
+        - - 9.965781217890562
+          - 9.965781217890562
+        - - 9.965781217890562
+          - 9.965781217890562
         constrained:
-        - - 1.2315135367772556
-          - 1.2315135367772556
-        - - 1.2315135367772556
-          - 1.2315135367772556
+        - - 4.965218492984954
+          - 4.965218492984954
+        - - 4.965218492984954
+          - 4.965218492984954
         unconstrained:
-        - - 1.0246457001441578
-          - 1.0246457001441578
-        - - 1.0246457001441578
-          - 1.0246457001441578
+        - - 5.025004791520295
+          - 5.025004791520295
+        - - 5.025004791520295
+          - 5.025004791520295
       properties:
         constrained:
           items:
@@ -1168,15 +1456,15 @@ components:
     BustedResult_result_allOf_Evidence_Ratios:
       example:
         optimized null:
-        - - 7.457744773683766
-          - 7.457744773683766
-        - - 7.457744773683766
-          - 7.457744773683766
+        - - 6.683562403749608
+          - 6.683562403749608
+        - - 6.683562403749608
+          - 6.683562403749608
         constrained:
-        - - 6.84685269835264
-          - 6.84685269835264
-        - - 6.84685269835264
-          - 6.84685269835264
+        - - 9.369310271410669
+          - 9.369310271410669
+        - - 9.369310271410669
+          - 9.369310271410669
       properties:
         constrained:
           items:
@@ -1203,7 +1491,7 @@ components:
             type: object
           branch attributes:
             $ref: '#/components/schemas/BustedResult_result_allOf_branch_attributes'
-          test_results:
+          test results:
             $ref: '#/components/schemas/BustedResult_result_allOf_test_results'
           substitutions:
             additionalProperties:
@@ -1226,20 +1514,23 @@ components:
         timers:
         - "{}"
         - "{}"
+        test results:
+          p-value: 7.457744773683766
+          LRT: 6.84685269835264
         tested:
           key:
             key: tested
         Evidence Ratios:
           optimized null:
-          - - 7.457744773683766
-            - 7.457744773683766
-          - - 7.457744773683766
-            - 7.457744773683766
+          - - 6.683562403749608
+            - 6.683562403749608
+          - - 6.683562403749608
+            - 6.683562403749608
           constrained:
-          - - 6.84685269835264
-            - 6.84685269835264
-          - - 6.84685269835264
-            - 6.84685269835264
+          - - 9.369310271410669
+            - 9.369310271410669
+          - - 9.369310271410669
+            - 9.369310271410669
         runtime: runtime
         analysis:
           settings:
@@ -1261,10 +1552,10 @@ components:
             AIC-c: 6.027456183070403
             display order: 9.301444243932576
         Synonymous site-posteriors:
-        - - 7.386281948385884
-          - 7.386281948385884
-        - - 7.386281948385884
-          - 7.386281948385884
+        - - 1.1730742509559433
+          - 1.1730742509559433
+        - - 1.1730742509559433
+          - 1.1730742509559433
         input:
           trees:
             key: trees
@@ -1275,10 +1566,27 @@ components:
             - 0
             name: name
         branch attributes:
-          attrbitutes:
+          attributes:
             key:
-              display_order: 9
+              display order: 2
               attribute type: attribute type
+          additionalProperties:
+            key:
+              Posterior prob omega class:
+              - - 7.386281948385884
+                - 7.386281948385884
+              - - 7.386281948385884
+                - 7.386281948385884
+              Posterior prob omega class by site:
+              - - 1.2315135367772556
+                - 1.2315135367772556
+              - - 1.2315135367772556
+                - 1.2315135367772556
+              Nucleotide GTR: 4.145608029883936
+              MG94xREV with separate rates for branch sets: 2.027123023002322
+              original name: original name
+              constrained: 1.0246457001441578
+              unconstrained: 1.4894159098541704
         substitutions:
           key:
             key:
@@ -1286,20 +1594,278 @@ components:
         background: 0.8008281904610115
         Site Log Likelihood:
           optimized null:
-          - - 1.4894159098541704
-            - 1.4894159098541704
-          - - 1.4894159098541704
-            - 1.4894159098541704
+          - - 9.965781217890562
+            - 9.965781217890562
+          - - 9.965781217890562
+            - 9.965781217890562
           constrained:
-          - - 1.2315135367772556
-            - 1.2315135367772556
-          - - 1.2315135367772556
-            - 1.2315135367772556
+          - - 4.965218492984954
+            - 4.965218492984954
+          - - 4.965218492984954
+            - 4.965218492984954
           unconstrained:
-          - - 1.0246457001441578
-            - 1.0246457001441578
-          - - 1.0246457001441578
-            - 1.0246457001441578
-        test_results:
-          p-value: 4.145608029883936
-          LRT: 2.027123023002322
+          - - 5.025004791520295
+            - 5.025004791520295
+          - - 5.025004791520295
+            - 5.025004791520295
+    AbsrelResult_result_allOf_fits_value_Rate_Distributions_value:
+      example:
+        Mean: 1.4658129805029452
+        Median: 5.962133916683182
+        "2.5%": 5.637376656633329
+        "97.5%": 2.3021358869347655
+      properties:
+        Mean:
+          type: number
+        Median:
+          type: number
+        "2.5%":
+          type: number
+        "97.5%":
+          type: number
+      type: object
+    AbsrelResult_result_allOf_fits_value:
+      example:
+        Log Likelihood: 6.027456183070403
+        estimated parameters: 9.301444243932576
+        Rate Distributions:
+          key:
+            Mean: 1.4658129805029452
+            Median: 5.962133916683182
+            "2.5%": 5.637376656633329
+            "97.5%": 2.3021358869347655
+        AIC-c: 0.8008281904610115
+        display order: 7.061401241503109
+        Equilibrium frequencies:
+        - - 3.616076749251911
+          - 3.616076749251911
+        - - 3.616076749251911
+          - 3.616076749251911
+      properties:
+        AIC-c:
+          type: number
+        Log Likelihood:
+          type: number
+        Rate Distributions:
+          additionalProperties:
+            $ref: '#/components/schemas/AbsrelResult_result_allOf_fits_value_Rate_Distributions_value'
+          type: object
+        display order:
+          type: number
+        estimated parameters:
+          type: number
+        Equilibrium frequencies:
+          items:
+            items:
+              type: number
+            type: array
+          type: array
+      type: object
+    AbsrelResult_result_allOf_test_results:
+      example:
+        tested: 4
+        P-value threshold: 2.027123023002322
+        positive test results: 7
+      properties:
+        P-value threshold:
+          type: number
+        tested:
+          type: integer
+        positive test results:
+          type: integer
+      type: object
+    AbsrelResult_result_allOf_data_partitions_value:
+      example:
+        coverage:
+        - - 1
+          - 1
+        - - 1
+          - 1
+        name: name
+      properties:
+        name:
+          type: string
+        coverage:
+          items:
+            items:
+              type: integer
+            type: array
+          type: array
+      type: object
+    AbsrelResult_result_allOf_branch_attributes_additionalProperties_value:
+      example:
+        Uncorrected P-value: 9.965781217890562
+        Full adaptive model: 1.1730742509559433
+        Baseline MG94xREV: 1.4894159098541704
+        Rate Distributions:
+        - - 4.965218492984954
+          - 4.965218492984954
+        - - 4.965218492984954
+          - 4.965218492984954
+        Nucleotide GTR: 1.0246457001441578
+        Baseline MG94xREV omega ratio: 6.84685269835264
+        Rate classes: 7
+        Corrected P-value: 9.369310271410669
+        original name: original name
+        LRT: 5.025004791520295
+      properties:
+        original name:
+          type: string
+        Nucleotide GTR:
+          type: number
+        Baseline MG94xREV:
+          type: number
+        Baseline MG94xREV omega ratio:
+          type: number
+        Rate classes:
+          type: integer
+        Full adaptive model:
+          type: number
+        Rate Distributions:
+          items:
+            items:
+              type: number
+            type: array
+          type: array
+        LRT:
+          type: number
+        Uncorrected P-value:
+          type: number
+        Corrected P-value:
+          type: number
+      type: object
+    AbsrelResult_result_allOf_branch_attributes:
+      example:
+        attributes:
+          key:
+            display order: 2
+            attribute type: attribute type
+        additionalProperties:
+          key:
+            Uncorrected P-value: 9.965781217890562
+            Full adaptive model: 1.1730742509559433
+            Baseline MG94xREV: 1.4894159098541704
+            Rate Distributions:
+            - - 4.965218492984954
+              - 4.965218492984954
+            - - 4.965218492984954
+              - 4.965218492984954
+            Nucleotide GTR: 1.0246457001441578
+            Baseline MG94xREV omega ratio: 6.84685269835264
+            Rate classes: 7
+            Corrected P-value: 9.369310271410669
+            original name: original name
+            LRT: 5.025004791520295
+      properties:
+        additionalProperties:
+          additionalProperties:
+            $ref: '#/components/schemas/AbsrelResult_result_allOf_branch_attributes_additionalProperties_value'
+          type: object
+        attributes:
+          additionalProperties:
+            $ref: '#/components/schemas/FelResult_result_allOf_branch_attributes_attributes_value'
+          type: object
+      type: object
+    AbsrelResult_result_allOf_timers_value:
+      example:
+        timer: 6
+        order: 8
+      properties:
+        timer:
+          type: integer
+        order:
+          type: integer
+      type: object
+    AbsrelResult_result:
+      allOf:
+      - $ref: '#/components/schemas/BaseResponse'
+      - properties:
+          fits:
+            additionalProperties:
+              $ref: '#/components/schemas/AbsrelResult_result_allOf_fits_value'
+            type: object
+          test results:
+            $ref: '#/components/schemas/AbsrelResult_result_allOf_test_results'
+          tested:
+            additionalProperties:
+              additionalProperties:
+                type: string
+              type: object
+            type: object
+          data partitions:
+            additionalProperties:
+              $ref: '#/components/schemas/AbsrelResult_result_allOf_data_partitions_value'
+            type: object
+          branch attributes:
+            $ref: '#/components/schemas/AbsrelResult_result_allOf_branch_attributes'
+          timers:
+            additionalProperties:
+              $ref: '#/components/schemas/AbsrelResult_result_allOf_timers_value'
+            type: object
+        type: object
+      example:
+        input:
+          trees:
+            key: trees
+        timers:
+          key:
+            timer: 6
+            order: 8
+        data partitions:
+          key:
+            coverage:
+            - - 1
+              - 1
+            - - 1
+              - 1
+            name: name
+        test results:
+          tested: 4
+          P-value threshold: 2.027123023002322
+          positive test results: 7
+        branch attributes:
+          attributes:
+            key:
+              display order: 2
+              attribute type: attribute type
+          additionalProperties:
+            key:
+              Uncorrected P-value: 9.965781217890562
+              Full adaptive model: 1.1730742509559433
+              Baseline MG94xREV: 1.4894159098541704
+              Rate Distributions:
+              - - 4.965218492984954
+                - 4.965218492984954
+              - - 4.965218492984954
+                - 4.965218492984954
+              Nucleotide GTR: 1.0246457001441578
+              Baseline MG94xREV omega ratio: 6.84685269835264
+              Rate classes: 7
+              Corrected P-value: 9.369310271410669
+              original name: original name
+              LRT: 5.025004791520295
+        tested:
+          key:
+            key: tested
+        runtime: runtime
+        analysis:
+          settings:
+            site_filter: "{}"
+          contact: john.smith@example.com
+        fits:
+          key:
+            Log Likelihood: 6.027456183070403
+            estimated parameters: 9.301444243932576
+            Rate Distributions:
+              key:
+                Mean: 1.4658129805029452
+                Median: 5.962133916683182
+                "2.5%": 5.637376656633329
+                "97.5%": 2.3021358869347655
+            AIC-c: 0.8008281904610115
+            display order: 7.061401241503109
+            Equilibrium frequencies:
+            - - 3.616076749251911
+              - 3.616076749251911
+            - - 3.616076749251911
+              - 3.616076749251911

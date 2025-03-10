@@ -12,5 +12,7 @@ package datamonkey
 
 type FelResultResultAllOfMle struct {
 
+	Headers [][]string `json:"headers,omitempty"`
+
 	Content map[string][][]float32 `json:"content,omitempty"`
 }

@@ -1,6 +1,16 @@
 api/openapi.yaml
 go.mod
 go/README.md
+go/model_absrel_request.go
+go/model_absrel_result.go
+go/model_absrel_result_result.go
+go/model_absrel_result_result_all_of_branch_attributes.go
+go/model_absrel_result_result_all_of_branch_attributes_additional_properties_value.go
+go/model_absrel_result_result_all_of_data_partitions_value.go
+go/model_absrel_result_result_all_of_fits_value.go
+go/model_absrel_result_result_all_of_fits_value_rate_distributions_value.go
+go/model_absrel_result_result_all_of_test_results.go
+go/model_absrel_result_result_all_of_timers_value.go
 go/model_analysis_info.go
 go/model_analysis_info_settings.go
 go/model_base_response.go
@@ -8,7 +18,7 @@ go/model_busted_request.go
 go/model_busted_result.go
 go/model_busted_result_result.go
 go/model_busted_result_result_all_of_branch_attributes.go
-go/model_busted_result_result_all_of_branch_attributes_value_value.go
+go/model_busted_result_result_all_of_branch_attributes_additional_properties_value.go
 go/model_busted_result_result_all_of_evidence_ratios.go
 go/model_busted_result_result_all_of_fits_value.go
 go/model_busted_result_result_all_of_fits_value_rate_distributions.go
@@ -24,8 +34,8 @@ go/model_fel_request.go
 go/model_fel_result.go
 go/model_fel_result_result.go
 go/model_fel_result_result_all_of_branch_attributes.go
-go/model_fel_result_result_all_of_branch_attributes_attrbitutes_value.go
-go/model_fel_result_result_all_of_branch_attributes_value_value.go
+go/model_fel_result_result_all_of_branch_attributes_additional_properties_value.go
+go/model_fel_result_result_all_of_branch_attributes_attributes_value.go
 go/model_fel_result_result_all_of_fits_value.go
 go/model_fel_result_result_all_of_mle.go
 go/model_genetic_code.go

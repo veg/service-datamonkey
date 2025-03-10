@@ -10,9 +10,9 @@
 
 package datamonkey
 
-type BustedResultResultAllOfBranchAttributes struct {
+type AbsrelResultResultAllOfBranchAttributes struct {
 
-	AdditionalPropertiesField map[string]BustedResultResultAllOfBranchAttributesAdditionalPropertiesValue `json:"additionalProperties,omitempty"`
+	AdditionalPropertiesField map[string]AbsrelResultResultAllOfBranchAttributesAdditionalPropertiesValue `json:"additionalProperties,omitempty"`
 
 	Attributes map[string]FelResultResultAllOfBranchAttributesAttributesValue `json:"attributes,omitempty"`
 }

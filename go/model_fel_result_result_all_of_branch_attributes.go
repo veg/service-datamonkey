@@ -12,5 +12,7 @@ package datamonkey
 
 type FelResultResultAllOfBranchAttributes struct {
 
-	Attrbitutes map[string]FelResultResultAllOfBranchAttributesAttrbitutesValue `json:"attrbitutes,omitempty"`
+	AdditionalPropertiesField map[string]FelResultResultAllOfBranchAttributesAdditionalPropertiesValue `json:"additionalProperties,omitempty"`
+
+	Attributes map[string]FelResultResultAllOfBranchAttributesAttributesValue `json:"attributes,omitempty"`
 }

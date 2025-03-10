@@ -9,8 +9,11 @@ package datamonkey
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
+	"strings"
+	"unicode"
 
 	"github.com/gin-gonic/gin"
 )
@@ -60,10 +63,23 @@ func (api *HyPhyBaseAPI) HandleGetJob(c *gin.Context, request HyPhyRequest, meth
 		return nil, fmt.Errorf("failed to read results: %v", err)
 	}
 
+	// Clean the JSON results to handle potential issues
+	cleanedResults := cleanJSONString(string(results))
+
+	// Log the original and cleaned results for debugging
+	log.Printf("Original results length: %d", len(results))
+	log.Printf("Cleaned results length: %d", len(cleanedResults))
+
+	// If the cleaned result is empty but the original wasn't, use the original
+	if len(cleanedResults) == 0 && len(results) > 0 {
+		log.Printf("Warning: Cleaning resulted in empty string, using original results")
+		cleanedResults = string(results)
+	}
+
 	return map[string]interface{}{
 		"jobId":   job.GetId(),
 		"status":  status,
-		"results": json.RawMessage(results),
+		"results": json.RawMessage(cleanedResults),
 	}, nil
 }
 
@@ -127,4 +143,44 @@ func (api *HyPhyBaseAPI) HandleStartJob(c *gin.Context, request HyPhyRequest, me
 		"jobId":  job.GetId(),
 		"status": JobStatusPending,
 	}, nil
+}
+
+// cleanJSONString attempts to clean a JSON string that might have invalid characters
+func cleanJSONString(input string) string {
+	// Replace any non-printable characters with spaces
+	var result strings.Builder
+	for _, r := range input {
+		if unicode.IsPrint(r) || unicode.IsSpace(r) {
+			result.WriteRune(r)
+		}
+	}
+
+	// Try to fix common JSON issues
+	cleaned := result.String()
+
+	// Remove any BOM characters at the beginning
+	cleaned = strings.TrimPrefix(cleaned, "\uFEFF")
+
+	// Trim any whitespace at the beginning and end
+	cleaned = strings.TrimSpace(cleaned)
+
+	// Ensure the JSON starts with { or [
+	if !strings.HasPrefix(cleaned, "{") && !strings.HasPrefix(cleaned, "[") {
+		if idx := strings.Index(cleaned, "{"); idx >= 0 {
+			cleaned = cleaned[idx:]
+		} else if idx := strings.Index(cleaned, "["); idx >= 0 {
+			cleaned = cleaned[idx:]
+		}
+	}
+
+	// Ensure the JSON ends with } or ]
+	if !strings.HasSuffix(cleaned, "}") && !strings.HasSuffix(cleaned, "]") {
+		if idx := strings.LastIndex(cleaned, "}"); idx >= 0 {
+			cleaned = cleaned[:idx+1]
+		} else if idx := strings.LastIndex(cleaned, "]"); idx >= 0 {
+			cleaned = cleaned[:idx+1]
+		}
+	}
+
+	return cleaned
 }

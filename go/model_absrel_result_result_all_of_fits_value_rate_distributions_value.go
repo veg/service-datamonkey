@@ -10,9 +10,13 @@
 
 package datamonkey
 
-type BustedResultResultAllOfBranchAttributes struct {
+type AbsrelResultResultAllOfFitsValueRateDistributionsValue struct {
 
-	AdditionalPropertiesField map[string]BustedResultResultAllOfBranchAttributesAdditionalPropertiesValue `json:"additionalProperties,omitempty"`
+	Mean float32 `json:"Mean,omitempty"`
 
-	Attributes map[string]FelResultResultAllOfBranchAttributesAttributesValue `json:"attributes,omitempty"`
+	Median float32 `json:"Median,omitempty"`
+
+	Var25 float32 `json:"2.5%,omitempty"`
+
+	Var975 float32 `json:"97.5%,omitempty"`
 }
