@@ -10,15 +10,9 @@
 
 package datamonkey
 
-type BustedResultResultAllOfFitsValue struct {
+type TimersInfoValue struct {
 
-	AICC float32 `json:"AIC-c,omitempty"`
+	Order int32 `json:"order,omitempty"`
 
-	LogLikelihood float32 `json:"Log Likelihood,omitempty"`
-
-	RateDistributions map[string]interface{} `json:"Rate Distributions,omitempty"`
-
-	DisplayOrder float32 `json:"display order,omitempty"`
-
-	EstimatedParameters float32 `json:"estimated parameters,omitempty"`
+	Timer int32 `json:"timer,omitempty"`
 }

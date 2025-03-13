@@ -18,7 +18,7 @@ type FelResultResultAllOfFitsValue struct {
 
 	LogLikelihood float32 `json:"Log Likelihood,omitempty"`
 
-	RateDistributions map[string][][]float32 `json:"Rate Distributions,omitempty"`
+	RateDistributions map[string]interface{} `json:"Rate Distributions,omitempty"`
 
 	DisplayOrder float32 `json:"display order,omitempty"`
 

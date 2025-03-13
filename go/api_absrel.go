@@ -72,9 +72,13 @@ func (api *ABSRELAPI) GetABSRELJob(c *gin.Context) {
 		}
 	}
 
+	// Create a wrapper structure to match the expected format
+	wrappedJSON := fmt.Sprintf(`{"job_id":"test_job","result":%s}`, string(rawResults))
+	log.Printf("Wrapped JSON: %s", wrappedJSON)
+
 	var absrelResult AbsrelResult
-	if err := json.Unmarshal(rawResults, &absrelResult); err != nil {
-		log.Printf("Error unmarshaling results: %v", err)
+	if err := json.Unmarshal([]byte(wrappedJSON), &absrelResult); err != nil {
+		log.Printf("Error unmarshaling wrapped results: %v", err)
 		// Try to unmarshal as a generic map to see what's in there
 		var resultAsMap map[string]interface{}
 		if mapErr := json.Unmarshal(rawResults, &resultAsMap); mapErr != nil {
@@ -89,7 +93,8 @@ func (api *ABSRELAPI) GetABSRELJob(c *gin.Context) {
 	// Log the parsed result structure
 	log.Printf("Parsed AbsrelResult: %+v", absrelResult)
 
-	resultMap["results"] = absrelResult
+	// Update the results in the resultMap
+	resultMap["results"] = absrelResult.Result
 
 	c.JSON(http.StatusOK, resultMap)
 }

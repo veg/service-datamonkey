@@ -22,7 +22,7 @@ type AbsrelResultResult struct {
 
 	Runtime string `json:"runtime,omitempty" validate:"regexp=^[0-9]+\\\\.[0-9]+\\\\.[0-9]+$"`
 
-	DataPartitions map[string]AbsrelResultResultAllOfDataPartitionsValue `json:"data partitions,omitempty"`
+	DataPartitions map[string]PartitionsInfoValue `json:"data partitions,omitempty"`
 
 	Fits map[string]AbsrelResultResultAllOfFitsValue `json:"fits,omitempty"`
 

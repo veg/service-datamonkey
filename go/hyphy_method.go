@@ -231,6 +231,47 @@ func (m *HyPhyMethod) GetCommand() string {
 	return cmd
 }
 
+// ParseResult parses the JSON output from HyPhy into the appropriate result struct
+func (m *HyPhyMethod) ParseResult(output string) (interface{}, error) {
+	switch m.MethodType {
+	case MethodFEL:
+		// Create a wrapper structure to match the expected format
+		wrappedJSON := fmt.Sprintf(`{"job_id":"test_job","result":%s}`, output)
+
+		var result FelResult
+		err := json.Unmarshal([]byte(wrappedJSON), &result)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse FEL result: %v", err)
+		}
+		return result, nil
+
+	case MethodBUSTED:
+		// Create a wrapper structure to match the expected format
+		wrappedJSON := fmt.Sprintf(`{"job_id":"test_job","result":%s}`, output)
+
+		var result BustedResult
+		err := json.Unmarshal([]byte(wrappedJSON), &result)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse BUSTED result: %v", err)
+		}
+		return result, nil
+
+	case MethodABSREL:
+		// Create a wrapper structure to match the expected format
+		wrappedJSON := fmt.Sprintf(`{"job_id":"test_job","result":%s}`, output)
+
+		var result AbsrelResult
+		err := json.Unmarshal([]byte(wrappedJSON), &result)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse ABSREL result: %v", err)
+		}
+		return result, nil
+
+	default:
+		return nil, fmt.Errorf("unknown method type: %s", m.MethodType)
+	}
+}
+
 // ValidateInput validates the input dataset and method-specific parameters
 func (m *HyPhyMethod) ValidateInput(dataset DatasetInterface) error {
 	metadata := dataset.GetMetadata()
@@ -273,38 +314,6 @@ func (m *HyPhyMethod) ValidateInput(dataset DatasetInterface) error {
 	}
 
 	return nil
-}
-
-// ParseResult parses the method output
-func (m *HyPhyMethod) ParseResult(output string) (interface{}, error) {
-	switch m.MethodType {
-	case MethodFEL:
-		var result FelResult
-		err := json.Unmarshal([]byte(output), &result)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse FEL result: %v", err)
-		}
-		return result, nil
-
-	case MethodBUSTED:
-		var result BustedResult
-		err := json.Unmarshal([]byte(output), &result)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse BUSTED result: %v", err)
-		}
-		return result, nil
-
-	case MethodABSREL:
-		var result AbsrelResult
-		err := json.Unmarshal([]byte(output), &result)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse ABSREL result: %v", err)
-		}
-		return result, nil
-
-	default:
-		return nil, fmt.Errorf("unknown method type: %s", m.MethodType)
-	}
 }
 
 // GetOutputPath returns the path where results should be stored

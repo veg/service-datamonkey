@@ -539,10 +539,9 @@ components:
         type: object
       type: object
     TimersInfo:
-      items:
-        properties: {}
-        type: object
-      type: array
+      additionalProperties:
+        $ref: '#/components/schemas/TimersInfo_value'
+      type: object
     PartitionsInfo:
       additionalProperties:
         $ref: '#/components/schemas/PartitionsInfo_value'
@@ -563,10 +562,9 @@ components:
             type: object
           type: object
         timers:
-          items:
-            properties: {}
-            type: object
-          type: array
+          additionalProperties:
+            $ref: '#/components/schemas/TimersInfo_value'
+          type: object
         runtime:
           pattern: "^[0-9]+\\.[0-9]+\\.[0-9]+$"
           type: string
@@ -582,23 +580,26 @@ components:
             trees:
               key: trees
           timers:
-          - "{}"
-          - "{}"
+            key:
+              timer: 6
+              order: 0
           data partitions:
             key:
               coverage:
-              - 0
-              - 0
+              - - 1
+                - 1
+              - - 1
+                - 1
               name: name
           branch attributes:
             attributes:
               key:
-                display order: 2
+                display order: 4
                 attribute type: attribute type
             additionalProperties:
               key:
-                Global MG94xREV: 9.301444243932576
-                Nucleotide GTR: 3.616076749251911
+                Global MG94xREV: 3.616076749251911
+                Nucleotide GTR: 2.027123023002322
                 original name: original name
           tested:
             key:
@@ -611,10 +612,10 @@ components:
               - headers
             content:
               key:
-              - - 4.145608029883936
-                - 4.145608029883936
-              - - 4.145608029883936
-                - 4.145608029883936
+              - - 7.386281948385884
+                - 7.386281948385884
+              - - 7.386281948385884
+                - 7.386281948385884
           runtime: runtime
           analysis:
             settings:
@@ -622,21 +623,16 @@ components:
             contact: john.smith@example.com
           fits:
             key:
-              Log Likelihood: 5.962133916683182
-              estimated parameters: 7.061401241503109
-              Rate Distributions:
-                key:
-                - - 5.637376656633329
-                  - 5.637376656633329
-                - - 5.637376656633329
-                  - 5.637376656633329
-              AIC-c: 6.027456183070403
-              display order: 2.3021358869347655
+              Log Likelihood: 2.3021358869347655
+              estimated parameters: 9.301444243932576
+              Rate Distributions: "{}"
+              AIC-c: 5.962133916683182
+              display order: 7.061401241503109
               Equilibrium frequencies:
-              - - 1.4658129805029452
-                - 1.4658129805029452
-              - - 1.4658129805029452
-                - 1.4658129805029452
+              - - 5.637376656633329
+                - 5.637376656633329
+              - - 5.637376656633329
+                - 5.637376656633329
         job_id: job_id
       properties:
         job_id:
@@ -725,25 +721,26 @@ components:
       example:
         result:
           timers:
-          - "{}"
-          - "{}"
+            key:
+              timer: 6
+              order: 0
           test results:
-            p-value: 7.457744773683766
-            LRT: 6.84685269835264
+            p-value: 1.2315135367772556
+            LRT: 7.386281948385884
           tested:
             key:
               key: tested
           Evidence Ratios:
             optimized null:
-            - - 6.683562403749608
-              - 6.683562403749608
-            - - 6.683562403749608
-              - 6.683562403749608
+            - - 4.965218492984954
+              - 4.965218492984954
+            - - 4.965218492984954
+              - 4.965218492984954
             constrained:
-            - - 9.369310271410669
-              - 9.369310271410669
-            - - 9.369310271410669
-              - 9.369310271410669
+            - - 1.1730742509559433
+              - 1.1730742509559433
+            - - 1.1730742509559433
+              - 1.1730742509559433
           runtime: runtime
           analysis:
             settings:
@@ -752,54 +749,48 @@ components:
           fits:
             key:
               Log Likelihood: 1.4658129805029452
-              estimated parameters: 3.616076749251911
-              Rate Distributions:
-                Test:
-                  key:
-                    proportion: 5.637376656633329
-                    omega: 5.962133916683182
-                Synonymous site-to-site rates:
-                  key:
-                    proportion: 2.3021358869347655
-                    rate: 7.061401241503109
+              estimated parameters: 5.637376656633329
+              Rate Distributions: "{}"
               AIC-c: 6.027456183070403
-              display order: 9.301444243932576
+              display order: 5.962133916683182
           Synonymous site-posteriors:
-          - - 1.1730742509559433
-            - 1.1730742509559433
-          - - 1.1730742509559433
-            - 1.1730742509559433
+          - - 1.0246457001441578
+            - 1.0246457001441578
+          - - 1.0246457001441578
+            - 1.0246457001441578
           input:
             trees:
               key: trees
           data partitions:
             key:
               coverage:
-              - 0
-              - 0
+              - - 1
+                - 1
+              - - 1
+                - 1
               name: name
           branch attributes:
             attributes:
               key:
-                display order: 2
+                display order: 4
                 attribute type: attribute type
             additionalProperties:
               key:
                 Posterior prob omega class:
-                - - 7.386281948385884
-                  - 7.386281948385884
-                - - 7.386281948385884
-                  - 7.386281948385884
+                - - 9.301444243932576
+                  - 9.301444243932576
+                - - 9.301444243932576
+                  - 9.301444243932576
                 Posterior prob omega class by site:
-                - - 1.2315135367772556
-                  - 1.2315135367772556
-                - - 1.2315135367772556
-                  - 1.2315135367772556
-                Nucleotide GTR: 4.145608029883936
-                MG94xREV with separate rates for branch sets: 2.027123023002322
+                - - 3.616076749251911
+                  - 3.616076749251911
+                - - 3.616076749251911
+                  - 3.616076749251911
+                Nucleotide GTR: 7.061401241503109
+                MG94xREV with separate rates for branch sets: 2.3021358869347655
                 original name: original name
-                constrained: 1.0246457001441578
-                unconstrained: 1.4894159098541704
+                constrained: 2.027123023002322
+                unconstrained: 4.145608029883936
           substitutions:
             key:
               key:
@@ -807,20 +798,20 @@ components:
           background: 0.8008281904610115
           Site Log Likelihood:
             optimized null:
-            - - 9.965781217890562
-              - 9.965781217890562
-            - - 9.965781217890562
-              - 9.965781217890562
+            - - 7.457744773683766
+              - 7.457744773683766
+            - - 7.457744773683766
+              - 7.457744773683766
             constrained:
-            - - 4.965218492984954
-              - 4.965218492984954
-            - - 4.965218492984954
-              - 4.965218492984954
+            - - 1.4894159098541704
+              - 1.4894159098541704
+            - - 1.4894159098541704
+              - 1.4894159098541704
             unconstrained:
-            - - 5.025004791520295
-              - 5.025004791520295
-            - - 5.025004791520295
-              - 5.025004791520295
+            - - 6.84685269835264
+              - 6.84685269835264
+            - - 6.84685269835264
+              - 6.84685269835264
         job_id: job_id
       properties:
         job_id:
@@ -883,8 +874,8 @@ components:
               key: trees
           timers:
             key:
-              timer: 6
-              order: 8
+              timer: 1
+              order: 4
           data partitions:
             key:
               coverage:
@@ -894,30 +885,30 @@ components:
                 - 1
               name: name
           test results:
-            tested: 4
-            P-value threshold: 2.027123023002322
-            positive test results: 7
+            tested: 7
+            P-value threshold: 2.3021358869347655
+            positive test results: 9
           branch attributes:
             attributes:
               key:
-                display order: 2
+                display order: 4
                 attribute type: attribute type
             additionalProperties:
               key:
-                Uncorrected P-value: 9.965781217890562
-                Full adaptive model: 1.1730742509559433
-                Baseline MG94xREV: 1.4894159098541704
+                Uncorrected P-value: 6.84685269835264
+                Full adaptive model: 1.2315135367772556
+                Baseline MG94xREV: 2.027123023002322
                 Rate Distributions:
-                - - 4.965218492984954
-                  - 4.965218492984954
-                - - 4.965218492984954
-                  - 4.965218492984954
-                Nucleotide GTR: 1.0246457001441578
-                Baseline MG94xREV omega ratio: 6.84685269835264
+                - - 1.0246457001441578
+                  - 1.0246457001441578
+                - - 1.0246457001441578
+                  - 1.0246457001441578
+                Nucleotide GTR: 3.616076749251911
+                Baseline MG94xREV omega ratio: 4.145608029883936
                 Rate classes: 7
-                Corrected P-value: 9.369310271410669
+                Corrected P-value: 7.457744773683766
                 original name: original name
-                LRT: 5.025004791520295
+                LRT: 1.4894159098541704
           tested:
             key:
               key: tested
@@ -929,20 +920,15 @@ components:
           fits:
             key:
               Log Likelihood: 6.027456183070403
-              estimated parameters: 9.301444243932576
-              Rate Distributions:
-                key:
-                  Mean: 1.4658129805029452
-                  Median: 5.962133916683182
-                  "2.5%": 5.637376656633329
-                  "97.5%": 2.3021358869347655
+              estimated parameters: 5.962133916683182
+              Rate Distributions: "{}"
               AIC-c: 0.8008281904610115
-              display order: 7.061401241503109
+              display order: 1.4658129805029452
               Equilibrium frequencies:
-              - - 3.616076749251911
-                - 3.616076749251911
-              - - 3.616076749251911
-                - 3.616076749251911
+              - - 5.637376656633329
+                - 5.637376656633329
+              - - 5.637376656633329
+                - 5.637376656633329
         job_id: job_id
       properties:
         job_id:
@@ -1044,37 +1030,46 @@ components:
           properties: {}
           type: object
       type: object
+    TimersInfo_value:
+      example:
+        timer: 6
+        order: 0
+      properties:
+        order:
+          type: integer
+        timer:
+          type: integer
+      type: object
     PartitionsInfo_value:
       example:
         coverage:
-        - 0
-        - 0
+        - - 1
+          - 1
+        - - 1
+          - 1
         name: name
       properties:
         name:
           type: string
         coverage:
           items:
-            type: integer
+            items:
+              type: integer
+            type: array
           type: array
       type: object
     FelResult_result_allOf_fits_value:
       example:
-        Log Likelihood: 5.962133916683182
-        estimated parameters: 7.061401241503109
-        Rate Distributions:
-          key:
-          - - 5.637376656633329
-            - 5.637376656633329
-          - - 5.637376656633329
-            - 5.637376656633329
-        AIC-c: 6.027456183070403
-        display order: 2.3021358869347655
+        Log Likelihood: 2.3021358869347655
+        estimated parameters: 9.301444243932576
+        Rate Distributions: "{}"
+        AIC-c: 5.962133916683182
+        display order: 7.061401241503109
         Equilibrium frequencies:
-        - - 1.4658129805029452
-          - 1.4658129805029452
-        - - 1.4658129805029452
-          - 1.4658129805029452
+        - - 5.637376656633329
+          - 5.637376656633329
+        - - 5.637376656633329
+          - 5.637376656633329
       properties:
         AIC-c:
           type: number
@@ -1087,12 +1082,6 @@ components:
         Log Likelihood:
           type: number
         Rate Distributions:
-          additionalProperties:
-            items:
-              items:
-                type: number
-              type: array
-            type: array
           type: object
         display order:
           type: number
@@ -1101,8 +1090,8 @@ components:
       type: object
     FelResult_result_allOf_branch_attributes_additionalProperties_value:
       example:
-        Global MG94xREV: 9.301444243932576
-        Nucleotide GTR: 3.616076749251911
+        Global MG94xREV: 3.616076749251911
+        Nucleotide GTR: 2.027123023002322
         original name: original name
       properties:
         Global MG94xREV:
@@ -1114,7 +1103,7 @@ components:
       type: object
     FelResult_result_allOf_branch_attributes_attributes_value:
       example:
-        display order: 2
+        display order: 4
         attribute type: attribute type
       properties:
         attribute type:
@@ -1126,12 +1115,12 @@ components:
       example:
         attributes:
           key:
-            display order: 2
+            display order: 4
             attribute type: attribute type
         additionalProperties:
           key:
-            Global MG94xREV: 9.301444243932576
-            Nucleotide GTR: 3.616076749251911
+            Global MG94xREV: 3.616076749251911
+            Nucleotide GTR: 2.027123023002322
             original name: original name
       properties:
         additionalProperties:
@@ -1152,10 +1141,10 @@ components:
           - headers
         content:
           key:
-          - - 4.145608029883936
-            - 4.145608029883936
-          - - 4.145608029883936
-            - 4.145608029883936
+          - - 7.386281948385884
+            - 7.386281948385884
+          - - 7.386281948385884
+            - 7.386281948385884
       properties:
         headers:
           items:
@@ -1190,23 +1179,26 @@ components:
           trees:
             key: trees
         timers:
-        - "{}"
-        - "{}"
+          key:
+            timer: 6
+            order: 0
         data partitions:
           key:
             coverage:
-            - 0
-            - 0
+            - - 1
+              - 1
+            - - 1
+              - 1
             name: name
         branch attributes:
           attributes:
             key:
-              display order: 2
+              display order: 4
               attribute type: attribute type
           additionalProperties:
             key:
-              Global MG94xREV: 9.301444243932576
-              Nucleotide GTR: 3.616076749251911
+              Global MG94xREV: 3.616076749251911
+              Nucleotide GTR: 2.027123023002322
               original name: original name
         tested:
           key:
@@ -1219,10 +1211,10 @@ components:
             - headers
           content:
             key:
-            - - 4.145608029883936
-              - 4.145608029883936
-            - - 4.145608029883936
-              - 4.145608029883936
+            - - 7.386281948385884
+              - 7.386281948385884
+            - - 7.386281948385884
+              - 7.386281948385884
         runtime: runtime
         analysis:
           settings:
@@ -1230,83 +1222,30 @@ components:
           contact: john.smith@example.com
         fits:
           key:
-            Log Likelihood: 5.962133916683182
-            estimated parameters: 7.061401241503109
-            Rate Distributions:
-              key:
-              - - 5.637376656633329
-                - 5.637376656633329
-              - - 5.637376656633329
-                - 5.637376656633329
-            AIC-c: 6.027456183070403
-            display order: 2.3021358869347655
+            Log Likelihood: 2.3021358869347655
+            estimated parameters: 9.301444243932576
+            Rate Distributions: "{}"
+            AIC-c: 5.962133916683182
+            display order: 7.061401241503109
             Equilibrium frequencies:
-            - - 1.4658129805029452
-              - 1.4658129805029452
-            - - 1.4658129805029452
-              - 1.4658129805029452
-    BustedResult_result_allOf_fits_value_Rate_Distributions_Test_value:
-      example:
-        proportion: 5.637376656633329
-        omega: 5.962133916683182
-      properties:
-        omega:
-          type: number
-        proportion:
-          type: number
-      type: object
-    BustedResult_result_allOf_fits_value_Rate_Distributions_Synonymous_site_to_site_rates_value:
-      example:
-        proportion: 2.3021358869347655
-        rate: 7.061401241503109
-      properties:
-        proportion:
-          type: number
-        rate:
-          type: number
-      type: object
-    BustedResult_result_allOf_fits_value_Rate_Distributions:
-      example:
-        Test:
-          key:
-            proportion: 5.637376656633329
-            omega: 5.962133916683182
-        Synonymous site-to-site rates:
-          key:
-            proportion: 2.3021358869347655
-            rate: 7.061401241503109
-      properties:
-        Test:
-          additionalProperties:
-            $ref: '#/components/schemas/BustedResult_result_allOf_fits_value_Rate_Distributions_Test_value'
-          type: object
-        Synonymous site-to-site rates:
-          additionalProperties:
-            $ref: '#/components/schemas/BustedResult_result_allOf_fits_value_Rate_Distributions_Synonymous_site_to_site_rates_value'
-          type: object
-      type: object
+            - - 5.637376656633329
+              - 5.637376656633329
+            - - 5.637376656633329
+              - 5.637376656633329
     BustedResult_result_allOf_fits_value:
       example:
         Log Likelihood: 1.4658129805029452
-        estimated parameters: 3.616076749251911
-        Rate Distributions:
-          Test:
-            key:
-              proportion: 5.637376656633329
-              omega: 5.962133916683182
-          Synonymous site-to-site rates:
-            key:
-              proportion: 2.3021358869347655
-              rate: 7.061401241503109
+        estimated parameters: 5.637376656633329
+        Rate Distributions: "{}"
         AIC-c: 6.027456183070403
-        display order: 9.301444243932576
+        display order: 5.962133916683182
       properties:
         AIC-c:
           type: number
         Log Likelihood:
           type: number
         Rate Distributions:
-          $ref: '#/components/schemas/BustedResult_result_allOf_fits_value_Rate_Distributions'
+          type: object
         display order:
           type: number
         estimated parameters:
@@ -1315,20 +1254,20 @@ components:
     BustedResult_result_allOf_branch_attributes_additionalProperties_value:
       example:
         Posterior prob omega class:
-        - - 7.386281948385884
-          - 7.386281948385884
-        - - 7.386281948385884
-          - 7.386281948385884
+        - - 9.301444243932576
+          - 9.301444243932576
+        - - 9.301444243932576
+          - 9.301444243932576
         Posterior prob omega class by site:
-        - - 1.2315135367772556
-          - 1.2315135367772556
-        - - 1.2315135367772556
-          - 1.2315135367772556
-        Nucleotide GTR: 4.145608029883936
-        MG94xREV with separate rates for branch sets: 2.027123023002322
+        - - 3.616076749251911
+          - 3.616076749251911
+        - - 3.616076749251911
+          - 3.616076749251911
+        Nucleotide GTR: 7.061401241503109
+        MG94xREV with separate rates for branch sets: 2.3021358869347655
         original name: original name
-        constrained: 1.0246457001441578
-        unconstrained: 1.4894159098541704
+        constrained: 2.027123023002322
+        unconstrained: 4.145608029883936
       properties:
         MG94xREV with separate rates for branch sets:
           type: number
@@ -1357,25 +1296,25 @@ components:
       example:
         attributes:
           key:
-            display order: 2
+            display order: 4
             attribute type: attribute type
         additionalProperties:
           key:
             Posterior prob omega class:
-            - - 7.386281948385884
-              - 7.386281948385884
-            - - 7.386281948385884
-              - 7.386281948385884
+            - - 9.301444243932576
+              - 9.301444243932576
+            - - 9.301444243932576
+              - 9.301444243932576
             Posterior prob omega class by site:
-            - - 1.2315135367772556
-              - 1.2315135367772556
-            - - 1.2315135367772556
-              - 1.2315135367772556
-            Nucleotide GTR: 4.145608029883936
-            MG94xREV with separate rates for branch sets: 2.027123023002322
+            - - 3.616076749251911
+              - 3.616076749251911
+            - - 3.616076749251911
+              - 3.616076749251911
+            Nucleotide GTR: 7.061401241503109
+            MG94xREV with separate rates for branch sets: 2.3021358869347655
             original name: original name
-            constrained: 1.0246457001441578
-            unconstrained: 1.4894159098541704
+            constrained: 2.027123023002322
+            unconstrained: 4.145608029883936
       properties:
         additionalProperties:
           additionalProperties:
@@ -1388,8 +1327,8 @@ components:
       type: object
     BustedResult_result_allOf_test_results:
       example:
-        p-value: 7.457744773683766
-        LRT: 6.84685269835264
+        p-value: 1.2315135367772556
+        LRT: 7.386281948385884
       properties:
         LRT:
           type: number
@@ -1408,20 +1347,20 @@ components:
     BustedResult_result_allOf_Site_Log_Likelihood:
       example:
         optimized null:
-        - - 9.965781217890562
-          - 9.965781217890562
-        - - 9.965781217890562
-          - 9.965781217890562
+        - - 7.457744773683766
+          - 7.457744773683766
+        - - 7.457744773683766
+          - 7.457744773683766
         constrained:
-        - - 4.965218492984954
-          - 4.965218492984954
-        - - 4.965218492984954
-          - 4.965218492984954
+        - - 1.4894159098541704
+          - 1.4894159098541704
+        - - 1.4894159098541704
+          - 1.4894159098541704
         unconstrained:
-        - - 5.025004791520295
-          - 5.025004791520295
-        - - 5.025004791520295
-          - 5.025004791520295
+        - - 6.84685269835264
+          - 6.84685269835264
+        - - 6.84685269835264
+          - 6.84685269835264
       properties:
         constrained:
           items:
@@ -1445,15 +1384,15 @@ components:
     BustedResult_result_allOf_Evidence_Ratios:
       example:
         optimized null:
-        - - 6.683562403749608
-          - 6.683562403749608
-        - - 6.683562403749608
-          - 6.683562403749608
+        - - 4.965218492984954
+          - 4.965218492984954
+        - - 4.965218492984954
+          - 4.965218492984954
         constrained:
-        - - 9.369310271410669
-          - 9.369310271410669
-        - - 9.369310271410669
-          - 9.369310271410669
+        - - 1.1730742509559433
+          - 1.1730742509559433
+        - - 1.1730742509559433
+          - 1.1730742509559433
       properties:
         constrained:
           items:
@@ -1501,25 +1440,26 @@ components:
         type: object
       example:
         timers:
-        - "{}"
-        - "{}"
+          key:
+            timer: 6
+            order: 0
         test results:
-          p-value: 7.457744773683766
-          LRT: 6.84685269835264
+          p-value: 1.2315135367772556
+          LRT: 7.386281948385884
         tested:
           key:
             key: tested
         Evidence Ratios:
           optimized null:
-          - - 6.683562403749608
-            - 6.683562403749608
-          - - 6.683562403749608
-            - 6.683562403749608
+          - - 4.965218492984954
+            - 4.965218492984954
+          - - 4.965218492984954
+            - 4.965218492984954
           constrained:
-          - - 9.369310271410669
-            - 9.369310271410669
-          - - 9.369310271410669
-            - 9.369310271410669
+          - - 1.1730742509559433
+            - 1.1730742509559433
+          - - 1.1730742509559433
+            - 1.1730742509559433
         runtime: runtime
         analysis:
           settings:
@@ -1528,54 +1468,48 @@ components:
         fits:
           key:
             Log Likelihood: 1.4658129805029452
-            estimated parameters: 3.616076749251911
-            Rate Distributions:
-              Test:
-                key:
-                  proportion: 5.637376656633329
-                  omega: 5.962133916683182
-              Synonymous site-to-site rates:
-                key:
-                  proportion: 2.3021358869347655
-                  rate: 7.061401241503109
+            estimated parameters: 5.637376656633329
+            Rate Distributions: "{}"
             AIC-c: 6.027456183070403
-            display order: 9.301444243932576
+            display order: 5.962133916683182
         Synonymous site-posteriors:
-        - - 1.1730742509559433
-          - 1.1730742509559433
-        - - 1.1730742509559433
-          - 1.1730742509559433
+        - - 1.0246457001441578
+          - 1.0246457001441578
+        - - 1.0246457001441578
+          - 1.0246457001441578
         input:
           trees:
             key: trees
         data partitions:
           key:
             coverage:
-            - 0
-            - 0
+            - - 1
+              - 1
+            - - 1
+              - 1
             name: name
         branch attributes:
           attributes:
             key:
-              display order: 2
+              display order: 4
               attribute type: attribute type
           additionalProperties:
             key:
               Posterior prob omega class:
-              - - 7.386281948385884
-                - 7.386281948385884
-              - - 7.386281948385884
-                - 7.386281948385884
+              - - 9.301444243932576
+                - 9.301444243932576
+              - - 9.301444243932576
+                - 9.301444243932576
               Posterior prob omega class by site:
-              - - 1.2315135367772556
-                - 1.2315135367772556
-              - - 1.2315135367772556
-                - 1.2315135367772556
-              Nucleotide GTR: 4.145608029883936
-              MG94xREV with separate rates for branch sets: 2.027123023002322
+              - - 3.616076749251911
+                - 3.616076749251911
+              - - 3.616076749251911
+                - 3.616076749251911
+              Nucleotide GTR: 7.061401241503109
+              MG94xREV with separate rates for branch sets: 2.3021358869347655
               original name: original name
-              constrained: 1.0246457001441578
-              unconstrained: 1.4894159098541704
+              constrained: 2.027123023002322
+              unconstrained: 4.145608029883936
         substitutions:
           key:
             key:
@@ -1583,61 +1517,38 @@ components:
         background: 0.8008281904610115
         Site Log Likelihood:
           optimized null:
-          - - 9.965781217890562
-            - 9.965781217890562
-          - - 9.965781217890562
-            - 9.965781217890562
+          - - 7.457744773683766
+            - 7.457744773683766
+          - - 7.457744773683766
+            - 7.457744773683766
           constrained:
-          - - 4.965218492984954
-            - 4.965218492984954
-          - - 4.965218492984954
-            - 4.965218492984954
+          - - 1.4894159098541704
+            - 1.4894159098541704
+          - - 1.4894159098541704
+            - 1.4894159098541704
           unconstrained:
-          - - 5.025004791520295
-            - 5.025004791520295
-          - - 5.025004791520295
-            - 5.025004791520295
-    AbsrelResult_result_allOf_fits_value_Rate_Distributions_value:
-      example:
-        Mean: 1.4658129805029452
-        Median: 5.962133916683182
-        "2.5%": 5.637376656633329
-        "97.5%": 2.3021358869347655
-      properties:
-        Mean:
-          type: number
-        Median:
-          type: number
-        "2.5%":
-          type: number
-        "97.5%":
-          type: number
-      type: object
+          - - 6.84685269835264
+            - 6.84685269835264
+          - - 6.84685269835264
+            - 6.84685269835264
     AbsrelResult_result_allOf_fits_value:
       example:
         Log Likelihood: 6.027456183070403
-        estimated parameters: 9.301444243932576
-        Rate Distributions:
-          key:
-            Mean: 1.4658129805029452
-            Median: 5.962133916683182
-            "2.5%": 5.637376656633329
-            "97.5%": 2.3021358869347655
+        estimated parameters: 5.962133916683182
+        Rate Distributions: "{}"
         AIC-c: 0.8008281904610115
-        display order: 7.061401241503109
+        display order: 1.4658129805029452
         Equilibrium frequencies:
-        - - 3.616076749251911
-          - 3.616076749251911
-        - - 3.616076749251911
-          - 3.616076749251911
+        - - 5.637376656633329
+          - 5.637376656633329
+        - - 5.637376656633329
+          - 5.637376656633329
       properties:
         AIC-c:
           type: number
         Log Likelihood:
           type: number
         Rate Distributions:
-          additionalProperties:
-            $ref: '#/components/schemas/AbsrelResult_result_allOf_fits_value_Rate_Distributions_value'
           type: object
         display order:
           type: number
@@ -1652,9 +1563,9 @@ components:
       type: object
     AbsrelResult_result_allOf_test_results:
       example:
-        tested: 4
-        P-value threshold: 2.027123023002322
-        positive test results: 7
+        tested: 7
+        P-value threshold: 2.3021358869347655
+        positive test results: 9
       properties:
         P-value threshold:
           type: number
@@ -1663,40 +1574,22 @@ components:
         positive test results:
           type: integer
       type: object
-    AbsrelResult_result_allOf_data_partitions_value:
-      example:
-        coverage:
-        - - 1
-          - 1
-        - - 1
-          - 1
-        name: name
-      properties:
-        name:
-          type: string
-        coverage:
-          items:
-            items:
-              type: integer
-            type: array
-          type: array
-      type: object
     AbsrelResult_result_allOf_branch_attributes_additionalProperties_value:
       example:
-        Uncorrected P-value: 9.965781217890562
-        Full adaptive model: 1.1730742509559433
-        Baseline MG94xREV: 1.4894159098541704
+        Uncorrected P-value: 6.84685269835264
+        Full adaptive model: 1.2315135367772556
+        Baseline MG94xREV: 2.027123023002322
         Rate Distributions:
-        - - 4.965218492984954
-          - 4.965218492984954
-        - - 4.965218492984954
-          - 4.965218492984954
-        Nucleotide GTR: 1.0246457001441578
-        Baseline MG94xREV omega ratio: 6.84685269835264
+        - - 1.0246457001441578
+          - 1.0246457001441578
+        - - 1.0246457001441578
+          - 1.0246457001441578
+        Nucleotide GTR: 3.616076749251911
+        Baseline MG94xREV omega ratio: 4.145608029883936
         Rate classes: 7
-        Corrected P-value: 9.369310271410669
+        Corrected P-value: 7.457744773683766
         original name: original name
-        LRT: 5.025004791520295
+        LRT: 1.4894159098541704
       properties:
         original name:
           type: string
@@ -1727,24 +1620,24 @@ components:
       example:
         attributes:
           key:
-            display order: 2
+            display order: 4
             attribute type: attribute type
         additionalProperties:
           key:
-            Uncorrected P-value: 9.965781217890562
-            Full adaptive model: 1.1730742509559433
-            Baseline MG94xREV: 1.4894159098541704
+            Uncorrected P-value: 6.84685269835264
+            Full adaptive model: 1.2315135367772556
+            Baseline MG94xREV: 2.027123023002322
             Rate Distributions:
-            - - 4.965218492984954
-              - 4.965218492984954
-            - - 4.965218492984954
-              - 4.965218492984954
-            Nucleotide GTR: 1.0246457001441578
-            Baseline MG94xREV omega ratio: 6.84685269835264
+            - - 1.0246457001441578
+              - 1.0246457001441578
+            - - 1.0246457001441578
+              - 1.0246457001441578
+            Nucleotide GTR: 3.616076749251911
+            Baseline MG94xREV omega ratio: 4.145608029883936
             Rate classes: 7
-            Corrected P-value: 9.369310271410669
+            Corrected P-value: 7.457744773683766
             original name: original name
-            LRT: 5.025004791520295
+            LRT: 1.4894159098541704
       properties:
         additionalProperties:
           additionalProperties:
@@ -1757,8 +1650,8 @@ components:
       type: object
     AbsrelResult_result_allOf_timers_value:
       example:
-        timer: 6
-        order: 8
+        timer: 1
+        order: 4
       properties:
         timer:
           type: integer
@@ -1783,7 +1676,7 @@ components:
             type: object
           data partitions:
             additionalProperties:
-              $ref: '#/components/schemas/AbsrelResult_result_allOf_data_partitions_value'
+              $ref: '#/components/schemas/PartitionsInfo_value'
             type: object
           branch attributes:
             $ref: '#/components/schemas/AbsrelResult_result_allOf_branch_attributes'
@@ -1798,8 +1691,8 @@ components:
             key: trees
         timers:
           key:
-            timer: 6
-            order: 8
+            timer: 1
+            order: 4
         data partitions:
           key:
             coverage:
@@ -1809,30 +1702,30 @@ components:
               - 1
             name: name
         test results:
-          tested: 4
-          P-value threshold: 2.027123023002322
-          positive test results: 7
+          tested: 7
+          P-value threshold: 2.3021358869347655
+          positive test results: 9
         branch attributes:
           attributes:
             key:
-              display order: 2
+              display order: 4
               attribute type: attribute type
           additionalProperties:
             key:
-              Uncorrected P-value: 9.965781217890562
-              Full adaptive model: 1.1730742509559433
-              Baseline MG94xREV: 1.4894159098541704
+              Uncorrected P-value: 6.84685269835264
+              Full adaptive model: 1.2315135367772556
+              Baseline MG94xREV: 2.027123023002322
               Rate Distributions:
-              - - 4.965218492984954
-                - 4.965218492984954
-              - - 4.965218492984954
-                - 4.965218492984954
-              Nucleotide GTR: 1.0246457001441578
-              Baseline MG94xREV omega ratio: 6.84685269835264
+              - - 1.0246457001441578
+                - 1.0246457001441578
+              - - 1.0246457001441578
+                - 1.0246457001441578
+              Nucleotide GTR: 3.616076749251911
+              Baseline MG94xREV omega ratio: 4.145608029883936
               Rate classes: 7
-              Corrected P-value: 9.369310271410669
+              Corrected P-value: 7.457744773683766
               original name: original name
-              LRT: 5.025004791520295
+              LRT: 1.4894159098541704
         tested:
           key:
             key: tested
@@ -1844,17 +1737,12 @@ components:
         fits:
           key:
             Log Likelihood: 6.027456183070403
-            estimated parameters: 9.301444243932576
-            Rate Distributions:
-              key:
-                Mean: 1.4658129805029452
-                Median: 5.962133916683182
-                "2.5%": 5.637376656633329
-                "97.5%": 2.3021358869347655
+            estimated parameters: 5.962133916683182
+            Rate Distributions: "{}"
             AIC-c: 0.8008281904610115
-            display order: 7.061401241503109
+            display order: 1.4658129805029452
             Equilibrium frequencies:
-            - - 3.616076749251911
-              - 3.616076749251911
-            - - 3.616076749251911
-              - 3.616076749251911
+            - - 5.637376656633329
+              - 5.637376656633329
+            - - 5.637376656633329
+              - 5.637376656633329

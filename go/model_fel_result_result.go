@@ -18,7 +18,7 @@ type FelResultResult struct {
 
 	Tested map[string]map[string]string `json:"tested,omitempty"`
 
-	Timers []map[string]interface{} `json:"timers,omitempty"`
+	Timers map[string]TimersInfoValue `json:"timers,omitempty"`
 
 	Runtime string `json:"runtime,omitempty" validate:"regexp=^[0-9]+\\\\.[0-9]+\\\\.[0-9]+$"`
 

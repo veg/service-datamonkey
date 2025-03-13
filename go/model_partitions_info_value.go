@@ -14,5 +14,5 @@ type PartitionsInfoValue struct {
 
 	Name string `json:"name,omitempty"`
 
-	Coverage []int32 `json:"coverage,omitempty"`
+	Coverage [][]int32 `json:"coverage,omitempty"`
 }
