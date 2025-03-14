@@ -10,9 +10,9 @@
 
 package datamonkey
 
-type ContrastFelResult struct {
+type MultihitResultResultTestResultsDoubleHitVsSingleHit struct {
 
-	JobId string `json:"job_id,omitempty" validate:"regexp=^[a-zA-Z0-9]+$"`
+	LRT float32 `json:"LRT,omitempty"`
 
-	Result ContrastFelResultResult `json:"result,omitempty"`
+	PValue float32 `json:"p_value,omitempty"`
 }

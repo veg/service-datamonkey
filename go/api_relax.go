@@ -19,20 +19,20 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type FELAPI struct {
+type RELAXAPI struct {
 	HyPhyBaseAPI
 }
 
-// NewFELAPI creates a new FELAPI instance
-func NewFELAPI(basePath, hyPhyPath string, scheduler SchedulerInterface, datasetTracker DatasetTracker) *FELAPI {
-	return &FELAPI{
+// NewRELAXAPI creates a new RELAXAPI instance
+func NewRELAXAPI(basePath, hyPhyPath string, scheduler SchedulerInterface, datasetTracker DatasetTracker) *RELAXAPI {
+	return &RELAXAPI{
 		HyPhyBaseAPI: NewHyPhyBaseAPI(basePath, hyPhyPath, scheduler, datasetTracker),
 	}
 }
 
-// GetFELJob retrieves the status and results of a FEL job
-func (api *FELAPI) GetFELJob(c *gin.Context) {
-	var request FelRequest
+// GetRELAXJob retrieves the status and results of a RELAX job
+func (api *RELAXAPI) GetRELAXJob(c *gin.Context) {
+	var request RelaxRequest
 	if err := c.BindJSON(&request); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to parse job configuration"})
 		return
@@ -44,7 +44,7 @@ func (api *FELAPI) GetFELJob(c *gin.Context) {
 		return
 	}
 
-	result, err := api.HandleGetJob(c, adapted, MethodFEL)
+	result, err := api.HandleGetJob(c, adapted, MethodRELAX)
 	if err != nil {
 		if err.Error() == "job is not complete" {
 			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
@@ -54,11 +54,8 @@ func (api *FELAPI) GetFELJob(c *gin.Context) {
 		return
 	}
 
-	// Parse the raw JSON results into FelResult
+	// Parse the raw JSON results into RelaxResult
 	resultMap := result.(map[string]interface{})
-
-	// Get the job ID from the result map
-	jobId := resultMap["jobId"].(string)
 
 	// Log the raw results for debugging
 	rawResults := resultMap["results"].(json.RawMessage)
@@ -76,11 +73,11 @@ func (api *FELAPI) GetFELJob(c *gin.Context) {
 	}
 
 	// Create a wrapper structure to match the expected format
-	wrappedJSON := fmt.Sprintf(`{"job_id":"%s","result":%s}`, jobId, string(rawResults))
+	wrappedJSON := fmt.Sprintf(`{"job_id":"test_job","result":%s}`, string(rawResults))
 	log.Printf("Wrapped JSON: %s", wrappedJSON)
 
-	var felResult FelResult
-	if err := json.Unmarshal([]byte(wrappedJSON), &felResult); err != nil {
+	var relaxResult RelaxResult
+	if err := json.Unmarshal([]byte(wrappedJSON), &relaxResult); err != nil {
 		log.Printf("Error unmarshaling wrapped results: %v", err)
 		// Try to unmarshal as a generic map to see what's in there
 		var resultAsMap map[string]interface{}
@@ -94,17 +91,17 @@ func (api *FELAPI) GetFELJob(c *gin.Context) {
 	}
 
 	// Log the parsed result structure
-	log.Printf("Parsed FelResult: %+v", felResult)
+	log.Printf("Parsed RelaxResult: %+v", relaxResult)
 
 	// Update the results in the resultMap
-	resultMap["results"] = felResult.Result
+	resultMap["results"] = relaxResult.Result
 
 	c.JSON(http.StatusOK, resultMap)
 }
 
-// StartFELJob starts a new FEL analysis job
-func (api *FELAPI) StartFELJob(c *gin.Context) {
-	var request FelRequest
+// StartRELAXJob starts a new RELAX analysis job
+func (api *RELAXAPI) StartRELAXJob(c *gin.Context) {
+	var request RelaxRequest
 	if err := c.BindJSON(&request); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to parse job configuration"})
 		return
@@ -116,7 +113,7 @@ func (api *FELAPI) StartFELJob(c *gin.Context) {
 		return
 	}
 
-	result, err := api.HandleStartJob(c, adapted, MethodFEL)
+	result, err := api.HandleStartJob(c, adapted, MethodRELAX)
 	if err != nil {
 		if err.Error() == "authentication token required" {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})

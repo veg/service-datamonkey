@@ -620,7 +620,7 @@ paths:
         \ sets of branches at a site. The method estimates site-specific synonymous\
         \ (alpha) and \nnon-synonymous (beta, one per branch set) substitution rates\
         \ and tests beta rates for equality at each site.\n"
-      operationId: startContrastFelJob
+      operationId: startCONTRASTFELJob
       parameters:
       - description: Pretty print response
         explode: true
@@ -664,7 +664,7 @@ paths:
         \ CONTRAST-FEL investigates whether \nselective pressures differ between two\
         \ or more sets of branches at a site by estimating site-specific \nsynonymous\
         \ and non-synonymous substitution rates.\n"
-      operationId: getContrastFelResults
+      operationId: getCONTRASTFELJob
       requestBody:
         content:
           application/json:
@@ -693,7 +693,7 @@ paths:
         Starts a Fast Unconstrained Bayesian AppRoximation (FUBAR) job to detect sites under positive selection.
         FUBAR uses a Bayesian approach to infer selection pressures at individual sites, providing posterior
         probabilities of positive and negative selection.
-      operationId: startFubarJob
+      operationId: startFUBARJob
       parameters:
       - description: Pretty print response
         explode: true
@@ -737,7 +737,7 @@ paths:
         Retrieves the results of a previously submitted Fast Unconstrained Bayesian AppRoximation (FUBAR) job.
         FUBAR uses a Bayesian approach to infer selection pressures at individual sites, providing posterior
         probabilities of positive and negative selection.
-      operationId: getFubarResults
+      operationId: getFUBARJob
       parameters:
       - description: Pretty print response
         explode: true
@@ -775,7 +775,7 @@ paths:
         \ is better fit by models \nwhich permit multiple instantaneous substitutions.\
         \ It can analyze both double-hit and \ntriple-hit substitutions, with an option\
         \ to account for synonymous triple-hit substitutions.\n"
-      operationId: startMultihitJob
+      operationId: startMULTIHITJob
       parameters:
       - description: Pretty print response
         explode: true
@@ -819,7 +819,7 @@ paths:
         Retrieve the results of a previously submitted MULTI-HIT analysis job.
         Results include evidence ratios for different substitution types, site-specific substitutions,
         model fitting information, and statistical test results comparing different models.
-      operationId: getMultihitResults
+      operationId: getMULTIHITJob
       parameters:
       - description: Pretty print response
         explode: true
@@ -858,7 +858,7 @@ paths:
         and minimum path substitution counting to estimate site-level dS and dN, and applies a simple
         binomial-based test to test if dS differs from dN. The estimates aggregate information over all branches,
         so the signal is derived from pervasive diversification or conservation.
-      operationId: startSlacJob
+      operationId: startSLACJob
       parameters:
       - description: Pretty print response
         explode: true
@@ -901,7 +901,7 @@ paths:
       description: |
         Retrieve the results of a previously submitted SLAC (Single Likelihood Ancestor Counting) analysis job.
         Results include model fitting information, branch attributes, and site-specific dN/dS estimates.
-      operationId: getSlacResults
+      operationId: getSLACJob
       parameters:
       - description: Pretty print response
         explode: true
@@ -2140,57 +2140,42 @@ components:
       type: object
     ContrastFelResult:
       example:
-        input:
-          partition_count: 1
-          file_name: file_name
-          number_of_sequences: 0
-          number_of_sites: 6
-        tested:
-          key: tested
-        MLE:
-          headers:
-          - - headers
-            - headers
-          - - headers
-            - headers
-          content:
-            key:
-            - - 5.962133916683182
-              - 5.962133916683182
-            - - 5.962133916683182
-              - 5.962133916683182
-        branch_attributes:
-          key: "{}"
-        analysis:
-          citation: citation
-          version: version
-          authors: authors
-          info: info
-        fits:
-          key: "{}"
+        result:
+          input:
+            partition_count: 1
+            file_name: file_name
+            number_of_sequences: 0
+            number_of_sites: 6
+          tested:
+            key: tested
+          MLE:
+            headers:
+            - - headers
+              - headers
+            - - headers
+              - headers
+            content:
+              key:
+              - - 5.962133916683182
+                - 5.962133916683182
+              - - 5.962133916683182
+                - 5.962133916683182
+          branch_attributes:
+            key: "{}"
+          analysis:
+            citation: citation
+            version: version
+            authors: authors
+            info: info
+          fits:
+            key: "{}"
+        job_id: job_id
       properties:
-        input:
-          $ref: '#/components/schemas/ContrastFelResult_input'
-        analysis:
-          $ref: '#/components/schemas/ContrastFelResult_analysis'
-        tested:
-          additionalProperties:
-            type: string
-          description: "Mapping of branch names to their test groups (e.g., \"TREATED\"\
-            , \"NAIVE\", \"background\")"
-          type: object
-        MLE:
-          $ref: '#/components/schemas/ContrastFelResult_MLE'
-        branch_attributes:
-          additionalProperties:
-            type: object
-          description: Attributes for each branch in the phylogenetic tree
-          type: object
-        fits:
-          additionalProperties:
-            type: object
-          description: Model fit statistics
-          type: object
+        job_id:
+          pattern: "^[a-zA-Z0-9]+$"
+          type: string
+        result:
+          $ref: '#/components/schemas/ContrastFelResult_result'
       type: object
     FubarRequest:
       example:
@@ -2230,53 +2215,44 @@ components:
       type: object
     FubarResult:
       example:
-        input:
-          partition_count: 1
-          file_name: file_name
-          number_of_sequences: 0
-          trees:
-            key: trees
-          number_of_sites: 6
-        timers:
-          key: "{}"
-        MLE:
-          headers:
-          - - headers
-            - headers
-          - - headers
-            - headers
-          content:
-            key:
-            - - 5.962133916683182
-              - 5.962133916683182
-            - - 5.962133916683182
-              - 5.962133916683182
-        analysis:
-          requirements: requirements
-          citation: citation
-          contact: contact
-          version: version
-          info: info
-          authors: authors
-        fits:
-          key: "{}"
+        result:
+          input:
+            partition_count: 1
+            file_name: file_name
+            number_of_sequences: 0
+            trees:
+              key: trees
+            number_of_sites: 6
+          timers:
+            key: "{}"
+          MLE:
+            headers:
+            - - headers
+              - headers
+            - - headers
+              - headers
+            content:
+              key:
+              - - 5.962133916683182
+                - 5.962133916683182
+              - - 5.962133916683182
+                - 5.962133916683182
+          analysis:
+            requirements: requirements
+            citation: citation
+            contact: contact
+            version: version
+            info: info
+            authors: authors
+          fits:
+            key: "{}"
+        job_id: job_id
       properties:
-        analysis:
-          $ref: '#/components/schemas/FubarResult_analysis'
-        input:
-          $ref: '#/components/schemas/FubarResult_input'
-        fits:
-          additionalProperties:
-            type: object
-          description: Model fit statistics
-          type: object
-        timers:
-          additionalProperties:
-            type: object
-          description: Timing information for different stages of the analysis
-          type: object
-        MLE:
-          $ref: '#/components/schemas/ContrastFelResult_MLE'
+        job_id:
+          pattern: "^[a-zA-Z0-9]+$"
+          type: string
+        result:
+          $ref: '#/components/schemas/FubarResult_result'
       type: object
     MultihitRequest:
       description: Request parameters for MULTI-HIT analysis
@@ -2310,94 +2286,86 @@ components:
     MultihitResult:
       description: Results from a MULTI-HIT analysis
       example:
-        site_substitutions:
-          key:
-            key: "{}"
-        evidence_ratios:
-          three_hit_islands_vs_2_hit:
-          - - 1.4658129805029452
-            - 1.4658129805029452
-          - - 1.4658129805029452
-            - 1.4658129805029452
-          three_hit:
-          - - 0.8008281904610115
-            - 0.8008281904610115
-          - - 0.8008281904610115
-            - 0.8008281904610115
-          two_hit:
-          - - 6.027456183070403
-            - 6.027456183070403
-          - - 6.027456183070403
-            - 6.027456183070403
-        analysis:
-          requirements: requirements
-          contact: contact
-          version: version
-          authors: authors
-          info: info
-        fits:
-          Standard_MG94:
-            display_order: 2
-            AIC_c: 5.962133916683182
-            estimated_parameters: 7
-            Log_Likelihood: 5.637376656633329
-            Rate_Distributions: "{}"
-          MG94_with_double_and_triple_instantaneous_substitutions_only_synonymous_islands:
-            display_order: 2
-            AIC_c: 5.962133916683182
-            estimated_parameters: 7
-            Log_Likelihood: 5.637376656633329
-            Rate_Distributions: "{}"
-          MG94_with_double_and_triple_instantaneous_substitutions:
-            display_order: 2
-            AIC_c: 5.962133916683182
-            estimated_parameters: 7
-            Log_Likelihood: 5.637376656633329
-            Rate_Distributions: "{}"
-          MG94_with_double_instantaneous_substitutions:
-            display_order: 2
-            AIC_c: 5.962133916683182
-            estimated_parameters: 7
-            Log_Likelihood: 5.637376656633329
-            Rate_Distributions: "{}"
-          Nucleotide_GTR:
-            display_order: 2
-            AIC_c: 5.962133916683182
-            estimated_parameters: 7
-            Log_Likelihood: 5.637376656633329
-            Rate_Distributions: "{}"
-        test_results:
-          Double_hit_vs_single_hit:
-            p_value: 3.616076749251911
-            LRT: 9.301444243932576
-          Triple_hit_vs_Triple_hit_island:
-            p_value: 3.616076749251911
-            LRT: 9.301444243932576
-          Triple_hit_vs_double_hit:
-            p_value: 3.616076749251911
-            LRT: 9.301444243932576
-          Triple_hit_vs_single_hit:
-            p_value: 3.616076749251911
-            LRT: 9.301444243932576
-          Triple_hit_island_vs_double_hit:
-            p_value: 3.616076749251911
-            LRT: 9.301444243932576
+        result:
+          site_substitutions:
+            key:
+              key: "{}"
+          evidence_ratios:
+            three_hit_islands_vs_2_hit:
+            - - 1.4658129805029452
+              - 1.4658129805029452
+            - - 1.4658129805029452
+              - 1.4658129805029452
+            three_hit:
+            - - 0.8008281904610115
+              - 0.8008281904610115
+            - - 0.8008281904610115
+              - 0.8008281904610115
+            two_hit:
+            - - 6.027456183070403
+              - 6.027456183070403
+            - - 6.027456183070403
+              - 6.027456183070403
+          analysis:
+            requirements: requirements
+            contact: contact
+            version: version
+            authors: authors
+            info: info
+          fits:
+            Standard_MG94:
+              display_order: 2
+              AIC_c: 5.962133916683182
+              estimated_parameters: 7
+              Log_Likelihood: 5.637376656633329
+              Rate_Distributions: "{}"
+            MG94_with_double_and_triple_instantaneous_substitutions_only_synonymous_islands:
+              display_order: 2
+              AIC_c: 5.962133916683182
+              estimated_parameters: 7
+              Log_Likelihood: 5.637376656633329
+              Rate_Distributions: "{}"
+            MG94_with_double_and_triple_instantaneous_substitutions:
+              display_order: 2
+              AIC_c: 5.962133916683182
+              estimated_parameters: 7
+              Log_Likelihood: 5.637376656633329
+              Rate_Distributions: "{}"
+            MG94_with_double_instantaneous_substitutions:
+              display_order: 2
+              AIC_c: 5.962133916683182
+              estimated_parameters: 7
+              Log_Likelihood: 5.637376656633329
+              Rate_Distributions: "{}"
+            Nucleotide_GTR:
+              display_order: 2
+              AIC_c: 5.962133916683182
+              estimated_parameters: 7
+              Log_Likelihood: 5.637376656633329
+              Rate_Distributions: "{}"
+          test_results:
+            Double_hit_vs_single_hit:
+              p_value: 3.616076749251911
+              LRT: 9.301444243932576
+            Triple_hit_vs_Triple_hit_island:
+              p_value: 3.616076749251911
+              LRT: 9.301444243932576
+            Triple_hit_vs_double_hit:
+              p_value: 3.616076749251911
+              LRT: 9.301444243932576
+            Triple_hit_vs_single_hit:
+              p_value: 3.616076749251911
+              LRT: 9.301444243932576
+            Triple_hit_island_vs_double_hit:
+              p_value: 3.616076749251911
+              LRT: 9.301444243932576
+        job_id: job_id
       properties:
-        evidence_ratios:
-          $ref: '#/components/schemas/MultihitResult_evidence_ratios'
-        site_substitutions:
-          additionalProperties:
-            additionalProperties:
-              type: object
-            type: object
-          description: Detailed site substitution mappings
-          type: object
-        analysis:
-          $ref: '#/components/schemas/MultihitResult_analysis'
-        fits:
-          $ref: '#/components/schemas/MultihitResult_fits'
-        test_results:
-          $ref: '#/components/schemas/MultihitResult_test_results'
+        job_id:
+          pattern: "^[a-zA-Z0-9]+$"
+          type: string
+        result:
+          $ref: '#/components/schemas/MultihitResult_result'
       type: object
     SlacRequest:
       description: Request parameters for SLAC (Single Likelihood Ancestor Counting)
@@ -2438,140 +2406,111 @@ components:
     SlacResult:
       description: Results from a SLAC (Single Likelihood Ancestor Counting) analysis
       example:
-        input:
-          partition_count: 1
-          file_name: file_name
-          number_of_sequences: 1
-          trees:
-            key: trees
-          number_of_sites: 1
-        timers:
-          Ancestor_sampling_analysis:
-            timer: 1
-            order: 4
-          Model_fitting:
-            timer: 1
-            order: 4
-          Primary_SLAC_analysis:
-            timer: 1
-            order: 4
-          Total_time:
-            timer: 1
-            order: 4
-        site_results:
-          key:
-          - 5.025004791520295
-          - 5.025004791520295
-        tested:
-          key:
-            key: tested
-        branch_attributes:
-          key:
+        result:
+          input:
+            partition_count: 1
+            file_name: file_name
+            number_of_sequences: 1
+            trees:
+              key: trees
+            number_of_sites: 1
+          timers:
+            Ancestor_sampling_analysis:
+              timer: 1
+              order: 4
+            Model_fitting:
+              timer: 1
+              order: 4
+            Primary_SLAC_analysis:
+              timer: 1
+              order: 4
+            Total_time:
+              timer: 1
+              order: 4
+          site_results:
             key:
-              codon:
-              - - codon
-                - codon
-              - - codon
-                - codon
-              synonymous_substitution_count:
-              - - 1.1730742509559433
-                - 1.1730742509559433
-              - - 1.1730742509559433
-                - 1.1730742509559433
-              Nucleotide_GTR: 6.84685269835264
-              original_name: original_name
-              nonsynonymous_substitution_count:
-              - - 4.965218492984954
-                - 4.965218492984954
-              - - 4.965218492984954
-                - 4.965218492984954
-              amino_acid:
-              - - amino_acid
-                - amino_acid
-              - - amino_acid
-                - amino_acid
-              Global_MG94xREV: 7.457744773683766
-        data_partitions:
-          key:
-            coverage:
-            - - 1
-              - 1
-            - - 1
-              - 1
-            name: name
-        analysis:
-          requirements: requirements
-          citation: citation
-          contact: contact
-          version: version
-          info: info
-          authors: authors
-        fits:
-          Nucleotide_GTR:
-            Equilibrium_frequencies:
-            - - 5.962133916683182
-              - 5.962133916683182
-            - - 5.962133916683182
-              - 5.962133916683182
-            display_order: 2
-            estimated_parameters: 6
-            AIC_c: 1.4658129805029452
-            Log_Likelihood: 0.8008281904610115
-            Rate_Distributions:
-              key: 5.637376656633329
-          Global_MG94xREV:
-            Equilibrium_frequencies:
-            - - 2.027123023002322
-              - 2.027123023002322
-            - - 2.027123023002322
-              - 2.027123023002322
-            display_order: 7
-            estimated_parameters: 9
-            AIC_c: 3.616076749251911
-            Log_Likelihood: 7.061401241503109
-            Rate_Distributions:
-              distribution:
-              - - 4.145608029883936
-                - 4.145608029883936
-              - - 4.145608029883936
-                - 4.145608029883936
+            - 5.025004791520295
+            - 5.025004791520295
+          tested:
+            key:
+              key: tested
+          branch_attributes:
+            key:
+              key:
+                codon:
+                - - codon
+                  - codon
+                - - codon
+                  - codon
+                synonymous_substitution_count:
+                - - 1.1730742509559433
+                  - 1.1730742509559433
+                - - 1.1730742509559433
+                  - 1.1730742509559433
+                Nucleotide_GTR: 6.84685269835264
+                original_name: original_name
+                nonsynonymous_substitution_count:
+                - - 4.965218492984954
+                  - 4.965218492984954
+                - - 4.965218492984954
+                  - 4.965218492984954
+                amino_acid:
+                - - amino_acid
+                  - amino_acid
+                - - amino_acid
+                  - amino_acid
+                Global_MG94xREV: 7.457744773683766
+          data_partitions:
+            key:
+              coverage:
+              - - 1
+                - 1
+              - - 1
+                - 1
+              name: name
+          analysis:
+            requirements: requirements
+            citation: citation
+            contact: contact
+            version: version
+            info: info
+            authors: authors
+          fits:
+            Nucleotide_GTR:
+              Equilibrium_frequencies:
+              - - 5.962133916683182
+                - 5.962133916683182
+              - - 5.962133916683182
+                - 5.962133916683182
+              display_order: 2
+              estimated_parameters: 6
+              AIC_c: 1.4658129805029452
+              Log_Likelihood: 0.8008281904610115
+              Rate_Distributions:
+                key: 5.637376656633329
+            Global_MG94xREV:
+              Equilibrium_frequencies:
+              - - 2.027123023002322
+                - 2.027123023002322
+              - - 2.027123023002322
+                - 2.027123023002322
+              display_order: 7
+              estimated_parameters: 9
+              AIC_c: 3.616076749251911
+              Log_Likelihood: 7.061401241503109
+              Rate_Distributions:
+                distribution:
+                - - 4.145608029883936
+                  - 4.145608029883936
+                - - 4.145608029883936
+                  - 4.145608029883936
+        job_id: job_id
       properties:
-        analysis:
-          $ref: '#/components/schemas/SlacResult_analysis'
-        fits:
-          $ref: '#/components/schemas/SlacResult_fits'
-        timers:
-          $ref: '#/components/schemas/SlacResult_timers'
-        tested:
-          additionalProperties:
-            additionalProperties:
-              type: string
-            type: object
-          description: Branches tested in the analysis
-          type: object
-        input:
-          $ref: '#/components/schemas/SlacResult_input'
-        data_partitions:
-          additionalProperties:
-            $ref: '#/components/schemas/PartitionsInfo_value'
-          description: Data partitions used in the analysis
-          type: object
-        branch_attributes:
-          additionalProperties:
-            additionalProperties:
-              $ref: '#/components/schemas/SlacResult_branch_attributes_value_value'
-            type: object
-          description: Branch-specific attributes
-          type: object
-        site_results:
-          additionalProperties:
-            description: "Array of site-specific statistics including dN, dS, p-values,\
-              \ etc."
-            items:
-              type: number
-            type: array
-          description: Site-specific results
-          type: object
+        job_id:
+          pattern: "^[a-zA-Z0-9]+$"
+          type: string
+        result:
+          $ref: '#/components/schemas/SlacResult_result'
       type: object
     DatasetMeta:
       properties:
@@ -4071,7 +4010,7 @@ components:
             Rate Distributions: "{}"
             AIC-c: 1.4658129805029452
             display order: 5
-    ContrastFelResult_input:
+    ContrastFelResult_result_input:
       example:
         partition_count: 1
         file_name: file_name
@@ -4091,7 +4030,7 @@ components:
           description: Number of partitions in the analysis
           type: integer
       type: object
-    ContrastFelResult_analysis:
+    ContrastFelResult_result_analysis:
       example:
         citation: citation
         version: version
@@ -4111,7 +4050,7 @@ components:
           description: Information about the analysis method
           type: string
       type: object
-    ContrastFelResult_MLE:
+    ContrastFelResult_result_MLE:
       example:
         headers:
         - - headers
@@ -4143,7 +4082,61 @@ components:
           description: Site-specific results with statistical values
           type: object
       type: object
-    FubarResult_analysis:
+    ContrastFelResult_result:
+      example:
+        input:
+          partition_count: 1
+          file_name: file_name
+          number_of_sequences: 0
+          number_of_sites: 6
+        tested:
+          key: tested
+        MLE:
+          headers:
+          - - headers
+            - headers
+          - - headers
+            - headers
+          content:
+            key:
+            - - 5.962133916683182
+              - 5.962133916683182
+            - - 5.962133916683182
+              - 5.962133916683182
+        branch_attributes:
+          key: "{}"
+        analysis:
+          citation: citation
+          version: version
+          authors: authors
+          info: info
+        fits:
+          key: "{}"
+      properties:
+        input:
+          $ref: '#/components/schemas/ContrastFelResult_result_input'
+        analysis:
+          $ref: '#/components/schemas/ContrastFelResult_result_analysis'
+        tested:
+          additionalProperties:
+            type: string
+          description: "Mapping of branch names to their test groups (e.g., \"TREATED\"\
+            , \"NAIVE\", \"background\")"
+          type: object
+        MLE:
+          $ref: '#/components/schemas/ContrastFelResult_result_MLE'
+        branch_attributes:
+          additionalProperties:
+            type: object
+          description: Attributes for each branch in the phylogenetic tree
+          type: object
+        fits:
+          additionalProperties:
+            type: object
+          description: Model fit statistics
+          type: object
+      type: object
+    FubarResult_result_analysis:
       example:
         requirements: requirements
         citation: citation
@@ -4171,7 +4164,7 @@ components:
           description: Requirements for running FUBAR
           type: string
       type: object
-    FubarResult_input:
+    FubarResult_result_input:
       example:
         partition_count: 1
         file_name: file_name
@@ -4198,7 +4191,57 @@ components:
           description: Trees used in the analysis
           type: object
       type: object
-    MultihitResult_evidence_ratios:
+    FubarResult_result:
+      example:
+        input:
+          partition_count: 1
+          file_name: file_name
+          number_of_sequences: 0
+          trees:
+            key: trees
+          number_of_sites: 6
+        timers:
+          key: "{}"
+        MLE:
+          headers:
+          - - headers
+            - headers
+          - - headers
+            - headers
+          content:
+            key:
+            - - 5.962133916683182
+              - 5.962133916683182
+            - - 5.962133916683182
+              - 5.962133916683182
+        analysis:
+          requirements: requirements
+          citation: citation
+          contact: contact
+          version: version
+          info: info
+          authors: authors
+        fits:
+          key: "{}"
+      properties:
+        analysis:
+          $ref: '#/components/schemas/FubarResult_result_analysis'
+        input:
+          $ref: '#/components/schemas/FubarResult_result_input'
+        fits:
+          additionalProperties:
+            type: object
+          description: Model fit statistics
+          type: object
+        timers:
+          additionalProperties:
+            type: object
+          description: Timing information for different stages of the analysis
+          type: object
+        MLE:
+          $ref: '#/components/schemas/ContrastFelResult_result_MLE'
+      type: object
+    MultihitResult_result_evidence_ratios:
       description: Evidence ratios for different substitution types
       example:
         three_hit_islands_vs_2_hit:
@@ -4239,7 +4282,7 @@ components:
             type: array
           type: array
       type: object
-    MultihitResult_analysis:
+    MultihitResult_result_analysis:
       description: Metadata about the analysis
       example:
         requirements: requirements
@@ -4259,7 +4302,7 @@ components:
         version:
           type: string
       type: object
-    MultihitResult_fits_MG94_with_double_and_triple_instantaneous_substitutions:
+    MultihitResult_result_fits_MG94_with_double_and_triple_instantaneous_substitutions:
       example:
         display_order: 2
         AIC_c: 5.962133916683182
@@ -4278,7 +4321,7 @@ components:
         estimated_parameters:
           type: integer
       type: object
-    MultihitResult_fits:
+    MultihitResult_result_fits:
       description: Model fitting information
       example:
         Standard_MG94:
@@ -4313,17 +4356,17 @@ components:
           Rate_Distributions: "{}"
       properties:
         MG94_with_double_and_triple_instantaneous_substitutions:
-          $ref: '#/components/schemas/MultihitResult_fits_MG94_with_double_and_triple_instantaneous_substitutions'
+          $ref: '#/components/schemas/MultihitResult_result_fits_MG94_with_double_and_triple_instantaneous_substitutions'
         MG94_with_double_and_triple_instantaneous_substitutions_only_synonymous_islands:
-          $ref: '#/components/schemas/MultihitResult_fits_MG94_with_double_and_triple_instantaneous_substitutions'
+          $ref: '#/components/schemas/MultihitResult_result_fits_MG94_with_double_and_triple_instantaneous_substitutions'
         MG94_with_double_instantaneous_substitutions:
-          $ref: '#/components/schemas/MultihitResult_fits_MG94_with_double_and_triple_instantaneous_substitutions'
+          $ref: '#/components/schemas/MultihitResult_result_fits_MG94_with_double_and_triple_instantaneous_substitutions'
         Nucleotide_GTR:
-          $ref: '#/components/schemas/MultihitResult_fits_MG94_with_double_and_triple_instantaneous_substitutions'
+          $ref: '#/components/schemas/MultihitResult_result_fits_MG94_with_double_and_triple_instantaneous_substitutions'
         Standard_MG94:
-          $ref: '#/components/schemas/MultihitResult_fits_MG94_with_double_and_triple_instantaneous_substitutions'
+          $ref: '#/components/schemas/MultihitResult_result_fits_MG94_with_double_and_triple_instantaneous_substitutions'
       type: object
-    MultihitResult_test_results_Double_hit_vs_single_hit:
+    MultihitResult_result_test_results_Double_hit_vs_single_hit:
       example:
         p_value: 3.616076749251911
         LRT: 9.301444243932576
@@ -4333,7 +4376,7 @@ components:
         p_value:
           type: number
       type: object
-    MultihitResult_test_results:
+    MultihitResult_result_test_results:
       description: Statistical test results comparing different models
       example:
         Double_hit_vs_single_hit:
@@ -4353,17 +4396,108 @@ components:
           LRT: 9.301444243932576
       properties:
         Double_hit_vs_single_hit:
-          $ref: '#/components/schemas/MultihitResult_test_results_Double_hit_vs_single_hit'
+          $ref: '#/components/schemas/MultihitResult_result_test_results_Double_hit_vs_single_hit'
         Triple_hit_vs_Triple_hit_island:
-          $ref: '#/components/schemas/MultihitResult_test_results_Double_hit_vs_single_hit'
+          $ref: '#/components/schemas/MultihitResult_result_test_results_Double_hit_vs_single_hit'
         Triple_hit_vs_double_hit:
-          $ref: '#/components/schemas/MultihitResult_test_results_Double_hit_vs_single_hit'
+          $ref: '#/components/schemas/MultihitResult_result_test_results_Double_hit_vs_single_hit'
         Triple_hit_vs_single_hit:
-          $ref: '#/components/schemas/MultihitResult_test_results_Double_hit_vs_single_hit'
+          $ref: '#/components/schemas/MultihitResult_result_test_results_Double_hit_vs_single_hit'
         Triple_hit_island_vs_double_hit:
-          $ref: '#/components/schemas/MultihitResult_test_results_Double_hit_vs_single_hit'
+          $ref: '#/components/schemas/MultihitResult_result_test_results_Double_hit_vs_single_hit'
       type: object
-    SlacResult_analysis:
+    MultihitResult_result:
+      example:
+        site_substitutions:
+          key:
+            key: "{}"
+        evidence_ratios:
+          three_hit_islands_vs_2_hit:
+          - - 1.4658129805029452
+            - 1.4658129805029452
+          - - 1.4658129805029452
+            - 1.4658129805029452
+          three_hit:
+          - - 0.8008281904610115
+            - 0.8008281904610115
+          - - 0.8008281904610115
+            - 0.8008281904610115
+          two_hit:
+          - - 6.027456183070403
+            - 6.027456183070403
+          - - 6.027456183070403
+            - 6.027456183070403
+        analysis:
+          requirements: requirements
+          contact: contact
+          version: version
+          authors: authors
+          info: info
+        fits:
+          Standard_MG94:
+            display_order: 2
+            AIC_c: 5.962133916683182
+            estimated_parameters: 7
+            Log_Likelihood: 5.637376656633329
+            Rate_Distributions: "{}"
+          MG94_with_double_and_triple_instantaneous_substitutions_only_synonymous_islands:
+            display_order: 2
+            AIC_c: 5.962133916683182
+            estimated_parameters: 7
+            Log_Likelihood: 5.637376656633329
+            Rate_Distributions: "{}"
+          MG94_with_double_and_triple_instantaneous_substitutions:
+            display_order: 2
+            AIC_c: 5.962133916683182
+            estimated_parameters: 7
+            Log_Likelihood: 5.637376656633329
+            Rate_Distributions: "{}"
+          MG94_with_double_instantaneous_substitutions:
+            display_order: 2
+            AIC_c: 5.962133916683182
+            estimated_parameters: 7
+            Log_Likelihood: 5.637376656633329
+            Rate_Distributions: "{}"
+          Nucleotide_GTR:
+            display_order: 2
+            AIC_c: 5.962133916683182
+            estimated_parameters: 7
+            Log_Likelihood: 5.637376656633329
+            Rate_Distributions: "{}"
+        test_results:
+          Double_hit_vs_single_hit:
+            p_value: 3.616076749251911
+            LRT: 9.301444243932576
+          Triple_hit_vs_Triple_hit_island:
+            p_value: 3.616076749251911
+            LRT: 9.301444243932576
+          Triple_hit_vs_double_hit:
+            p_value: 3.616076749251911
+            LRT: 9.301444243932576
+          Triple_hit_vs_single_hit:
+            p_value: 3.616076749251911
+            LRT: 9.301444243932576
+          Triple_hit_island_vs_double_hit:
+            p_value: 3.616076749251911
+            LRT: 9.301444243932576
+      properties:
+        evidence_ratios:
+          $ref: '#/components/schemas/MultihitResult_result_evidence_ratios'
+        site_substitutions:
+          additionalProperties:
+            additionalProperties:
+              type: object
+            type: object
+          description: Detailed site substitution mappings
+          type: object
+        analysis:
+          $ref: '#/components/schemas/MultihitResult_result_analysis'
+        fits:
+          $ref: '#/components/schemas/MultihitResult_result_fits'
+        test_results:
+          $ref: '#/components/schemas/MultihitResult_result_test_results'
+      type: object
+    SlacResult_result_analysis:
       description: Metadata about the analysis
       example:
         requirements: requirements
@@ -4392,7 +4526,7 @@ components:
           description: Requirements for the SLAC method
           type: string
       type: object
-    SlacResult_fits_Nucleotide_GTR:
+    SlacResult_result_fits_Nucleotide_GTR:
       example:
         Equilibrium_frequencies:
         - - 5.962133916683182
@@ -4425,7 +4559,7 @@ components:
         display_order:
           type: integer
       type: object
-    SlacResult_fits_Global_MG94xREV_Rate_Distributions:
+    SlacResult_result_fits_Global_MG94xREV_Rate_Distributions:
       example:
         distribution:
         - - 4.145608029883936
@@ -4440,7 +4574,7 @@ components:
             type: array
           type: array
       type: object
-    SlacResult_fits_Global_MG94xREV:
+    SlacResult_result_fits_Global_MG94xREV:
       example:
         Equilibrium_frequencies:
         - - 2.027123023002322
@@ -4471,11 +4605,11 @@ components:
             type: array
           type: array
         Rate_Distributions:
-          $ref: '#/components/schemas/SlacResult_fits_Global_MG94xREV_Rate_Distributions'
+          $ref: '#/components/schemas/SlacResult_result_fits_Global_MG94xREV_Rate_Distributions'
         display_order:
           type: integer
       type: object
-    SlacResult_fits:
+    SlacResult_result_fits:
       description: Model fitting information
       example:
         Nucleotide_GTR:
@@ -4508,11 +4642,11 @@ components:
               - 4.145608029883936
       properties:
         Nucleotide_GTR:
-          $ref: '#/components/schemas/SlacResult_fits_Nucleotide_GTR'
+          $ref: '#/components/schemas/SlacResult_result_fits_Nucleotide_GTR'
         Global_MG94xREV:
-          $ref: '#/components/schemas/SlacResult_fits_Global_MG94xREV'
+          $ref: '#/components/schemas/SlacResult_result_fits_Global_MG94xREV'
       type: object
-    SlacResult_timers:
+    SlacResult_result_timers:
       description: Timing information for the analysis
       example:
         Ancestor_sampling_analysis:
@@ -4537,7 +4671,7 @@ components:
         Ancestor_sampling_analysis:
           $ref: '#/components/schemas/AbsrelResult_result_allOf_timers_value'
       type: object
-    SlacResult_input:
+    SlacResult_result_input:
       description: Input information for the analysis
       example:
         partition_count: 1
@@ -4560,7 +4694,7 @@ components:
             type: string
           type: object
       type: object
-    SlacResult_branch_attributes_value_value:
+    SlacResult_result_branch_attributes_value_value:
       example:
         codon:
         - - codon
@@ -4616,4 +4750,141 @@ components:
               type: number
             type: array
           type: array
+      type: object
+    SlacResult_result:
+      example:
+        input:
+          partition_count: 1
+          file_name: file_name
+          number_of_sequences: 1
+          trees:
+            key: trees
+          number_of_sites: 1
+        timers:
+          Ancestor_sampling_analysis:
+            timer: 1
+            order: 4
+          Model_fitting:
+            timer: 1
+            order: 4
+          Primary_SLAC_analysis:
+            timer: 1
+            order: 4
+          Total_time:
+            timer: 1
+            order: 4
+        site_results:
+          key:
+          - 5.025004791520295
+          - 5.025004791520295
+        tested:
+          key:
+            key: tested
+        branch_attributes:
+          key:
+            key:
+              codon:
+              - - codon
+                - codon
+              - - codon
+                - codon
+              synonymous_substitution_count:
+              - - 1.1730742509559433
+                - 1.1730742509559433
+              - - 1.1730742509559433
+                - 1.1730742509559433
+              Nucleotide_GTR: 6.84685269835264
+              original_name: original_name
+              nonsynonymous_substitution_count:
+              - - 4.965218492984954
+                - 4.965218492984954
+              - - 4.965218492984954
+                - 4.965218492984954
+              amino_acid:
+              - - amino_acid
+                - amino_acid
+              - - amino_acid
+                - amino_acid
+              Global_MG94xREV: 7.457744773683766
+        data_partitions:
+          key:
+            coverage:
+            - - 1
+              - 1
+            - - 1
+              - 1
+            name: name
+        analysis:
+          requirements: requirements
+          citation: citation
+          contact: contact
+          version: version
+          info: info
+          authors: authors
+        fits:
+          Nucleotide_GTR:
+            Equilibrium_frequencies:
+            - - 5.962133916683182
+              - 5.962133916683182
+            - - 5.962133916683182
+              - 5.962133916683182
+            display_order: 2
+            estimated_parameters: 6
+            AIC_c: 1.4658129805029452
+            Log_Likelihood: 0.8008281904610115
+            Rate_Distributions:
+              key: 5.637376656633329
+          Global_MG94xREV:
+            Equilibrium_frequencies:
+            - - 2.027123023002322
+              - 2.027123023002322
+            - - 2.027123023002322
+              - 2.027123023002322
+            display_order: 7
+            estimated_parameters: 9
+            AIC_c: 3.616076749251911
+            Log_Likelihood: 7.061401241503109
+            Rate_Distributions:
+              distribution:
+              - - 4.145608029883936
+                - 4.145608029883936
+              - - 4.145608029883936
+                - 4.145608029883936
+      properties:
+        analysis:
+          $ref: '#/components/schemas/SlacResult_result_analysis'
+        fits:
+          $ref: '#/components/schemas/SlacResult_result_fits'
+        timers:
+          $ref: '#/components/schemas/SlacResult_result_timers'
+        tested:
+          additionalProperties:
+            additionalProperties:
+              type: string
+            type: object
+          description: Branches tested in the analysis
+          type: object
+        input:
+          $ref: '#/components/schemas/SlacResult_result_input'
+        data_partitions:
+          additionalProperties:
+            $ref: '#/components/schemas/PartitionsInfo_value'
+          description: Data partitions used in the analysis
+          type: object
+        branch_attributes:
+          additionalProperties:
+            additionalProperties:
+              $ref: '#/components/schemas/SlacResult_result_branch_attributes_value_value'
+            type: object
+          description: Branch-specific attributes
+          type: object
+        site_results:
+          additionalProperties:
+            description: "Array of site-specific statistics including dN, dS, p-values,\
+              \ etc."
+            items:
+              type: number
+            type: array
+          description: Site-specific results
+          type: object
       type: object

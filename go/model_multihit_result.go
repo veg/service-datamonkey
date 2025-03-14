@@ -13,14 +13,7 @@ package datamonkey
 // MultihitResult - Results from a MULTI-HIT analysis
 type MultihitResult struct {
 
-	EvidenceRatios MultihitResultEvidenceRatios `json:"evidence_ratios,omitempty"`
+	JobId string `json:"job_id,omitempty" validate:"regexp=^[a-zA-Z0-9]+$"`
 
-	// Detailed site substitution mappings
-	SiteSubstitutions map[string]map[string]map[string]interface{} `json:"site_substitutions,omitempty"`
-
-	Analysis MultihitResultAnalysis `json:"analysis,omitempty"`
-
-	Fits MultihitResultFits `json:"fits,omitempty"`
-
-	TestResults MultihitResultTestResults `json:"test_results,omitempty"`
+	Result MultihitResultResult `json:"result,omitempty"`
 }

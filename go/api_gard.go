@@ -19,20 +19,20 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type FELAPI struct {
+type GARDAPI struct {
 	HyPhyBaseAPI
 }
 
-// NewFELAPI creates a new FELAPI instance
-func NewFELAPI(basePath, hyPhyPath string, scheduler SchedulerInterface, datasetTracker DatasetTracker) *FELAPI {
-	return &FELAPI{
+// NewGARDAPI creates a new GARDAPI instance
+func NewGARDAPI(basePath, hyPhyPath string, scheduler SchedulerInterface, datasetTracker DatasetTracker) *GARDAPI {
+	return &GARDAPI{
 		HyPhyBaseAPI: NewHyPhyBaseAPI(basePath, hyPhyPath, scheduler, datasetTracker),
 	}
 }
 
-// GetFELJob retrieves the status and results of a FEL job
-func (api *FELAPI) GetFELJob(c *gin.Context) {
-	var request FelRequest
+// GetGARDJob retrieves the status and results of a GARD job
+func (api *GARDAPI) GetGARDJob(c *gin.Context) {
+	var request GardRequest
 	if err := c.BindJSON(&request); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to parse job configuration"})
 		return
@@ -44,7 +44,7 @@ func (api *FELAPI) GetFELJob(c *gin.Context) {
 		return
 	}
 
-	result, err := api.HandleGetJob(c, adapted, MethodFEL)
+	result, err := api.HandleGetJob(c, adapted, MethodGARD)
 	if err != nil {
 		if err.Error() == "job is not complete" {
 			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
@@ -54,7 +54,7 @@ func (api *FELAPI) GetFELJob(c *gin.Context) {
 		return
 	}
 
-	// Parse the raw JSON results into FelResult
+	// Parse the raw JSON results into GardResult
 	resultMap := result.(map[string]interface{})
 
 	// Get the job ID from the result map
@@ -79,8 +79,8 @@ func (api *FELAPI) GetFELJob(c *gin.Context) {
 	wrappedJSON := fmt.Sprintf(`{"job_id":"%s","result":%s}`, jobId, string(rawResults))
 	log.Printf("Wrapped JSON: %s", wrappedJSON)
 
-	var felResult FelResult
-	if err := json.Unmarshal([]byte(wrappedJSON), &felResult); err != nil {
+	var gardResult GardResult
+	if err := json.Unmarshal([]byte(wrappedJSON), &gardResult); err != nil {
 		log.Printf("Error unmarshaling wrapped results: %v", err)
 		// Try to unmarshal as a generic map to see what's in there
 		var resultAsMap map[string]interface{}
@@ -94,17 +94,17 @@ func (api *FELAPI) GetFELJob(c *gin.Context) {
 	}
 
 	// Log the parsed result structure
-	log.Printf("Parsed FelResult: %+v", felResult)
+	log.Printf("Parsed GardResult: %+v", gardResult)
 
 	// Update the results in the resultMap
-	resultMap["results"] = felResult.Result
+	resultMap["results"] = gardResult.Result
 
 	c.JSON(http.StatusOK, resultMap)
 }
 
-// StartFELJob starts a new FEL analysis job
-func (api *FELAPI) StartFELJob(c *gin.Context) {
-	var request FelRequest
+// StartGARDJob starts a new GARD analysis job
+func (api *GARDAPI) StartGARDJob(c *gin.Context) {
+	var request GardRequest
 	if err := c.BindJSON(&request); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to parse job configuration"})
 		return
@@ -116,7 +116,7 @@ func (api *FELAPI) StartFELJob(c *gin.Context) {
 		return
 	}
 
-	result, err := api.HandleStartJob(c, adapted, MethodFEL)
+	result, err := api.HandleStartJob(c, adapted, MethodGARD)
 	if err != nil {
 		if err.Error() == "authentication token required" {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})

@@ -130,16 +130,16 @@ func getRoutes(handleFunctions ApiHandleFunctions) []Route {
 			handleFunctions.BUSTEDAPI.StartBUSTEDJob,
 		},
 		{
-			"GetContrastFelResults",
+			"GetCONTRASTFELJob",
 			http.MethodPost,
 			"/api/v1/methods/contrast-fel-result",
-			handleFunctions.CONTRASTFELAPI.GetContrastFelResults,
+			handleFunctions.CONTRASTFELAPI.GetCONTRASTFELJob,
 		},
 		{
-			"StartContrastFelJob",
+			"StartCONTRASTFELJob",
 			http.MethodPost,
 			"/api/v1/methods/contrast-fel-start",
-			handleFunctions.CONTRASTFELAPI.StartContrastFelJob,
+			handleFunctions.CONTRASTFELAPI.StartCONTRASTFELJob,
 		},
 		{
 			"GetFELJob",
@@ -154,16 +154,16 @@ func getRoutes(handleFunctions ApiHandleFunctions) []Route {
 			handleFunctions.FELAPI.StartFELJob,
 		},
 		{
-			"GetFubarResults",
+			"GetFUBARJob",
 			http.MethodPost,
 			"/api/v1/methods/fubar-result",
-			handleFunctions.FUBARAPI.GetFubarResults,
+			handleFunctions.FUBARAPI.GetFUBARJob,
 		},
 		{
-			"StartFubarJob",
+			"StartFUBARJob",
 			http.MethodPost,
 			"/api/v1/methods/fubar-start",
-			handleFunctions.FUBARAPI.StartFubarJob,
+			handleFunctions.FUBARAPI.StartFUBARJob,
 		},
 		{
 			"GetDatasetsList",
@@ -208,16 +208,16 @@ func getRoutes(handleFunctions ApiHandleFunctions) []Route {
 			handleFunctions.MEMEAPI.StartMEMEJob,
 		},
 		{
-			"GetMultihitResults",
+			"GetMULTIHITJob",
 			http.MethodPost,
 			"/api/v1/methods/multihit-result",
-			handleFunctions.MULTIHITAPI.GetMultihitResults,
+			handleFunctions.MULTIHITAPI.GetMULTIHITJob,
 		},
 		{
-			"StartMultihitJob",
+			"StartMULTIHITJob",
 			http.MethodPost,
 			"/api/v1/methods/multihit-start",
-			handleFunctions.MULTIHITAPI.StartMultihitJob,
+			handleFunctions.MULTIHITAPI.StartMULTIHITJob,
 		},
 		{
 			"GetRELAXJob",
@@ -232,16 +232,16 @@ func getRoutes(handleFunctions ApiHandleFunctions) []Route {
 			handleFunctions.RELAXAPI.StartRELAXJob,
 		},
 		{
-			"GetSlacResults",
+			"GetSLACJob",
 			http.MethodPost,
 			"/api/v1/methods/slac-result",
-			handleFunctions.SLACAPI.GetSlacResults,
+			handleFunctions.SLACAPI.GetSLACJob,
 		},
 		{
-			"StartSlacJob",
+			"StartSLACJob",
 			http.MethodPost,
 			"/api/v1/methods/slac-start",
-			handleFunctions.SLACAPI.StartSlacJob,
+			handleFunctions.SLACAPI.StartSLACJob,
 		},
 	}
 }

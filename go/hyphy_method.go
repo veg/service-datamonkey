@@ -15,6 +15,14 @@ const (
 	MethodFEL    HyPhyMethodType = "fel"
 	MethodBUSTED HyPhyMethodType = "busted"
 	MethodABSREL HyPhyMethodType = "absrel"
+	MethodSLAC   HyPhyMethodType = "slac"
+	MethodMULTIHIT HyPhyMethodType = "multihit"
+	MethodGARD   HyPhyMethodType = "gard"
+	MethodMEME   HyPhyMethodType = "meme"
+	MethodFUBAR  HyPhyMethodType = "fubar"
+	MethodCONTRASTFEL HyPhyMethodType = "contrast-fel"
+	MethodRELAX  HyPhyMethodType = "relax"
+	MethodBGM    HyPhyMethodType = "bgm"
 )
 
 // HyPhyMethod implements ComputeMethodInterface for all HyPhy analyses
@@ -267,6 +275,94 @@ func (m *HyPhyMethod) ParseResult(output string) (interface{}, error) {
 		}
 		return result, nil
 
+	case MethodSLAC:
+		// Create a wrapper structure to match the expected format
+		wrappedJSON := fmt.Sprintf(`{"job_id":"test_job","result":%s}`, output)
+
+		var result SlacResult
+		err := json.Unmarshal([]byte(wrappedJSON), &result)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse SLAC result: %v", err)
+		}
+		return result, nil
+
+	case MethodMULTIHIT:
+		// Create a wrapper structure to match the expected format
+		wrappedJSON := fmt.Sprintf(`{"job_id":"test_job","result":%s}`, output)
+
+		var result MultihitResult
+		err := json.Unmarshal([]byte(wrappedJSON), &result)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse MULTI-HIT result: %v", err)
+		}
+		return result, nil
+
+	case MethodGARD:
+		// Create a wrapper structure to match the expected format
+		wrappedJSON := fmt.Sprintf(`{"job_id":"test_job","result":%s}`, output)
+
+		var result GardResult
+		err := json.Unmarshal([]byte(wrappedJSON), &result)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse GARD result: %v", err)
+		}
+		return result, nil
+
+	case MethodMEME:
+		// Create a wrapper structure to match the expected format
+		wrappedJSON := fmt.Sprintf(`{"job_id":"test_job","result":%s}`, output)
+
+		var result MemeResult
+		err := json.Unmarshal([]byte(wrappedJSON), &result)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse MEME result: %v", err)
+		}
+		return result, nil
+
+	case MethodFUBAR:
+		// Create a wrapper structure to match the expected format
+		wrappedJSON := fmt.Sprintf(`{"job_id":"test_job","result":%s}`, output)
+
+		var result FubarResult
+		err := json.Unmarshal([]byte(wrappedJSON), &result)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse FUBAR result: %v", err)
+		}
+		return result, nil
+
+	case MethodCONTRASTFEL:
+		// Create a wrapper structure to match the expected format
+		wrappedJSON := fmt.Sprintf(`{"job_id":"test_job","result":%s}`, output)
+
+		var result ContrastFelResult
+		err := json.Unmarshal([]byte(wrappedJSON), &result)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse CONTRAST-FEL result: %v", err)
+		}
+		return result, nil
+
+	case MethodRELAX:
+		// Create a wrapper structure to match the expected format
+		wrappedJSON := fmt.Sprintf(`{"job_id":"test_job","result":%s}`, output)
+
+		var result RelaxResult
+		err := json.Unmarshal([]byte(wrappedJSON), &result)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse RELAX result: %v", err)
+		}
+		return result, nil
+
+	case MethodBGM:
+		// Create a wrapper structure to match the expected format
+		wrappedJSON := fmt.Sprintf(`{"job_id":"test_job","result":%s}`, output)
+
+		var result BgmResult
+		err := json.Unmarshal([]byte(wrappedJSON), &result)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse BGM result: %v", err)
+		}
+		return result, nil
+
 	default:
 		return nil, fmt.Errorf("unknown method type: %s", m.MethodType)
 	}
@@ -311,6 +407,30 @@ func (m *HyPhyMethod) ValidateInput(dataset DatasetInterface) error {
 		if req.StartingPoints < 0 {
 			return fmt.Errorf("starting-points must be non-negative")
 		}
+
+	case *SlacRequest:
+		// Basic validation for SLAC
+
+	case *MultihitRequest:
+		// Basic validation for MULTI-HIT
+
+	case *GardRequest:
+		// Basic validation for GARD
+
+	case *MemeRequest:
+		// Basic validation for MEME
+
+	case *FubarRequest:
+		// Basic validation for FUBAR
+
+	case *ContrastFelRequest:
+		// Basic validation for CONTRAST-FEL
+
+	case *RelaxRequest:
+		// Basic validation for RELAX
+
+	case *BgmRequest:
+		// Basic validation for BGM
 	}
 
 	return nil

@@ -13,23 +13,7 @@ package datamonkey
 // SlacResult - Results from a SLAC (Single Likelihood Ancestor Counting) analysis
 type SlacResult struct {
 
-	Analysis SlacResultAnalysis `json:"analysis,omitempty"`
+	JobId string `json:"job_id,omitempty" validate:"regexp=^[a-zA-Z0-9]+$"`
 
-	Fits SlacResultFits `json:"fits,omitempty"`
-
-	Timers SlacResultTimers `json:"timers,omitempty"`
-
-	// Branches tested in the analysis
-	Tested map[string]map[string]string `json:"tested,omitempty"`
-
-	Input SlacResultInput `json:"input,omitempty"`
-
-	// Data partitions used in the analysis
-	DataPartitions map[string]PartitionsInfoValue `json:"data_partitions,omitempty"`
-
-	// Branch-specific attributes
-	BranchAttributes map[string]map[string]SlacResultBranchAttributesValueValue `json:"branch_attributes,omitempty"`
-
-	// Site-specific results
-	SiteResults map[string][]float32 `json:"site_results,omitempty"`
+	Result SlacResultResult `json:"result,omitempty"`
 }

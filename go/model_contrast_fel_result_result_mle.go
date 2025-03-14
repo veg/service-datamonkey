@@ -10,9 +10,11 @@
 
 package datamonkey
 
-type ContrastFelResult struct {
+type ContrastFelResultResultMle struct {
 
-	JobId string `json:"job_id,omitempty" validate:"regexp=^[a-zA-Z0-9]+$"`
+	// Headers describing the columns in the content array
+	Headers [][]string `json:"headers,omitempty"`
 
-	Result ContrastFelResultResult `json:"result,omitempty"`
+	// Site-specific results with statistical values
+	Content map[string][][]float32 `json:"content,omitempty"`
 }

@@ -12,15 +12,7 @@ package datamonkey
 
 type FubarResult struct {
 
-	Analysis FubarResultAnalysis `json:"analysis,omitempty"`
+	JobId string `json:"job_id,omitempty" validate:"regexp=^[a-zA-Z0-9]+$"`
 
-	Input FubarResultInput `json:"input,omitempty"`
-
-	// Model fit statistics
-	Fits map[string]map[string]interface{} `json:"fits,omitempty"`
-
-	// Timing information for different stages of the analysis
-	Timers map[string]map[string]interface{} `json:"timers,omitempty"`
-
-	MLE ContrastFelResultMle `json:"MLE,omitempty"`
+	Result FubarResultResult `json:"result,omitempty"`
 }

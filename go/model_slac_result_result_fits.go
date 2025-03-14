@@ -10,9 +10,10 @@
 
 package datamonkey
 
-type ContrastFelResult struct {
+// SlacResultResultFits - Model fitting information
+type SlacResultResultFits struct {
 
-	JobId string `json:"job_id,omitempty" validate:"regexp=^[a-zA-Z0-9]+$"`
+	NucleotideGTR SlacResultResultFitsNucleotideGtr `json:"Nucleotide_GTR,omitempty"`
 
-	Result ContrastFelResultResult `json:"result,omitempty"`
+	GlobalMG94xREV SlacResultResultFitsGlobalMg94xRev `json:"Global_MG94xREV,omitempty"`
 }

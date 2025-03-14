@@ -10,9 +10,17 @@
 
 package datamonkey
 
-type ContrastFelResult struct {
+type ContrastFelResultResultAnalysis struct {
 
-	JobId string `json:"job_id,omitempty" validate:"regexp=^[a-zA-Z0-9]+$"`
+	// Authors of the analysis method
+	Authors string `json:"authors,omitempty"`
 
-	Result ContrastFelResultResult `json:"result,omitempty"`
+	// Citation for the analysis method
+	Citation string `json:"citation,omitempty"`
+
+	// Version of the analysis method
+	Version string `json:"version,omitempty"`
+
+	// Information about the analysis method
+	Info string `json:"info,omitempty"`
 }

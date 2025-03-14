@@ -10,9 +10,7 @@
 
 package datamonkey
 
-type ContrastFelResult struct {
+type SlacResultResultFitsGlobalMg94xRevRateDistributions struct {
 
-	JobId string `json:"job_id,omitempty" validate:"regexp=^[a-zA-Z0-9]+$"`
-
-	Result ContrastFelResultResult `json:"result,omitempty"`
+	Distribution [][]float32 `json:"distribution,omitempty"`
 }

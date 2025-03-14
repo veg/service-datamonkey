@@ -10,9 +10,16 @@
 
 package datamonkey
 
-type ContrastFelResult struct {
+// MultihitResultResultAnalysis - Metadata about the analysis
+type MultihitResultResultAnalysis struct {
 
-	JobId string `json:"job_id,omitempty" validate:"regexp=^[a-zA-Z0-9]+$"`
+	Authors string `json:"authors,omitempty"`
 
-	Result ContrastFelResultResult `json:"result,omitempty"`
+	Contact string `json:"contact,omitempty"`
+
+	Info string `json:"info,omitempty"`
+
+	Requirements string `json:"requirements,omitempty"`
+
+	Version string `json:"version,omitempty"`
 }
