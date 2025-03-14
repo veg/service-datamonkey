@@ -65,14 +65,30 @@ type ApiHandleFunctions struct {
 
 	// Routes for the ABSRELAPI part of the API
 	ABSRELAPI ABSRELAPI
+	// Routes for the BGMAPI part of the API
+	BGMAPI BGMAPI
 	// Routes for the BUSTEDAPI part of the API
 	BUSTEDAPI BUSTEDAPI
+	// Routes for the CONTRASTFELAPI part of the API
+	CONTRASTFELAPI CONTRASTFELAPI
 	// Routes for the FELAPI part of the API
 	FELAPI FELAPI
+	// Routes for the FUBARAPI part of the API
+	FUBARAPI FUBARAPI
 	// Routes for the FileUploadAndQCAPI part of the API
 	FileUploadAndQCAPI FileUploadAndQCAPI
+	// Routes for the GARDAPI part of the API
+	GARDAPI GARDAPI
 	// Routes for the HealthAPI part of the API
 	HealthAPI HealthAPI
+	// Routes for the MEMEAPI part of the API
+	MEMEAPI MEMEAPI
+	// Routes for the MULTIHITAPI part of the API
+	MULTIHITAPI MULTIHITAPI
+	// Routes for the RELAXAPI part of the API
+	RELAXAPI RELAXAPI
+	// Routes for the SLACAPI part of the API
+	SLACAPI SLACAPI
 }
 
 func getRoutes(handleFunctions ApiHandleFunctions) []Route {
@@ -90,6 +106,18 @@ func getRoutes(handleFunctions ApiHandleFunctions) []Route {
 			handleFunctions.ABSRELAPI.StartABSRELJob,
 		},
 		{
+			"GetBGMJob",
+			http.MethodPost,
+			"/api/v1/methods/bgm-result",
+			handleFunctions.BGMAPI.GetBGMJob,
+		},
+		{
+			"StartBGMJob",
+			http.MethodPost,
+			"/api/v1/methods/bgm-start",
+			handleFunctions.BGMAPI.StartBGMJob,
+		},
+		{
 			"GetBUSTEDJob",
 			http.MethodPost,
 			"/api/v1/methods/busted-result",
@@ -100,6 +128,18 @@ func getRoutes(handleFunctions ApiHandleFunctions) []Route {
 			http.MethodPost,
 			"/api/v1/methods/busted-start",
 			handleFunctions.BUSTEDAPI.StartBUSTEDJob,
+		},
+		{
+			"GetContrastFelResults",
+			http.MethodPost,
+			"/api/v1/methods/contrast-fel-result",
+			handleFunctions.CONTRASTFELAPI.GetContrastFelResults,
+		},
+		{
+			"StartContrastFelJob",
+			http.MethodPost,
+			"/api/v1/methods/contrast-fel-start",
+			handleFunctions.CONTRASTFELAPI.StartContrastFelJob,
 		},
 		{
 			"GetFELJob",
@@ -114,6 +154,18 @@ func getRoutes(handleFunctions ApiHandleFunctions) []Route {
 			handleFunctions.FELAPI.StartFELJob,
 		},
 		{
+			"GetFubarResults",
+			http.MethodPost,
+			"/api/v1/methods/fubar-result",
+			handleFunctions.FUBARAPI.GetFubarResults,
+		},
+		{
+			"StartFubarJob",
+			http.MethodPost,
+			"/api/v1/methods/fubar-start",
+			handleFunctions.FUBARAPI.StartFubarJob,
+		},
+		{
 			"GetDatasetsList",
 			http.MethodGet,
 			"/api/v1/datasets",
@@ -126,10 +178,70 @@ func getRoutes(handleFunctions ApiHandleFunctions) []Route {
 			handleFunctions.FileUploadAndQCAPI.PostDataset,
 		},
 		{
+			"GetGARDJob",
+			http.MethodPost,
+			"/api/v1/methods/gard-result",
+			handleFunctions.GARDAPI.GetGARDJob,
+		},
+		{
+			"StartGARDJob",
+			http.MethodPost,
+			"/api/v1/methods/gard-start",
+			handleFunctions.GARDAPI.StartGARDJob,
+		},
+		{
 			"GetHealth",
 			http.MethodGet,
 			"/api/v1/health",
 			handleFunctions.HealthAPI.GetHealth,
+		},
+		{
+			"GetMEMEJob",
+			http.MethodPost,
+			"/api/v1/methods/meme-result",
+			handleFunctions.MEMEAPI.GetMEMEJob,
+		},
+		{
+			"StartMEMEJob",
+			http.MethodPost,
+			"/api/v1/methods/meme-start",
+			handleFunctions.MEMEAPI.StartMEMEJob,
+		},
+		{
+			"GetMultihitResults",
+			http.MethodPost,
+			"/api/v1/methods/multihit-result",
+			handleFunctions.MULTIHITAPI.GetMultihitResults,
+		},
+		{
+			"StartMultihitJob",
+			http.MethodPost,
+			"/api/v1/methods/multihit-start",
+			handleFunctions.MULTIHITAPI.StartMultihitJob,
+		},
+		{
+			"GetRELAXJob",
+			http.MethodPost,
+			"/api/v1/methods/relax-result",
+			handleFunctions.RELAXAPI.GetRELAXJob,
+		},
+		{
+			"StartRELAXJob",
+			http.MethodPost,
+			"/api/v1/methods/relax-start",
+			handleFunctions.RELAXAPI.StartRELAXJob,
+		},
+		{
+			"GetSlacResults",
+			http.MethodPost,
+			"/api/v1/methods/slac-result",
+			handleFunctions.SLACAPI.GetSlacResults,
+		},
+		{
+			"StartSlacJob",
+			http.MethodPost,
+			"/api/v1/methods/slac-start",
+			handleFunctions.SLACAPI.StartSlacJob,
 		},
 	}
 }

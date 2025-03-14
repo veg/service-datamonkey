@@ -20,16 +20,40 @@ servers:
 - url: http://datamonkey.org/api/v1
 - url: https://datamonkey.org/api/v1
 tags:
+- description: Check health of Datamonkey server
+  name: Health
+- description: Examples uploading files to Datamonkey
+  name: File Upload and QC
 - description: Examples starting jobs and fetching results for FEL
   name: FEL
 - description: Examples starting jobs and fetching results for BUSTED
   name: BUSTED
 - description: Examples starting jobs and fetching results for ABSREL
   name: ABSREL
-- description: Examples uploading files to Datamonkey
-  name: File Upload and QC
-- description: Check health of Datamonkey server
-  name: Health
+- description: Examples starting jobs and fetching results for BGM (Bayesian Graphical
+    Model)
+  name: BGM
+- description: Examples starting jobs and fetching results for CONTRAST-FEL (Fixed
+    Effects Likelihood with Contrast)
+  name: CONTRAST-FEL
+- description: Examples starting jobs and fetching results for FUBAR (Fast Unconstrained
+    Bayesian AppRoximation)
+  name: FUBAR
+- description: Examples starting jobs and fetching results for GARD (Genetic Algorithm
+    for Recombination Detection)
+  name: GARD
+- description: Examples starting jobs and fetching results for MEME (Mixed Effects
+    Model of Evolution)
+  name: MEME
+- description: Examples starting jobs and fetching results for MULTI-HIT (Multiple
+    Hit) analysis
+  name: MULTI-HIT
+- description: Examples starting jobs and fetching results for RELAX (Hypothesis testing
+    framework to detect relaxation of selection)
+  name: RELAX
+- description: Examples starting jobs and fetching results for SLAC (Single Likelihood
+    Ancestor Counting) analysis
+  name: SLAC
 - description: Examples building codon-aware alignments from uploaded data. Somewhere
     over the rainbow..
   name: Codon Aware Alignments
@@ -293,6 +317,622 @@ paths:
       summary: Get an ABSREL job result
       tags:
       - ABSREL
+  /methods/meme-start:
+    post:
+      operationId: startMEMEJob
+      parameters:
+      - description: Pretty print response
+        explode: true
+        in: query
+        name: pretty_print
+        required: false
+        schema:
+          type: boolean
+        style: form
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MemeRequest'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobStatus'
+          description: Success
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvalidDataError'
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerError'
+          description: Internal Server Error
+      summary: Start a MEME analysis
+      tags:
+      - MEME
+  /methods/meme-result:
+    post:
+      operationId: getMEMEJob
+      parameters:
+      - description: Pretty print response
+        explode: true
+        in: query
+        name: pretty_print
+        required: false
+        schema:
+          type: boolean
+        style: form
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MemeRequest'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemeResult'
+          description: Success
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerError'
+          description: Internal Server Error
+      summary: Get MEME analysis results
+      tags:
+      - MEME
+  /methods/relax-start:
+    post:
+      operationId: startRELAXJob
+      parameters:
+      - description: Pretty print response
+        explode: true
+        in: query
+        name: pretty_print
+        required: false
+        schema:
+          type: boolean
+        style: form
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RelaxRequest'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobStatus'
+          description: Success
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvalidDataError'
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerError'
+          description: Internal Server Error
+      summary: Start and monitor a RELAX job
+      tags:
+      - RELAX
+  /methods/relax-result:
+    post:
+      operationId: getRELAXJob
+      parameters:
+      - description: Pretty print response
+        explode: true
+        in: query
+        name: pretty_print
+        required: false
+        schema:
+          type: boolean
+        style: form
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RelaxRequest'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RelaxResult'
+          description: Success
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerError'
+          description: Internal Server Error
+      summary: Get RELAX analysis results
+      tags:
+      - RELAX
+  /methods/gard-start:
+    post:
+      operationId: startGARDJob
+      parameters:
+      - description: Pretty print response
+        explode: true
+        in: query
+        name: pretty_print
+        required: false
+        schema:
+          type: boolean
+        style: form
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GardRequest'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobStatus'
+          description: Success
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvalidDataError'
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerError'
+          description: Internal Server Error
+      summary: Start a GARD analysis
+      tags:
+      - GARD
+  /methods/gard-result:
+    post:
+      operationId: getGARDJob
+      parameters:
+      - description: Pretty print response
+        explode: true
+        in: query
+        name: pretty_print
+        required: false
+        schema:
+          type: boolean
+        style: form
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GardRequest'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GardResult'
+          description: Success
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerError'
+          description: Internal Server Error
+      summary: Get GARD analysis results
+      tags:
+      - GARD
+  /methods/bgm-start:
+    post:
+      operationId: startBGMJob
+      parameters:
+      - description: Pretty print response
+        explode: true
+        in: query
+        name: pretty_print
+        required: false
+        schema:
+          type: boolean
+        style: form
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BgmRequest'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobStatus'
+          description: Success
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvalidDataError'
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerError'
+          description: Internal Server Error
+      summary: Start and monitor a BGM job
+      tags:
+      - BGM
+  /methods/bgm-result:
+    post:
+      operationId: getBGMJob
+      parameters:
+      - description: Pretty print response
+        explode: true
+        in: query
+        name: pretty_print
+        required: false
+        schema:
+          type: boolean
+        style: form
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BgmRequest'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BgmResult'
+          description: Success
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerError'
+          description: Internal Server Error
+      summary: Get a BGM job result
+      tags:
+      - BGM
+  /methods/contrast-fel-start:
+    post:
+      description: "Starts a Contrast-FEL (Fixed Effects Likelihood with Contrast)\
+        \ job to investigate whether selective pressures differ \nbetween two or more\
+        \ sets of branches at a site. The method estimates site-specific synonymous\
+        \ (alpha) and \nnon-synonymous (beta, one per branch set) substitution rates\
+        \ and tests beta rates for equality at each site.\n"
+      operationId: startContrastFelJob
+      parameters:
+      - description: Pretty print response
+        explode: true
+        in: query
+        name: pretty_print
+        required: false
+        schema:
+          type: boolean
+        style: form
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContrastFelRequest'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobStatus'
+          description: Success
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvalidDataError'
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerError'
+          description: Internal Server Error
+      summary: Start a CONTRAST-FEL analysis
+      tags:
+      - CONTRAST-FEL
+  /methods/contrast-fel-result:
+    post:
+      description: "Retrieves the results of a previously submitted CONTRAST-FEL job.\
+        \ CONTRAST-FEL investigates whether \nselective pressures differ between two\
+        \ or more sets of branches at a site by estimating site-specific \nsynonymous\
+        \ and non-synonymous substitution rates.\n"
+      operationId: getContrastFelResults
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContrastFelRequest'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContrastFelResult'
+          description: Success
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerError'
+          description: Internal Server Error
+      summary: Get CONTRAST-FEL analysis results
+      tags:
+      - CONTRAST-FEL
+  /methods/fubar-start:
+    post:
+      description: |
+        Starts a Fast Unconstrained Bayesian AppRoximation (FUBAR) job to detect sites under positive selection.
+        FUBAR uses a Bayesian approach to infer selection pressures at individual sites, providing posterior
+        probabilities of positive and negative selection.
+      operationId: startFubarJob
+      parameters:
+      - description: Pretty print response
+        explode: true
+        in: query
+        name: pretty_print
+        required: false
+        schema:
+          type: boolean
+        style: form
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FubarRequest'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobStatus'
+          description: Success
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvalidDataError'
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerError'
+          description: Internal Server Error
+      summary: Start a FUBAR analysis
+      tags:
+      - FUBAR
+  /methods/fubar-result:
+    post:
+      description: |
+        Retrieves the results of a previously submitted Fast Unconstrained Bayesian AppRoximation (FUBAR) job.
+        FUBAR uses a Bayesian approach to infer selection pressures at individual sites, providing posterior
+        probabilities of positive and negative selection.
+      operationId: getFubarResults
+      parameters:
+      - description: Pretty print response
+        explode: true
+        in: query
+        name: pretty_print
+        required: false
+        schema:
+          type: boolean
+        style: form
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FubarRequest'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FubarResult'
+          description: Success
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerError'
+          description: Internal Server Error
+      summary: Get FUBAR analysis results
+      tags:
+      - FUBAR
+  /methods/multihit-start:
+    post:
+      description: "MULTI-HIT (Multiple Hit) examines whether or not a codon alignment\
+        \ is better fit by models \nwhich permit multiple instantaneous substitutions.\
+        \ It can analyze both double-hit and \ntriple-hit substitutions, with an option\
+        \ to account for synonymous triple-hit substitutions.\n"
+      operationId: startMultihitJob
+      parameters:
+      - description: Pretty print response
+        explode: true
+        in: query
+        name: pretty_print
+        required: false
+        schema:
+          type: boolean
+        style: form
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MultihitRequest'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobStatus'
+          description: Success
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvalidDataError'
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerError'
+          description: Internal Server Error
+      summary: Start a MULTI-HIT analysis
+      tags:
+      - MULTI-HIT
+  /methods/multihit-result:
+    post:
+      description: |
+        Retrieve the results of a previously submitted MULTI-HIT analysis job.
+        Results include evidence ratios for different substitution types, site-specific substitutions,
+        model fitting information, and statistical test results comparing different models.
+      operationId: getMultihitResults
+      parameters:
+      - description: Pretty print response
+        explode: true
+        in: query
+        name: pretty_print
+        required: false
+        schema:
+          type: boolean
+        style: form
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MultihitRequest'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MultihitResult'
+          description: Success
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerError'
+          description: Internal Server Error
+      summary: Get MULTI-HIT analysis results
+      tags:
+      - MULTI-HIT
+  /methods/slac-start:
+    post:
+      description: |
+        SLAC (Single Likelihood Ancestor Counting) uses a maximum likelihood ancestral state reconstruction
+        and minimum path substitution counting to estimate site-level dS and dN, and applies a simple
+        binomial-based test to test if dS differs from dN. The estimates aggregate information over all branches,
+        so the signal is derived from pervasive diversification or conservation.
+      operationId: startSlacJob
+      parameters:
+      - description: Pretty print response
+        explode: true
+        in: query
+        name: pretty_print
+        required: false
+        schema:
+          type: boolean
+        style: form
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SlacRequest'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobStatus'
+          description: Success
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvalidDataError'
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerError'
+          description: Internal Server Error
+      summary: Start a SLAC analysis
+      tags:
+      - SLAC
+  /methods/slac-result:
+    post:
+      description: |
+        Retrieve the results of a previously submitted SLAC (Single Likelihood Ancestor Counting) analysis job.
+        Results include model fitting information, branch attributes, and site-specific dN/dS estimates.
+      operationId: getSlacResults
+      parameters:
+      - description: Pretty print response
+        explode: true
+        in: query
+        name: pretty_print
+        required: false
+        schema:
+          type: boolean
+        style: form
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SlacRequest'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SlacResult'
+          description: Success
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerError'
+          description: Internal Server Error
+      summary: Get SLAC analysis results
+      tags:
+      - SLAC
   /datasets:
     get:
       operationId: getDatasetsList
@@ -936,6 +1576,1002 @@ components:
           type: string
         result:
           $ref: '#/components/schemas/AbsrelResult_result'
+      type: object
+    MemeRequest:
+      example:
+        genetic_code: Universal
+        impute_states: "No"
+        site_multihit: Estimate
+        multiple_hits: None
+        rates: 0
+        tree: tree
+        alignment: alignment
+        resample: 6.027456183070403
+      properties:
+        alignment:
+          pattern: "^[a-zA-Z0-9]+$"
+          type: string
+        tree:
+          pattern: "^[a-zA-Z0-9]+$"
+          type: string
+        genetic_code:
+          $ref: '#/components/schemas/GeneticCode'
+        multiple_hits:
+          default: None
+          description: Specify handling of multiple nucleotide substitutions
+          enum:
+          - None
+          - Double
+          - Double+Triple
+          type: string
+        site_multihit:
+          default: Estimate
+          description: Specify whether to estimate multiple hit rates for each site
+          enum:
+          - Estimate
+          - Global
+          type: string
+        rates:
+          default: 2
+          description: Number of different categories of non-synonymous rates
+          type: integer
+        resample:
+          default: 0
+          description: Number of bootstrapping replicates
+          type: number
+        impute_states:
+          default: "No"
+          description: Option to impute likely character states for missing data
+          enum:
+          - "Yes"
+          - "No"
+          type: string
+      type: object
+    MemeResult:
+      example:
+        result:
+          input:
+            trees:
+              key: trees
+          timers:
+            key:
+              timer: 6
+              order: 0
+          data partitions:
+            key:
+              coverage:
+              - - 1
+                - 1
+              - - 1
+                - 1
+              name: name
+          branch attributes:
+            attributes:
+              key:
+                display order: 4
+                attribute type: attribute type
+            additionalProperties:
+              key:
+                Global MG94xREV: 3.616076749251911
+                Nucleotide GTR: 2.027123023002322
+                original name: original name
+          tested:
+            key:
+              key: tested
+          MLE:
+            headers:
+            - - headers
+              - headers
+            - - headers
+              - headers
+            content:
+              key:
+              - - 7.386281948385884
+                - 7.386281948385884
+              - - 7.386281948385884
+                - 7.386281948385884
+          runtime: runtime
+          analysis:
+            settings:
+              site_filter: "{}"
+            contact: john.smith@example.com
+          fits:
+            key:
+              Log Likelihood: 2.3021358869347655
+              estimated parameters: 9.301444243932576
+              Rate Distributions: "{}"
+              AIC-c: 5.962133916683182
+              display order: 7.061401241503109
+              Equilibrium frequencies:
+              - - 5.637376656633329
+                - 5.637376656633329
+              - - 5.637376656633329
+                - 5.637376656633329
+        job_id: job_id
+      properties:
+        job_id:
+          pattern: "^[a-zA-Z0-9]+$"
+          type: string
+        result:
+          $ref: '#/components/schemas/FelResult_result'
+      type: object
+    RelaxRequest:
+      example:
+        genetic_code: Universal
+        models: All
+        reference_branches:
+        - reference_branches
+        - reference_branches
+        kill_zero_lengths: "No"
+        test_branches:
+        - test_branches
+        - test_branches
+        rates: 0
+        tree: tree
+        alignment: alignment
+      properties:
+        alignment:
+          pattern: "^[a-zA-Z0-9]+$"
+          type: string
+        tree:
+          pattern: "^[a-zA-Z0-9]+$"
+          type: string
+        genetic_code:
+          $ref: '#/components/schemas/GeneticCode'
+        test_branches:
+          default: []
+          description: Branches to be considered as 'Test'
+          items:
+            type: string
+          type: array
+        reference_branches:
+          default: []
+          description: Branches to be considered as 'Reference'
+          items:
+            type: string
+          type: array
+        models:
+          default: All
+          description: "Type of analysis to run (All for descriptive models and RELAX\
+            \ test, Minimal for only the RELAX test)"
+          enum:
+          - All
+          - Minimal
+          type: string
+        rates:
+          default: 3
+          description: Number of omega rate classes
+          type: integer
+        kill_zero_lengths:
+          default: "No"
+          description: Specify whether to handle zero-length branches
+          enum:
+          - "Yes"
+          - "No"
+          type: string
+      type: object
+    RelaxResult:
+      example:
+        result:
+          input:
+            trees:
+              key: trees
+          timers:
+            key:
+              timer: 6
+              order: 0
+          data partitions:
+            key:
+              coverage:
+              - - 1
+                - 1
+              - - 1
+                - 1
+              name: name
+          test results:
+            branch attributes:
+              key:
+                key:
+                  RELAX null: 6.778324963048013
+                  k (RELAX alternative): 5.944895607614016
+                  Nucleotide GTR: 3.5571952270680973
+                  tested: true
+                  MG94xREV with separate rates for branch sets: 6.965117697638846
+                  original name: original name
+                  General descriptive: 1.284659006116532
+                  RELAX alternative: 6.878052220127876
+                  k (general descriptive): 2.8841621266687802
+            p-value: 6.683562403749608
+            test: test
+            "null": "null"
+            log likelihood ratio: 9.018348186070783
+            relaxation or intensification parameter: 8.762042012749001
+            background: background
+            degrees of freedom: 6
+            alternative: alternative
+          tested:
+            key:
+              key: tested
+          runtime: runtime
+          analysis:
+            settings:
+              site_filter: "{}"
+            contact: john.smith@example.com
+          fits:
+            RELAX null:
+              Log Likelihood: 4.965218492984954
+              estimated parameters: 5
+              Rate Distributions:
+                Test:
+                  key:
+                    proportion: 7.457744773683766
+                    omega: 6.84685269835264
+                Reference:
+                  key:
+                    proportion: 7.457744773683766
+                    omega: 6.84685269835264
+              AIC-c: 9.965781217890562
+              display order: 9
+            Nucleotide GTR:
+              Log Likelihood: 0.8008281904610115
+              estimated parameters: 6
+              Rate Distributions:
+                key: 5.637376656633329
+              AIC-c: 1.4658129805029452
+              display order: 2
+              Equilibrium frequencies:
+              - - 5.962133916683182
+                - 5.962133916683182
+              - - 5.962133916683182
+                - 5.962133916683182
+            MG94xREV with separate rates for branch sets:
+              Log Likelihood: 7.061401241503109
+              estimated parameters: 9
+              Rate Distributions:
+                key:
+                - - 4.145608029883936
+                  - 4.145608029883936
+                - - 4.145608029883936
+                  - 4.145608029883936
+              AIC-c: 3.616076749251911
+              display order: 7
+              Equilibrium frequencies:
+              - - 2.027123023002322
+                - 2.027123023002322
+              - - 2.027123023002322
+                - 2.027123023002322
+            General descriptive:
+              Log Likelihood: 1.2315135367772556
+              estimated parameters: 1
+              Rate Distributions:
+                Shared:
+                  key:
+                    proportion: 7.457744773683766
+                    omega: 6.84685269835264
+              AIC-c: 1.4894159098541704
+              display order: 1
+            RELAX alternative:
+              Log Likelihood: 4.965218492984954
+              estimated parameters: 5
+              Rate Distributions:
+                Test:
+                  key:
+                    proportion: 7.457744773683766
+                    omega: 6.84685269835264
+                Reference:
+                  key:
+                    proportion: 7.457744773683766
+                    omega: 6.84685269835264
+              AIC-c: 9.965781217890562
+              display order: 9
+        job_id: job_id
+      properties:
+        job_id:
+          pattern: "^[a-zA-Z0-9]+$"
+          type: string
+        result:
+          $ref: '#/components/schemas/RelaxResult_result'
+      type: object
+    GardRequest:
+      example:
+        genetic_code: Universal
+        run_mode: Normal
+        data_type: Nucleotide
+        model: JTT
+        alignment: alignment
+        site_to_site_variation: None
+        rate_classes: 0
+      properties:
+        alignment:
+          pattern: "^[a-zA-Z0-9]+$"
+          type: string
+        genetic_code:
+          $ref: '#/components/schemas/GeneticCode'
+        data_type:
+          default: Nucleotide
+          description: The type of data being analyzed
+          enum:
+          - Nucleotide
+          - Protein
+          type: string
+        run_mode:
+          default: Normal
+          description: The optimization mode
+          enum:
+          - Normal
+          - Faster
+          type: string
+        site_to_site_variation:
+          default: None
+          description: Specifies the model for rate variation among sites
+          enum:
+          - None
+          - General Discrete
+          - Beta-Gamma
+          type: string
+        rate_classes:
+          default: 2
+          description: The number of discrete rate classes for rate variation
+          type: integer
+        model:
+          default: JTT
+          description: The substitution model to use
+          type: string
+      type: object
+    GardResult:
+      example:
+        result:
+          timers:
+            key:
+              timer: 6
+              order: 0
+          baselineScore: 0.8008281904610115
+          tested:
+            key:
+              key: tested
+          siteBreakPointSupport:
+            key: 3.616076749251911
+          runtime: runtime
+          singleTreeAICc: 1.4658129805029452
+          analysis:
+            settings:
+              site_filter: "{}"
+            contact: john.smith@example.com
+          trees:
+            key: "{}"
+          timeElapsed: 5
+          input:
+            trees:
+              key: trees
+          data partitions:
+            key:
+              coverage:
+              - - 1
+                - 1
+              - - 1
+                - 1
+              name: name
+          breakpointData:
+            key:
+              bps:
+              - - 2
+                - 2
+              - - 2
+                - 2
+              tree: tree
+          totalModelCount: 5
+          potentialBreakpoints: 6
+          improvements:
+            key:
+              deltaAICc: 9.301444243932576
+              breakpoints:
+              - - 7
+                - 7
+              - - 7
+                - 7
+        job_id: job_id
+      properties:
+        job_id:
+          pattern: "^[a-zA-Z0-9]+$"
+          type: string
+        result:
+          $ref: '#/components/schemas/GardResult_result'
+      type: object
+    BgmRequest:
+      example:
+        genetic_code: Universal
+        max_parents: 5
+        min_subs: 5
+        burn_in: 6
+        tree: tree
+        data_type: codon
+        alignment: alignment
+        branches: All
+        steps: 0
+        samples: 1
+      properties:
+        alignment:
+          pattern: "^[a-zA-Z0-9]+$"
+          type: string
+        tree:
+          pattern: "^[a-zA-Z0-9]+$"
+          type: string
+        branches:
+          default: All
+          description: Specify branches to test
+          type: string
+        genetic_code:
+          $ref: '#/components/schemas/GeneticCode'
+        data_type:
+          default: codon
+          description: The type of data being analyzed
+          enum:
+          - nucleotide
+          - amino-acid
+          - codon
+          type: string
+        steps:
+          default: 100000
+          description: Number of MCMC steps to sample
+          type: integer
+        burn_in:
+          default: 10000
+          description: Number of MCMC steps to discard as burn-in
+          type: integer
+        samples:
+          default: 100
+          description: Number of samples to extract from the chain
+          type: integer
+        max_parents:
+          default: 1
+          description: Maximum number of parents allowed per node
+          type: integer
+        min_subs:
+          default: 1
+          description: Minimum number of substitutions per site to include in the
+            analysis
+          type: integer
+      type: object
+    BgmResult:
+      example:
+        result:
+          input:
+            trees:
+              key: trees
+          timers:
+            key:
+              timer: 6
+              order: 0
+          data partitions:
+            key:
+              coverage:
+              - - 1
+                - 1
+              - - 1
+                - 1
+              name: name
+          branch attributes:
+            key:
+              key:
+                key: 2.3021358869347655
+          tested:
+            key:
+              key: tested
+          MLE:
+            headers:
+            - - headers
+              - headers
+            - - headers
+              - headers
+            content:
+            - - 5.637376656633329
+              - 5.637376656633329
+            - - 5.637376656633329
+              - 5.637376656633329
+          runtime: runtime
+          analysis:
+            settings:
+              site_filter: "{}"
+            contact: john.smith@example.com
+          fits:
+            key:
+              Log Likelihood: 0.8008281904610115
+              estimated parameters: 6
+              Rate Distributions: "{}"
+              AIC-c: 1.4658129805029452
+              display order: 5
+        job_id: job_id
+      properties:
+        job_id:
+          pattern: "^[a-zA-Z0-9]+$"
+          type: string
+        result:
+          $ref: '#/components/schemas/BgmResult_result'
+      type: object
+    ContrastFelRequest:
+      example:
+        p_value: 0.8008281904610115
+        genetic_code: Universal
+        srv: "Yes"
+        tree: tree
+        q_value: 6.027456183070403
+        alignment: alignment
+        permutations: "Yes"
+        branch_sets:
+        - branch_sets
+        - branch_sets
+      properties:
+        alignment:
+          description: "Path to the in-frame codon alignment file (e.g., .fasta, .phy)"
+          type: string
+        tree:
+          description: Path to the phylogenetic tree file
+          type: string
+        branch_sets:
+          description: "Array of branch sets to be used for comparison (e.g., \"Source\"\
+            \ and \"Test\" groups)"
+          items:
+            type: string
+          type: array
+        genetic_code:
+          default: Universal
+          description: Which genetic code should be used
+          type: string
+        srv:
+          default: "Yes"
+          description: Include synonymous rate variation in the model ("Yes" or "No")
+          type: string
+        permutations:
+          default: "Yes"
+          description: Perform permutation significance tests ("Yes" or "No")
+          type: string
+        p_value:
+          default: 0.05
+          description: Significance value for site tests
+          type: number
+        q_value:
+          default: 0.2
+          description: Significance value for False Discovery Rate reporting
+          type: number
+      required:
+      - alignment
+      - branch_sets
+      - tree
+      type: object
+    ContrastFelResult:
+      example:
+        input:
+          partition_count: 1
+          file_name: file_name
+          number_of_sequences: 0
+          number_of_sites: 6
+        tested:
+          key: tested
+        MLE:
+          headers:
+          - - headers
+            - headers
+          - - headers
+            - headers
+          content:
+            key:
+            - - 5.962133916683182
+              - 5.962133916683182
+            - - 5.962133916683182
+              - 5.962133916683182
+        branch_attributes:
+          key: "{}"
+        analysis:
+          citation: citation
+          version: version
+          authors: authors
+          info: info
+        fits:
+          key: "{}"
+      properties:
+        input:
+          $ref: '#/components/schemas/ContrastFelResult_input'
+        analysis:
+          $ref: '#/components/schemas/ContrastFelResult_analysis'
+        tested:
+          additionalProperties:
+            type: string
+          description: "Mapping of branch names to their test groups (e.g., \"TREATED\"\
+            , \"NAIVE\", \"background\")"
+          type: object
+        MLE:
+          $ref: '#/components/schemas/ContrastFelResult_MLE'
+        branch_attributes:
+          additionalProperties:
+            type: object
+          description: Attributes for each branch in the phylogenetic tree
+          type: object
+        fits:
+          additionalProperties:
+            type: object
+          description: Model fit statistics
+          type: object
+      type: object
+    FubarRequest:
+      example:
+        genetic_code: Universal
+        grid_points: 8
+        tree: tree
+        alignment: alignment
+        concentration_parameter: 0.6031428726887332
+      properties:
+        alignment:
+          description: "Path to the in-frame codon alignment file (e.g., .fasta, .nex)"
+          type: string
+        tree:
+          description: Path to the phylogenetic tree file
+          type: string
+        genetic_code:
+          default: Universal
+          description: Which genetic code should be used
+          type: string
+        grid_points:
+          default: 20
+          description: Number of grid points for the Bayesian analysis (must be between
+            5 and 50)
+          maximum: 50
+          minimum: 5
+          type: integer
+        concentration_parameter:
+          default: 0.5
+          description: Concentration parameter for the Dirichlet prior in the Bayesian
+            estimation
+          maximum: 1
+          minimum: 0.001
+          type: number
+      required:
+      - alignment
+      - tree
+      type: object
+    FubarResult:
+      example:
+        input:
+          partition_count: 1
+          file_name: file_name
+          number_of_sequences: 0
+          trees:
+            key: trees
+          number_of_sites: 6
+        timers:
+          key: "{}"
+        MLE:
+          headers:
+          - - headers
+            - headers
+          - - headers
+            - headers
+          content:
+            key:
+            - - 5.962133916683182
+              - 5.962133916683182
+            - - 5.962133916683182
+              - 5.962133916683182
+        analysis:
+          requirements: requirements
+          citation: citation
+          contact: contact
+          version: version
+          info: info
+          authors: authors
+        fits:
+          key: "{}"
+      properties:
+        analysis:
+          $ref: '#/components/schemas/FubarResult_analysis'
+        input:
+          $ref: '#/components/schemas/FubarResult_input'
+        fits:
+          additionalProperties:
+            type: object
+          description: Model fit statistics
+          type: object
+        timers:
+          additionalProperties:
+            type: object
+          description: Timing information for different stages of the analysis
+          type: object
+        MLE:
+          $ref: '#/components/schemas/ContrastFelResult_MLE'
+      type: object
+    MultihitRequest:
+      description: Request parameters for MULTI-HIT analysis
+      example:
+        genetic_code: Universal
+        triple_islands: false
+        alignment_file: alignment_file
+        rate_classes: 1
+      properties:
+        alignment_file:
+          description: "Path to the alignment file (e.g., .fasta, .phy)"
+          type: string
+        genetic_code:
+          default: Universal
+          description: The genetic code to use for the analysis
+          type: string
+        triple_islands:
+          default: false
+          description: Toggle for accounting synonymous triple-hit substitutions
+          type: boolean
+        rate_classes:
+          default: 3
+          description: Number of rate classes to use
+          maximum: 10
+          minimum: 1
+          type: integer
+      required:
+      - alignment_file
+      - genetic_code
+      type: object
+    MultihitResult:
+      description: Results from a MULTI-HIT analysis
+      example:
+        site_substitutions:
+          key:
+            key: "{}"
+        evidence_ratios:
+          three_hit_islands_vs_2_hit:
+          - - 1.4658129805029452
+            - 1.4658129805029452
+          - - 1.4658129805029452
+            - 1.4658129805029452
+          three_hit:
+          - - 0.8008281904610115
+            - 0.8008281904610115
+          - - 0.8008281904610115
+            - 0.8008281904610115
+          two_hit:
+          - - 6.027456183070403
+            - 6.027456183070403
+          - - 6.027456183070403
+            - 6.027456183070403
+        analysis:
+          requirements: requirements
+          contact: contact
+          version: version
+          authors: authors
+          info: info
+        fits:
+          Standard_MG94:
+            display_order: 2
+            AIC_c: 5.962133916683182
+            estimated_parameters: 7
+            Log_Likelihood: 5.637376656633329
+            Rate_Distributions: "{}"
+          MG94_with_double_and_triple_instantaneous_substitutions_only_synonymous_islands:
+            display_order: 2
+            AIC_c: 5.962133916683182
+            estimated_parameters: 7
+            Log_Likelihood: 5.637376656633329
+            Rate_Distributions: "{}"
+          MG94_with_double_and_triple_instantaneous_substitutions:
+            display_order: 2
+            AIC_c: 5.962133916683182
+            estimated_parameters: 7
+            Log_Likelihood: 5.637376656633329
+            Rate_Distributions: "{}"
+          MG94_with_double_instantaneous_substitutions:
+            display_order: 2
+            AIC_c: 5.962133916683182
+            estimated_parameters: 7
+            Log_Likelihood: 5.637376656633329
+            Rate_Distributions: "{}"
+          Nucleotide_GTR:
+            display_order: 2
+            AIC_c: 5.962133916683182
+            estimated_parameters: 7
+            Log_Likelihood: 5.637376656633329
+            Rate_Distributions: "{}"
+        test_results:
+          Double_hit_vs_single_hit:
+            p_value: 3.616076749251911
+            LRT: 9.301444243932576
+          Triple_hit_vs_Triple_hit_island:
+            p_value: 3.616076749251911
+            LRT: 9.301444243932576
+          Triple_hit_vs_double_hit:
+            p_value: 3.616076749251911
+            LRT: 9.301444243932576
+          Triple_hit_vs_single_hit:
+            p_value: 3.616076749251911
+            LRT: 9.301444243932576
+          Triple_hit_island_vs_double_hit:
+            p_value: 3.616076749251911
+            LRT: 9.301444243932576
+      properties:
+        evidence_ratios:
+          $ref: '#/components/schemas/MultihitResult_evidence_ratios'
+        site_substitutions:
+          additionalProperties:
+            additionalProperties:
+              type: object
+            type: object
+          description: Detailed site substitution mappings
+          type: object
+        analysis:
+          $ref: '#/components/schemas/MultihitResult_analysis'
+        fits:
+          $ref: '#/components/schemas/MultihitResult_fits'
+        test_results:
+          $ref: '#/components/schemas/MultihitResult_test_results'
+      type: object
+    SlacRequest:
+      description: Request parameters for SLAC (Single Likelihood Ancestor Counting)
+        analysis
+      example:
+        genetic_code: Universal
+        pvalue: 0.6027456183070403
+        alignment_file: alignment_file
+        branches: All
+        samples: 1
+      properties:
+        alignment_file:
+          description: "Path to the alignment file (e.g., .fasta, .nex, .phy)"
+          type: string
+        genetic_code:
+          default: Universal
+          description: The genetic code to use for the analysis
+          type: string
+        branches:
+          default: All
+          description: Specify branches to test
+          type: string
+        samples:
+          default: 100
+          description: Number of samples for ancestral reconstruction uncertainty
+          minimum: 1
+          type: integer
+        pvalue:
+          default: 0.1
+          description: Threshold for statistical significance
+          maximum: 1
+          minimum: 0
+          type: number
+      required:
+      - alignment_file
+      - genetic_code
+      type: object
+    SlacResult:
+      description: Results from a SLAC (Single Likelihood Ancestor Counting) analysis
+      example:
+        input:
+          partition_count: 1
+          file_name: file_name
+          number_of_sequences: 1
+          trees:
+            key: trees
+          number_of_sites: 1
+        timers:
+          Ancestor_sampling_analysis:
+            timer: 1
+            order: 4
+          Model_fitting:
+            timer: 1
+            order: 4
+          Primary_SLAC_analysis:
+            timer: 1
+            order: 4
+          Total_time:
+            timer: 1
+            order: 4
+        site_results:
+          key:
+          - 5.025004791520295
+          - 5.025004791520295
+        tested:
+          key:
+            key: tested
+        branch_attributes:
+          key:
+            key:
+              codon:
+              - - codon
+                - codon
+              - - codon
+                - codon
+              synonymous_substitution_count:
+              - - 1.1730742509559433
+                - 1.1730742509559433
+              - - 1.1730742509559433
+                - 1.1730742509559433
+              Nucleotide_GTR: 6.84685269835264
+              original_name: original_name
+              nonsynonymous_substitution_count:
+              - - 4.965218492984954
+                - 4.965218492984954
+              - - 4.965218492984954
+                - 4.965218492984954
+              amino_acid:
+              - - amino_acid
+                - amino_acid
+              - - amino_acid
+                - amino_acid
+              Global_MG94xREV: 7.457744773683766
+        data_partitions:
+          key:
+            coverage:
+            - - 1
+              - 1
+            - - 1
+              - 1
+            name: name
+        analysis:
+          requirements: requirements
+          citation: citation
+          contact: contact
+          version: version
+          info: info
+          authors: authors
+        fits:
+          Nucleotide_GTR:
+            Equilibrium_frequencies:
+            - - 5.962133916683182
+              - 5.962133916683182
+            - - 5.962133916683182
+              - 5.962133916683182
+            display_order: 2
+            estimated_parameters: 6
+            AIC_c: 1.4658129805029452
+            Log_Likelihood: 0.8008281904610115
+            Rate_Distributions:
+              key: 5.637376656633329
+          Global_MG94xREV:
+            Equilibrium_frequencies:
+            - - 2.027123023002322
+              - 2.027123023002322
+            - - 2.027123023002322
+              - 2.027123023002322
+            display_order: 7
+            estimated_parameters: 9
+            AIC_c: 3.616076749251911
+            Log_Likelihood: 7.061401241503109
+            Rate_Distributions:
+              distribution:
+              - - 4.145608029883936
+                - 4.145608029883936
+              - - 4.145608029883936
+                - 4.145608029883936
+      properties:
+        analysis:
+          $ref: '#/components/schemas/SlacResult_analysis'
+        fits:
+          $ref: '#/components/schemas/SlacResult_fits'
+        timers:
+          $ref: '#/components/schemas/SlacResult_timers'
+        tested:
+          additionalProperties:
+            additionalProperties:
+              type: string
+            type: object
+          description: Branches tested in the analysis
+          type: object
+        input:
+          $ref: '#/components/schemas/SlacResult_input'
+        data_partitions:
+          additionalProperties:
+            $ref: '#/components/schemas/PartitionsInfo_value'
+          description: Data partitions used in the analysis
+          type: object
+        branch_attributes:
+          additionalProperties:
+            additionalProperties:
+              $ref: '#/components/schemas/SlacResult_branch_attributes_value_value'
+            type: object
+          description: Branch-specific attributes
+          type: object
+        site_results:
+          additionalProperties:
+            description: "Array of site-specific statistics including dN, dS, p-values,\
+              \ etc."
+            items:
+              type: number
+            type: array
+          description: Site-specific results
+          type: object
       type: object
     DatasetMeta:
       properties:
@@ -1746,3 +3382,1238 @@ components:
               - 5.637376656633329
             - - 5.637376656633329
               - 5.637376656633329
+    RelaxResult_result_allOf_fits_Nucleotide_GTR:
+      example:
+        Log Likelihood: 0.8008281904610115
+        estimated parameters: 6
+        Rate Distributions:
+          key: 5.637376656633329
+        AIC-c: 1.4658129805029452
+        display order: 2
+        Equilibrium frequencies:
+        - - 5.962133916683182
+          - 5.962133916683182
+        - - 5.962133916683182
+          - 5.962133916683182
+      properties:
+        Log Likelihood:
+          type: number
+        estimated parameters:
+          type: integer
+        AIC-c:
+          type: number
+        Equilibrium frequencies:
+          items:
+            items:
+              type: number
+            type: array
+          type: array
+        Rate Distributions:
+          additionalProperties:
+            type: number
+          type: object
+        display order:
+          type: integer
+      type: object
+    RelaxResult_result_allOf_fits_MG94xREV_with_separate_rates_for_branch_sets:
+      example:
+        Log Likelihood: 7.061401241503109
+        estimated parameters: 9
+        Rate Distributions:
+          key:
+          - - 4.145608029883936
+            - 4.145608029883936
+          - - 4.145608029883936
+            - 4.145608029883936
+        AIC-c: 3.616076749251911
+        display order: 7
+        Equilibrium frequencies:
+        - - 2.027123023002322
+          - 2.027123023002322
+        - - 2.027123023002322
+          - 2.027123023002322
+      properties:
+        Log Likelihood:
+          type: number
+        estimated parameters:
+          type: integer
+        AIC-c:
+          type: number
+        Equilibrium frequencies:
+          items:
+            items:
+              type: number
+            type: array
+          type: array
+        Rate Distributions:
+          additionalProperties:
+            items:
+              items:
+                type: number
+              type: array
+            type: array
+          type: object
+        display order:
+          type: integer
+      type: object
+    RelaxResult_result_allOf_fits_General_descriptive_Rate_Distributions_Shared_value:
+      example:
+        proportion: 7.457744773683766
+        omega: 6.84685269835264
+      properties:
+        omega:
+          type: number
+        proportion:
+          type: number
+      type: object
+    RelaxResult_result_allOf_fits_General_descriptive_Rate_Distributions:
+      example:
+        Shared:
+          key:
+            proportion: 7.457744773683766
+            omega: 6.84685269835264
+      properties:
+        Shared:
+          additionalProperties:
+            $ref: '#/components/schemas/RelaxResult_result_allOf_fits_General_descriptive_Rate_Distributions_Shared_value'
+          type: object
+      type: object
+    RelaxResult_result_allOf_fits_General_descriptive:
+      example:
+        Log Likelihood: 1.2315135367772556
+        estimated parameters: 1
+        Rate Distributions:
+          Shared:
+            key:
+              proportion: 7.457744773683766
+              omega: 6.84685269835264
+        AIC-c: 1.4894159098541704
+        display order: 1
+      properties:
+        Log Likelihood:
+          type: number
+        estimated parameters:
+          type: integer
+        AIC-c:
+          type: number
+        Rate Distributions:
+          $ref: '#/components/schemas/RelaxResult_result_allOf_fits_General_descriptive_Rate_Distributions'
+        display order:
+          type: integer
+      type: object
+    RelaxResult_result_allOf_fits_RELAX_alternative_Rate_Distributions:
+      example:
+        Test:
+          key:
+            proportion: 7.457744773683766
+            omega: 6.84685269835264
+        Reference:
+          key:
+            proportion: 7.457744773683766
+            omega: 6.84685269835264
+      properties:
+        Test:
+          additionalProperties:
+            $ref: '#/components/schemas/RelaxResult_result_allOf_fits_General_descriptive_Rate_Distributions_Shared_value'
+          type: object
+        Reference:
+          additionalProperties:
+            $ref: '#/components/schemas/RelaxResult_result_allOf_fits_General_descriptive_Rate_Distributions_Shared_value'
+          type: object
+      type: object
+    RelaxResult_result_allOf_fits_RELAX_alternative:
+      example:
+        Log Likelihood: 4.965218492984954
+        estimated parameters: 5
+        Rate Distributions:
+          Test:
+            key:
+              proportion: 7.457744773683766
+              omega: 6.84685269835264
+          Reference:
+            key:
+              proportion: 7.457744773683766
+              omega: 6.84685269835264
+        AIC-c: 9.965781217890562
+        display order: 9
+      properties:
+        Log Likelihood:
+          type: number
+        estimated parameters:
+          type: integer
+        AIC-c:
+          type: number
+        Rate Distributions:
+          $ref: '#/components/schemas/RelaxResult_result_allOf_fits_RELAX_alternative_Rate_Distributions'
+        display order:
+          type: integer
+      type: object
+    RelaxResult_result_allOf_fits:
+      example:
+        RELAX null:
+          Log Likelihood: 4.965218492984954
+          estimated parameters: 5
+          Rate Distributions:
+            Test:
+              key:
+                proportion: 7.457744773683766
+                omega: 6.84685269835264
+            Reference:
+              key:
+                proportion: 7.457744773683766
+                omega: 6.84685269835264
+          AIC-c: 9.965781217890562
+          display order: 9
+        Nucleotide GTR:
+          Log Likelihood: 0.8008281904610115
+          estimated parameters: 6
+          Rate Distributions:
+            key: 5.637376656633329
+          AIC-c: 1.4658129805029452
+          display order: 2
+          Equilibrium frequencies:
+          - - 5.962133916683182
+            - 5.962133916683182
+          - - 5.962133916683182
+            - 5.962133916683182
+        MG94xREV with separate rates for branch sets:
+          Log Likelihood: 7.061401241503109
+          estimated parameters: 9
+          Rate Distributions:
+            key:
+            - - 4.145608029883936
+              - 4.145608029883936
+            - - 4.145608029883936
+              - 4.145608029883936
+          AIC-c: 3.616076749251911
+          display order: 7
+          Equilibrium frequencies:
+          - - 2.027123023002322
+            - 2.027123023002322
+          - - 2.027123023002322
+            - 2.027123023002322
+        General descriptive:
+          Log Likelihood: 1.2315135367772556
+          estimated parameters: 1
+          Rate Distributions:
+            Shared:
+              key:
+                proportion: 7.457744773683766
+                omega: 6.84685269835264
+          AIC-c: 1.4894159098541704
+          display order: 1
+        RELAX alternative:
+          Log Likelihood: 4.965218492984954
+          estimated parameters: 5
+          Rate Distributions:
+            Test:
+              key:
+                proportion: 7.457744773683766
+                omega: 6.84685269835264
+            Reference:
+              key:
+                proportion: 7.457744773683766
+                omega: 6.84685269835264
+          AIC-c: 9.965781217890562
+          display order: 9
+      properties:
+        Nucleotide GTR:
+          $ref: '#/components/schemas/RelaxResult_result_allOf_fits_Nucleotide_GTR'
+        MG94xREV with separate rates for branch sets:
+          $ref: '#/components/schemas/RelaxResult_result_allOf_fits_MG94xREV_with_separate_rates_for_branch_sets'
+        General descriptive:
+          $ref: '#/components/schemas/RelaxResult_result_allOf_fits_General_descriptive'
+        RELAX alternative:
+          $ref: '#/components/schemas/RelaxResult_result_allOf_fits_RELAX_alternative'
+        RELAX null:
+          $ref: '#/components/schemas/RelaxResult_result_allOf_fits_RELAX_alternative'
+      type: object
+    RelaxResult_result_allOf_test_results_branch_attributes_value_value:
+      example:
+        RELAX null: 6.778324963048013
+        k (RELAX alternative): 5.944895607614016
+        Nucleotide GTR: 3.5571952270680973
+        tested: true
+        MG94xREV with separate rates for branch sets: 6.965117697638846
+        original name: original name
+        General descriptive: 1.284659006116532
+        RELAX alternative: 6.878052220127876
+        k (general descriptive): 2.8841621266687802
+      properties:
+        original name:
+          type: string
+        Nucleotide GTR:
+          type: number
+        MG94xREV with separate rates for branch sets:
+          type: number
+        General descriptive:
+          type: number
+        k (general descriptive):
+          type: number
+        RELAX null:
+          type: number
+        RELAX alternative:
+          type: number
+        k (RELAX alternative):
+          type: number
+        tested:
+          type: boolean
+      type: object
+    RelaxResult_result_allOf_test_results:
+      example:
+        branch attributes:
+          key:
+            key:
+              RELAX null: 6.778324963048013
+              k (RELAX alternative): 5.944895607614016
+              Nucleotide GTR: 3.5571952270680973
+              tested: true
+              MG94xREV with separate rates for branch sets: 6.965117697638846
+              original name: original name
+              General descriptive: 1.284659006116532
+              RELAX alternative: 6.878052220127876
+              k (general descriptive): 2.8841621266687802
+        p-value: 6.683562403749608
+        test: test
+        "null": "null"
+        log likelihood ratio: 9.018348186070783
+        relaxation or intensification parameter: 8.762042012749001
+        background: background
+        degrees of freedom: 6
+        alternative: alternative
+      properties:
+        p-value:
+          type: number
+        relaxation or intensification parameter:
+          type: number
+        test:
+          type: string
+        alternative:
+          type: string
+        "null":
+          type: string
+        background:
+          type: string
+        log likelihood ratio:
+          type: number
+        degrees of freedom:
+          type: integer
+        branch attributes:
+          additionalProperties:
+            additionalProperties:
+              $ref: '#/components/schemas/RelaxResult_result_allOf_test_results_branch_attributes_value_value'
+            type: object
+          type: object
+      type: object
+    RelaxResult_result:
+      allOf:
+      - $ref: '#/components/schemas/BaseResponse'
+      - properties:
+          fits:
+            $ref: '#/components/schemas/RelaxResult_result_allOf_fits'
+          test results:
+            $ref: '#/components/schemas/RelaxResult_result_allOf_test_results'
+        type: object
+      example:
+        input:
+          trees:
+            key: trees
+        timers:
+          key:
+            timer: 6
+            order: 0
+        data partitions:
+          key:
+            coverage:
+            - - 1
+              - 1
+            - - 1
+              - 1
+            name: name
+        test results:
+          branch attributes:
+            key:
+              key:
+                RELAX null: 6.778324963048013
+                k (RELAX alternative): 5.944895607614016
+                Nucleotide GTR: 3.5571952270680973
+                tested: true
+                MG94xREV with separate rates for branch sets: 6.965117697638846
+                original name: original name
+                General descriptive: 1.284659006116532
+                RELAX alternative: 6.878052220127876
+                k (general descriptive): 2.8841621266687802
+          p-value: 6.683562403749608
+          test: test
+          "null": "null"
+          log likelihood ratio: 9.018348186070783
+          relaxation or intensification parameter: 8.762042012749001
+          background: background
+          degrees of freedom: 6
+          alternative: alternative
+        tested:
+          key:
+            key: tested
+        runtime: runtime
+        analysis:
+          settings:
+            site_filter: "{}"
+          contact: john.smith@example.com
+        fits:
+          RELAX null:
+            Log Likelihood: 4.965218492984954
+            estimated parameters: 5
+            Rate Distributions:
+              Test:
+                key:
+                  proportion: 7.457744773683766
+                  omega: 6.84685269835264
+              Reference:
+                key:
+                  proportion: 7.457744773683766
+                  omega: 6.84685269835264
+            AIC-c: 9.965781217890562
+            display order: 9
+          Nucleotide GTR:
+            Log Likelihood: 0.8008281904610115
+            estimated parameters: 6
+            Rate Distributions:
+              key: 5.637376656633329
+            AIC-c: 1.4658129805029452
+            display order: 2
+            Equilibrium frequencies:
+            - - 5.962133916683182
+              - 5.962133916683182
+            - - 5.962133916683182
+              - 5.962133916683182
+          MG94xREV with separate rates for branch sets:
+            Log Likelihood: 7.061401241503109
+            estimated parameters: 9
+            Rate Distributions:
+              key:
+              - - 4.145608029883936
+                - 4.145608029883936
+              - - 4.145608029883936
+                - 4.145608029883936
+            AIC-c: 3.616076749251911
+            display order: 7
+            Equilibrium frequencies:
+            - - 2.027123023002322
+              - 2.027123023002322
+            - - 2.027123023002322
+              - 2.027123023002322
+          General descriptive:
+            Log Likelihood: 1.2315135367772556
+            estimated parameters: 1
+            Rate Distributions:
+              Shared:
+                key:
+                  proportion: 7.457744773683766
+                  omega: 6.84685269835264
+            AIC-c: 1.4894159098541704
+            display order: 1
+          RELAX alternative:
+            Log Likelihood: 4.965218492984954
+            estimated parameters: 5
+            Rate Distributions:
+              Test:
+                key:
+                  proportion: 7.457744773683766
+                  omega: 6.84685269835264
+              Reference:
+                key:
+                  proportion: 7.457744773683766
+                  omega: 6.84685269835264
+            AIC-c: 9.965781217890562
+            display order: 9
+    GardResult_result_allOf_breakpointData_value:
+      example:
+        bps:
+        - - 2
+          - 2
+        - - 2
+          - 2
+        tree: tree
+      properties:
+        bps:
+          description: Breakpoint positions
+          items:
+            items:
+              type: integer
+            type: array
+          type: array
+        tree:
+          description: Newick tree for this segment
+          type: string
+      type: object
+    GardResult_result_allOf_improvements_value:
+      example:
+        deltaAICc: 9.301444243932576
+        breakpoints:
+        - - 7
+          - 7
+        - - 7
+          - 7
+      properties:
+        breakpoints:
+          description: Breakpoint positions
+          items:
+            items:
+              type: integer
+            type: array
+          type: array
+        deltaAICc:
+          description: Change in AICc score
+          type: number
+      type: object
+    GardResult_result:
+      allOf:
+      - $ref: '#/components/schemas/BaseResponse'
+      - properties:
+          baselineScore:
+            description: Baseline score for the analysis
+            type: number
+          potentialBreakpoints:
+            description: Number of potential breakpoints analyzed
+            type: integer
+          singleTreeAICc:
+            description: AICc score for the single tree model
+            type: number
+          timeElapsed:
+            description: Time elapsed for the analysis in seconds
+            type: integer
+          totalModelCount:
+            description: Total number of models evaluated
+            type: integer
+          breakpointData:
+            additionalProperties:
+              $ref: '#/components/schemas/GardResult_result_allOf_breakpointData_value'
+            description: Data for each segment between breakpoints
+            type: object
+          improvements:
+            additionalProperties:
+              $ref: '#/components/schemas/GardResult_result_allOf_improvements_value'
+            description: Improvement metrics for each breakpoint
+            type: object
+          siteBreakPointSupport:
+            additionalProperties:
+              type: number
+            description: Support values for potential breakpoints at each site
+            type: object
+          trees:
+            additionalProperties:
+              type: object
+            description: Tree data
+            type: object
+        type: object
+      example:
+        timers:
+          key:
+            timer: 6
+            order: 0
+        baselineScore: 0.8008281904610115
+        tested:
+          key:
+            key: tested
+        siteBreakPointSupport:
+          key: 3.616076749251911
+        runtime: runtime
+        singleTreeAICc: 1.4658129805029452
+        analysis:
+          settings:
+            site_filter: "{}"
+          contact: john.smith@example.com
+        trees:
+          key: "{}"
+        timeElapsed: 5
+        input:
+          trees:
+            key: trees
+        data partitions:
+          key:
+            coverage:
+            - - 1
+              - 1
+            - - 1
+              - 1
+            name: name
+        breakpointData:
+          key:
+            bps:
+            - - 2
+              - 2
+            - - 2
+              - 2
+            tree: tree
+        totalModelCount: 5
+        potentialBreakpoints: 6
+        improvements:
+          key:
+            deltaAICc: 9.301444243932576
+            breakpoints:
+            - - 7
+              - 7
+            - - 7
+              - 7
+    BgmResult_result_allOf_fits_value:
+      example:
+        Log Likelihood: 0.8008281904610115
+        estimated parameters: 6
+        Rate Distributions: "{}"
+        AIC-c: 1.4658129805029452
+        display order: 5
+      properties:
+        Log Likelihood:
+          type: number
+        estimated parameters:
+          type: integer
+        AIC-c:
+          type: number
+        Rate Distributions:
+          nullable: true
+          type: object
+        display order:
+          type: integer
+      type: object
+    BgmResult_result_allOf_MLE:
+      description: Maximum likelihood estimates
+      example:
+        headers:
+        - - headers
+          - headers
+        - - headers
+          - headers
+        content:
+        - - 5.637376656633329
+          - 5.637376656633329
+        - - 5.637376656633329
+          - 5.637376656633329
+      properties:
+        headers:
+          description: Column headers for the content array
+          items:
+            items:
+              type: string
+            type: array
+          type: array
+        content:
+          description: Site pair data with correlation values
+          items:
+            items:
+              type: number
+            type: array
+          type: array
+      type: object
+    BgmResult_result:
+      allOf:
+      - $ref: '#/components/schemas/BaseResponse'
+      - properties:
+          fits:
+            additionalProperties:
+              $ref: '#/components/schemas/BgmResult_result_allOf_fits_value'
+            description: Model fit information
+            type: object
+          MLE:
+            $ref: '#/components/schemas/BgmResult_result_allOf_MLE'
+          branch attributes:
+            additionalProperties:
+              additionalProperties:
+                additionalProperties:
+                  type: number
+                type: object
+              type: object
+            description: Branch-specific attributes
+            type: object
+        type: object
+      example:
+        input:
+          trees:
+            key: trees
+        timers:
+          key:
+            timer: 6
+            order: 0
+        data partitions:
+          key:
+            coverage:
+            - - 1
+              - 1
+            - - 1
+              - 1
+            name: name
+        branch attributes:
+          key:
+            key:
+              key: 2.3021358869347655
+        tested:
+          key:
+            key: tested
+        MLE:
+          headers:
+          - - headers
+            - headers
+          - - headers
+            - headers
+          content:
+          - - 5.637376656633329
+            - 5.637376656633329
+          - - 5.637376656633329
+            - 5.637376656633329
+        runtime: runtime
+        analysis:
+          settings:
+            site_filter: "{}"
+          contact: john.smith@example.com
+        fits:
+          key:
+            Log Likelihood: 0.8008281904610115
+            estimated parameters: 6
+            Rate Distributions: "{}"
+            AIC-c: 1.4658129805029452
+            display order: 5
+    ContrastFelResult_input:
+      example:
+        partition_count: 1
+        file_name: file_name
+        number_of_sequences: 0
+        number_of_sites: 6
+      properties:
+        file_name:
+          description: Name of the input file
+          type: string
+        number_of_sequences:
+          description: Number of sequences in the alignment
+          type: integer
+        number_of_sites:
+          description: Number of sites in the alignment
+          type: integer
+        partition_count:
+          description: Number of partitions in the analysis
+          type: integer
+      type: object
+    ContrastFelResult_analysis:
+      example:
+        citation: citation
+        version: version
+        authors: authors
+        info: info
+      properties:
+        authors:
+          description: Authors of the analysis method
+          type: string
+        citation:
+          description: Citation for the analysis method
+          type: string
+        version:
+          description: Version of the analysis method
+          type: string
+        info:
+          description: Information about the analysis method
+          type: string
+      type: object
+    ContrastFelResult_MLE:
+      example:
+        headers:
+        - - headers
+          - headers
+        - - headers
+          - headers
+        content:
+          key:
+          - - 5.962133916683182
+            - 5.962133916683182
+          - - 5.962133916683182
+            - 5.962133916683182
+      properties:
+        headers:
+          description: Headers describing the columns in the content array
+          items:
+            items:
+              type: string
+            type: array
+          type: array
+        content:
+          additionalProperties:
+            items:
+              description: Array of values for each site
+              items:
+                type: number
+              type: array
+            type: array
+          description: Site-specific results with statistical values
+          type: object
+      type: object
+    FubarResult_analysis:
+      example:
+        requirements: requirements
+        citation: citation
+        contact: contact
+        version: version
+        info: info
+        authors: authors
+      properties:
+        info:
+          description: Information about the FUBAR analysis
+          type: string
+        version:
+          description: Version of the FUBAR method
+          type: string
+        citation:
+          description: Citation for the FUBAR method
+          type: string
+        authors:
+          description: Authors of the FUBAR method
+          type: string
+        contact:
+          description: Contact information for the authors
+          type: string
+        requirements:
+          description: Requirements for running FUBAR
+          type: string
+      type: object
+    FubarResult_input:
+      example:
+        partition_count: 1
+        file_name: file_name
+        number_of_sequences: 0
+        trees:
+          key: trees
+        number_of_sites: 6
+      properties:
+        file_name:
+          description: Name of the input file
+          type: string
+        number_of_sequences:
+          description: Number of sequences in the alignment
+          type: integer
+        number_of_sites:
+          description: Number of sites in the alignment
+          type: integer
+        partition_count:
+          description: Number of partitions in the analysis
+          type: integer
+        trees:
+          additionalProperties:
+            type: string
+          description: Trees used in the analysis
+          type: object
+      type: object
+    MultihitResult_evidence_ratios:
+      description: Evidence ratios for different substitution types
+      example:
+        three_hit_islands_vs_2_hit:
+        - - 1.4658129805029452
+          - 1.4658129805029452
+        - - 1.4658129805029452
+          - 1.4658129805029452
+        three_hit:
+        - - 0.8008281904610115
+          - 0.8008281904610115
+        - - 0.8008281904610115
+          - 0.8008281904610115
+        two_hit:
+        - - 6.027456183070403
+          - 6.027456183070403
+        - - 6.027456183070403
+          - 6.027456183070403
+      properties:
+        three_hit:
+          description: Evidence ratios for three-hit substitutions
+          items:
+            items:
+              type: number
+            type: array
+          type: array
+        two_hit:
+          description: Evidence ratios for two-hit substitutions
+          items:
+            items:
+              type: number
+            type: array
+          type: array
+        three_hit_islands_vs_2_hit:
+          description: Evidence ratios comparing three-hit islands vs two-hit substitutions
+          items:
+            items:
+              type: number
+            type: array
+          type: array
+      type: object
+    MultihitResult_analysis:
+      description: Metadata about the analysis
+      example:
+        requirements: requirements
+        contact: contact
+        version: version
+        authors: authors
+        info: info
+      properties:
+        authors:
+          type: string
+        contact:
+          type: string
+        info:
+          type: string
+        requirements:
+          type: string
+        version:
+          type: string
+      type: object
+    MultihitResult_fits_MG94_with_double_and_triple_instantaneous_substitutions:
+      example:
+        display_order: 2
+        AIC_c: 5.962133916683182
+        estimated_parameters: 7
+        Log_Likelihood: 5.637376656633329
+        Rate_Distributions: "{}"
+      properties:
+        AIC_c:
+          type: number
+        Log_Likelihood:
+          type: number
+        Rate_Distributions:
+          type: object
+        display_order:
+          type: integer
+        estimated_parameters:
+          type: integer
+      type: object
+    MultihitResult_fits:
+      description: Model fitting information
+      example:
+        Standard_MG94:
+          display_order: 2
+          AIC_c: 5.962133916683182
+          estimated_parameters: 7
+          Log_Likelihood: 5.637376656633329
+          Rate_Distributions: "{}"
+        MG94_with_double_and_triple_instantaneous_substitutions_only_synonymous_islands:
+          display_order: 2
+          AIC_c: 5.962133916683182
+          estimated_parameters: 7
+          Log_Likelihood: 5.637376656633329
+          Rate_Distributions: "{}"
+        MG94_with_double_and_triple_instantaneous_substitutions:
+          display_order: 2
+          AIC_c: 5.962133916683182
+          estimated_parameters: 7
+          Log_Likelihood: 5.637376656633329
+          Rate_Distributions: "{}"
+        MG94_with_double_instantaneous_substitutions:
+          display_order: 2
+          AIC_c: 5.962133916683182
+          estimated_parameters: 7
+          Log_Likelihood: 5.637376656633329
+          Rate_Distributions: "{}"
+        Nucleotide_GTR:
+          display_order: 2
+          AIC_c: 5.962133916683182
+          estimated_parameters: 7
+          Log_Likelihood: 5.637376656633329
+          Rate_Distributions: "{}"
+      properties:
+        MG94_with_double_and_triple_instantaneous_substitutions:
+          $ref: '#/components/schemas/MultihitResult_fits_MG94_with_double_and_triple_instantaneous_substitutions'
+        MG94_with_double_and_triple_instantaneous_substitutions_only_synonymous_islands:
+          $ref: '#/components/schemas/MultihitResult_fits_MG94_with_double_and_triple_instantaneous_substitutions'
+        MG94_with_double_instantaneous_substitutions:
+          $ref: '#/components/schemas/MultihitResult_fits_MG94_with_double_and_triple_instantaneous_substitutions'
+        Nucleotide_GTR:
+          $ref: '#/components/schemas/MultihitResult_fits_MG94_with_double_and_triple_instantaneous_substitutions'
+        Standard_MG94:
+          $ref: '#/components/schemas/MultihitResult_fits_MG94_with_double_and_triple_instantaneous_substitutions'
+      type: object
+    MultihitResult_test_results_Double_hit_vs_single_hit:
+      example:
+        p_value: 3.616076749251911
+        LRT: 9.301444243932576
+      properties:
+        LRT:
+          type: number
+        p_value:
+          type: number
+      type: object
+    MultihitResult_test_results:
+      description: Statistical test results comparing different models
+      example:
+        Double_hit_vs_single_hit:
+          p_value: 3.616076749251911
+          LRT: 9.301444243932576
+        Triple_hit_vs_Triple_hit_island:
+          p_value: 3.616076749251911
+          LRT: 9.301444243932576
+        Triple_hit_vs_double_hit:
+          p_value: 3.616076749251911
+          LRT: 9.301444243932576
+        Triple_hit_vs_single_hit:
+          p_value: 3.616076749251911
+          LRT: 9.301444243932576
+        Triple_hit_island_vs_double_hit:
+          p_value: 3.616076749251911
+          LRT: 9.301444243932576
+      properties:
+        Double_hit_vs_single_hit:
+          $ref: '#/components/schemas/MultihitResult_test_results_Double_hit_vs_single_hit'
+        Triple_hit_vs_Triple_hit_island:
+          $ref: '#/components/schemas/MultihitResult_test_results_Double_hit_vs_single_hit'
+        Triple_hit_vs_double_hit:
+          $ref: '#/components/schemas/MultihitResult_test_results_Double_hit_vs_single_hit'
+        Triple_hit_vs_single_hit:
+          $ref: '#/components/schemas/MultihitResult_test_results_Double_hit_vs_single_hit'
+        Triple_hit_island_vs_double_hit:
+          $ref: '#/components/schemas/MultihitResult_test_results_Double_hit_vs_single_hit'
+      type: object
+    SlacResult_analysis:
+      description: Metadata about the analysis
+      example:
+        requirements: requirements
+        citation: citation
+        contact: contact
+        version: version
+        info: info
+        authors: authors
+      properties:
+        info:
+          description: Description of the SLAC method
+          type: string
+        version:
+          description: Version of the SLAC method
+          type: string
+        citation:
+          description: Citation for the SLAC method
+          type: string
+        authors:
+          description: Authors of the SLAC method
+          type: string
+        contact:
+          description: Contact information for the SLAC method
+          type: string
+        requirements:
+          description: Requirements for the SLAC method
+          type: string
+      type: object
+    SlacResult_fits_Nucleotide_GTR:
+      example:
+        Equilibrium_frequencies:
+        - - 5.962133916683182
+          - 5.962133916683182
+        - - 5.962133916683182
+          - 5.962133916683182
+        display_order: 2
+        estimated_parameters: 6
+        AIC_c: 1.4658129805029452
+        Log_Likelihood: 0.8008281904610115
+        Rate_Distributions:
+          key: 5.637376656633329
+      properties:
+        Log_Likelihood:
+          type: number
+        estimated_parameters:
+          type: integer
+        AIC_c:
+          type: number
+        Equilibrium_frequencies:
+          items:
+            items:
+              type: number
+            type: array
+          type: array
+        Rate_Distributions:
+          additionalProperties:
+            type: number
+          type: object
+        display_order:
+          type: integer
+      type: object
+    SlacResult_fits_Global_MG94xREV_Rate_Distributions:
+      example:
+        distribution:
+        - - 4.145608029883936
+          - 4.145608029883936
+        - - 4.145608029883936
+          - 4.145608029883936
+      properties:
+        distribution:
+          items:
+            items:
+              type: number
+            type: array
+          type: array
+      type: object
+    SlacResult_fits_Global_MG94xREV:
+      example:
+        Equilibrium_frequencies:
+        - - 2.027123023002322
+          - 2.027123023002322
+        - - 2.027123023002322
+          - 2.027123023002322
+        display_order: 7
+        estimated_parameters: 9
+        AIC_c: 3.616076749251911
+        Log_Likelihood: 7.061401241503109
+        Rate_Distributions:
+          distribution:
+          - - 4.145608029883936
+            - 4.145608029883936
+          - - 4.145608029883936
+            - 4.145608029883936
+      properties:
+        Log_Likelihood:
+          type: number
+        estimated_parameters:
+          type: integer
+        AIC_c:
+          type: number
+        Equilibrium_frequencies:
+          items:
+            items:
+              type: number
+            type: array
+          type: array
+        Rate_Distributions:
+          $ref: '#/components/schemas/SlacResult_fits_Global_MG94xREV_Rate_Distributions'
+        display_order:
+          type: integer
+      type: object
+    SlacResult_fits:
+      description: Model fitting information
+      example:
+        Nucleotide_GTR:
+          Equilibrium_frequencies:
+          - - 5.962133916683182
+            - 5.962133916683182
+          - - 5.962133916683182
+            - 5.962133916683182
+          display_order: 2
+          estimated_parameters: 6
+          AIC_c: 1.4658129805029452
+          Log_Likelihood: 0.8008281904610115
+          Rate_Distributions:
+            key: 5.637376656633329
+        Global_MG94xREV:
+          Equilibrium_frequencies:
+          - - 2.027123023002322
+            - 2.027123023002322
+          - - 2.027123023002322
+            - 2.027123023002322
+          display_order: 7
+          estimated_parameters: 9
+          AIC_c: 3.616076749251911
+          Log_Likelihood: 7.061401241503109
+          Rate_Distributions:
+            distribution:
+            - - 4.145608029883936
+              - 4.145608029883936
+            - - 4.145608029883936
+              - 4.145608029883936
+      properties:
+        Nucleotide_GTR:
+          $ref: '#/components/schemas/SlacResult_fits_Nucleotide_GTR'
+        Global_MG94xREV:
+          $ref: '#/components/schemas/SlacResult_fits_Global_MG94xREV'
+      type: object
+    SlacResult_timers:
+      description: Timing information for the analysis
+      example:
+        Ancestor_sampling_analysis:
+          timer: 1
+          order: 4
+        Model_fitting:
+          timer: 1
+          order: 4
+        Primary_SLAC_analysis:
+          timer: 1
+          order: 4
+        Total_time:
+          timer: 1
+          order: 4
+      properties:
+        Total_time:
+          $ref: '#/components/schemas/AbsrelResult_result_allOf_timers_value'
+        Model_fitting:
+          $ref: '#/components/schemas/AbsrelResult_result_allOf_timers_value'
+        Primary_SLAC_analysis:
+          $ref: '#/components/schemas/AbsrelResult_result_allOf_timers_value'
+        Ancestor_sampling_analysis:
+          $ref: '#/components/schemas/AbsrelResult_result_allOf_timers_value'
+      type: object
+    SlacResult_input:
+      description: Input information for the analysis
+      example:
+        partition_count: 1
+        file_name: file_name
+        number_of_sequences: 1
+        trees:
+          key: trees
+        number_of_sites: 1
+      properties:
+        file_name:
+          type: string
+        number_of_sequences:
+          type: integer
+        number_of_sites:
+          type: integer
+        partition_count:
+          type: integer
+        trees:
+          additionalProperties:
+            type: string
+          type: object
+      type: object
+    SlacResult_branch_attributes_value_value:
+      example:
+        codon:
+        - - codon
+          - codon
+        - - codon
+          - codon
+        synonymous_substitution_count:
+        - - 1.1730742509559433
+          - 1.1730742509559433
+        - - 1.1730742509559433
+          - 1.1730742509559433
+        Nucleotide_GTR: 6.84685269835264
+        original_name: original_name
+        nonsynonymous_substitution_count:
+        - - 4.965218492984954
+          - 4.965218492984954
+        - - 4.965218492984954
+          - 4.965218492984954
+        amino_acid:
+        - - amino_acid
+          - amino_acid
+        - - amino_acid
+          - amino_acid
+        Global_MG94xREV: 7.457744773683766
+      properties:
+        original_name:
+          type: string
+        Nucleotide_GTR:
+          type: number
+        Global_MG94xREV:
+          type: number
+        codon:
+          items:
+            items:
+              type: string
+            type: array
+          type: array
+        amino_acid:
+          items:
+            items:
+              type: string
+            type: array
+          type: array
+        synonymous_substitution_count:
+          items:
+            items:
+              type: number
+            type: array
+          type: array
+        nonsynonymous_substitution_count:
+          items:
+            items:
+              type: number
+            type: array
+          type: array
+      type: object
