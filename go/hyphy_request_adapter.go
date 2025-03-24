@@ -2,6 +2,7 @@ package datamonkey
 
 import (
 	"fmt"
+	"log"
 	"reflect"
 )
 
@@ -121,10 +122,12 @@ func (r *requestAdapter) IsTreeSet() bool {
 }
 
 func (r *requestAdapter) GetGeneticCode() string {
+	log.Printf("GetGeneticCode called, returning: '%s'", r.geneticCode)
 	return r.geneticCode
 }
 
 func (r *requestAdapter) IsGeneticCodeSet() bool {
+	log.Printf("IsGeneticCodeSet called, returning: %v", r.geneticCodeSet)
 	return r.geneticCodeSet
 }
 
@@ -161,10 +164,12 @@ func (r *requestAdapter) IsResampleSet() bool {
 }
 
 func (r *requestAdapter) GetMultipleHits() string {
+	log.Printf("GetMultipleHits called, returning: '%s'", r.multipleHits)
 	return r.multipleHits
 }
 
 func (r *requestAdapter) IsMultipleHitsSet() bool {
+	log.Printf("IsMultipleHitsSet called, returning: %v", r.multipleHitsSet)
 	return r.multipleHitsSet
 }
 
@@ -218,56 +223,56 @@ func (r *requestAdapter) IsErrorSinkSet() bool {
 
 // AdaptRequest adapts any request type that has an Alignment field to HyPhyRequest
 func AdaptRequest(req interface{}) (HyPhyRequest, error) {
-	// Get the value and ensure it's a pointer to a struct
-	v := reflect.ValueOf(req)
-	if v.Kind() != reflect.Ptr || v.Elem().Kind() != reflect.Struct {
-		return nil, fmt.Errorf("request must be a pointer to a struct")
+	// Check if req is nil
+	if req == nil {
+		return nil, fmt.Errorf("request is nil")
 	}
 
-	// Get the struct value
-	v = v.Elem()
-
-	// Look for the Alignment field (required)
-	alignmentField := v.FieldByName("Alignment")
-	if !alignmentField.IsValid() {
-		return nil, fmt.Errorf("request must have an alignment field")
+	// Check if req is already a HyPhyRequest
+	if hyPhyReq, ok := req.(HyPhyRequest); ok {
+		return hyPhyReq, nil
 	}
 
-	// Ensure the field is a string
-	if alignmentField.Kind() != reflect.String {
-		return nil, fmt.Errorf("alignment field must be a string")
+	// Create a new adapter
+	adapter := &requestAdapter{}
+
+	// Get the value of req
+	v := reflect.ValueOf(req).Elem()
+
+	// Extract alignment
+	if field := v.FieldByName("Alignment"); field.IsValid() {
+		adapter.alignment = field.String()
+	} else if field := v.FieldByName("DatasetId"); field.IsValid() {
+		adapter.alignment = field.String()
+	} else {
+		return nil, fmt.Errorf("request does not have an Alignment or DatasetId field")
 	}
 
-	// Create adapter with default values
-	adapter := &requestAdapter{
-		alignment: alignmentField.String(),
-	}
-
-	// Try to get other fields (optional)
-	if field := v.FieldByName("Tree"); field.IsValid() && field.Kind() == reflect.String {
+	if field := v.FieldByName("Tree"); field.IsValid() {
 		adapter.tree = field.String()
-		adapter.treeSet = true
+		adapter.treeSet = adapter.tree != ""
 	}
 
 	if field := v.FieldByName("GeneticCode"); field.IsValid() {
 		if gcString, ok := field.Interface().(GeneticCode); ok {
 			adapter.geneticCode = string(gcString)
-			adapter.geneticCodeSet = true
+			adapter.geneticCodeSet = adapter.geneticCode != ""
+		} else if field.Kind() == reflect.String {
+			adapter.geneticCode = field.String()
+			adapter.geneticCodeSet = adapter.geneticCode != ""
 		}
 	}
 
 	if field := v.FieldByName("Branches"); field.IsValid() && field.Kind() == reflect.Slice {
 		branches := make([]string, field.Len())
 		for i := 0; i < field.Len(); i++ {
-			if str, ok := field.Index(i).Interface().(string); ok {
-				branches[i] = str
-			}
+			branches[i] = field.Index(i).String()
 		}
 		adapter.branches = branches
-		adapter.branchesSet = true
+		adapter.branchesSet = len(branches) > 0
 	}
 
-	if field := v.FieldByName("Ci"); field.IsValid() {
+	if field := v.FieldByName("CI"); field.IsValid() {
 		if field.Kind() == reflect.Bool {
 			if field.Bool() {
 				adapter.ci = "Yes"
@@ -277,11 +282,10 @@ func AdaptRequest(req interface{}) (HyPhyRequest, error) {
 			adapter.ciSet = true
 		} else if field.Kind() == reflect.String {
 			adapter.ci = field.String()
-			adapter.ciSet = true
+			adapter.ciSet = adapter.ci != ""
 		}
 	}
 
-	// Handle SRV which can be bool in FEL and string in BUSTED
 	if field := v.FieldByName("Srv"); field.IsValid() {
 		if field.Kind() == reflect.Bool {
 			if field.Bool() {
@@ -292,43 +296,43 @@ func AdaptRequest(req interface{}) (HyPhyRequest, error) {
 			adapter.srvSet = true
 		} else if field.Kind() == reflect.String {
 			adapter.srv = field.String()
-			adapter.srvSet = true
+			adapter.srvSet = adapter.srv != ""
 		}
 	}
 
 	if field := v.FieldByName("Resample"); field.IsValid() && field.Kind() == reflect.Float32 {
 		adapter.resample = float32(field.Float())
-		adapter.resampleSet = true
+		adapter.resampleSet = adapter.resample > 0
 	}
 
 	if field := v.FieldByName("MultipleHits"); field.IsValid() && field.Kind() == reflect.String {
 		adapter.multipleHits = field.String()
-		adapter.multipleHitsSet = true
+		adapter.multipleHitsSet = adapter.multipleHits != ""
 	}
 
 	if field := v.FieldByName("SiteMultihit"); field.IsValid() && field.Kind() == reflect.String {
 		adapter.siteMultihit = field.String()
-		adapter.siteMultihitSet = true
+		adapter.siteMultihitSet = adapter.siteMultihit != ""
 	}
 
 	if field := v.FieldByName("Rates"); field.IsValid() && field.Kind() == reflect.Int32 {
 		adapter.rates = int32(field.Int())
-		adapter.ratesSet = true
+		adapter.ratesSet = adapter.rates > 0
 	}
 
 	if field := v.FieldByName("SynRates"); field.IsValid() && field.Kind() == reflect.Int32 {
 		adapter.synRates = int32(field.Int())
-		adapter.synRatesSet = true
+		adapter.synRatesSet = adapter.synRates > 0
 	}
 
 	if field := v.FieldByName("GridSize"); field.IsValid() && field.Kind() == reflect.Int32 {
 		adapter.gridSize = int32(field.Int())
-		adapter.gridSizeSet = true
+		adapter.gridSizeSet = adapter.gridSize > 0
 	}
 
 	if field := v.FieldByName("StartingPoints"); field.IsValid() && field.Kind() == reflect.Int32 {
 		adapter.startingPoints = int32(field.Int())
-		adapter.startingPointsSet = true
+		adapter.startingPointsSet = adapter.startingPoints > 0
 	}
 
 	if field := v.FieldByName("ErrorSink"); field.IsValid() && field.Kind() == reflect.Bool {

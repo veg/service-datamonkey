@@ -12,17 +12,17 @@ import (
 type HyPhyMethodType string
 
 const (
-	MethodFEL    HyPhyMethodType = "fel"
-	MethodBUSTED HyPhyMethodType = "busted"
-	MethodABSREL HyPhyMethodType = "absrel"
-	MethodSLAC   HyPhyMethodType = "slac"
-	MethodMULTIHIT HyPhyMethodType = "multihit"
-	MethodGARD   HyPhyMethodType = "gard"
-	MethodMEME   HyPhyMethodType = "meme"
-	MethodFUBAR  HyPhyMethodType = "fubar"
+	MethodFEL         HyPhyMethodType = "fel"
+	MethodBUSTED      HyPhyMethodType = "busted"
+	MethodABSREL      HyPhyMethodType = "absrel"
+	MethodSLAC        HyPhyMethodType = "slac"
+	MethodMULTIHIT    HyPhyMethodType = "multihit"
+	MethodGARD        HyPhyMethodType = "gard"
+	MethodMEME        HyPhyMethodType = "meme"
+	MethodFUBAR       HyPhyMethodType = "fubar"
 	MethodCONTRASTFEL HyPhyMethodType = "contrast-fel"
-	MethodRELAX  HyPhyMethodType = "relax"
-	MethodBGM    HyPhyMethodType = "bgm"
+	MethodRELAX       HyPhyMethodType = "relax"
+	MethodBGM         HyPhyMethodType = "bgm"
 )
 
 // HyPhyMethod implements ComputeMethodInterface for all HyPhy analyses
@@ -140,10 +140,10 @@ func (m *HyPhyMethod) GetCommand() string {
 			cmd += fmt.Sprintf(" --tree %s", filepath.Join(m.DataDir, tree))
 		}
 
-		// Add genetic code parameter only if it was explicitly set
+		// Handle genetic code parameter
 		if hyPhyReq.IsGeneticCodeSet() {
 			geneticCode := hyPhyReq.GetGeneticCode()
-			cmd += fmt.Sprintf(" --code %v", geneticCode)
+			cmd += fmt.Sprintf(" --code %s", geneticCode)
 		}
 
 		// Add branches parameter only if it was explicitly set
@@ -172,7 +172,7 @@ func (m *HyPhyMethod) GetCommand() string {
 			cmd += fmt.Sprintf(" --resample %v", resample)
 		}
 
-		// Add multiple-hits parameter only if it was explicitly set
+		// Handle multiple-hits parameter
 		if hyPhyReq.IsMultipleHitsSet() {
 			multipleHits := hyPhyReq.GetMultipleHits()
 			cmd += fmt.Sprintf(" --multiple-hits %s", multipleHits)
@@ -213,26 +213,24 @@ func (m *HyPhyMethod) GetCommand() string {
 			errorSink := hyPhyReq.GetErrorSink()
 			cmd += fmt.Sprintf(" --error-sink %v", errorSink)
 		}
+	} else {
+		// Use reflection to iterate over request fields
+		reqValue := reflect.ValueOf(m.Request).Elem()
+		reqType := reqValue.Type()
 
-		return cmd
-	}
+		for i := 0; i < reqType.NumField(); i++ {
+			field := reqType.Field(i)
+			value := reqValue.Field(i)
 
-	// Use reflection to iterate over request fields
-	reqValue := reflect.ValueOf(m.Request).Elem()
-	reqType := reqValue.Type()
+			// Skip alignment and dataset ID fields as they're handled separately
+			if field.Name == "Alignment" || field.Name == "DatasetId" {
+				continue
+			}
 
-	for i := 0; i < reqType.NumField(); i++ {
-		field := reqType.Field(i)
-		value := reqValue.Field(i)
-
-		// Skip alignment and dataset ID fields as they're handled separately
-		if field.Name == "Alignment" || field.Name == "DatasetId" {
-			continue
-		}
-
-		// Add argument if field has a value
-		if arg := getCommandArg(field, value, string(m.MethodType)); arg != "" {
-			cmd += arg
+			// Add argument if field has a value
+			if arg := getCommandArg(field, value, string(m.MethodType)); arg != "" {
+				cmd += arg
+			}
 		}
 	}
 
