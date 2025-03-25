@@ -72,7 +72,7 @@ type HyPhyRequest interface {
 	IsStartingPointsSet() bool
 
 	// GetErrorSink returns whether to include a rate class for misalignment artifacts
-	GetErrorSink() bool
+	GetErrorSink() string
 	// IsErrorSinkSet returns whether error sink was explicitly set in the request
 	IsErrorSinkSet() bool
 }
@@ -105,7 +105,7 @@ type requestAdapter struct {
 	gridSizeSet       bool
 	startingPoints    int32
 	startingPointsSet bool
-	errorSink         bool
+	errorSink         string
 	errorSinkSet      bool
 }
 
@@ -213,7 +213,7 @@ func (r *requestAdapter) IsStartingPointsSet() bool {
 	return r.startingPointsSet
 }
 
-func (r *requestAdapter) GetErrorSink() bool {
+func (r *requestAdapter) GetErrorSink() string {
 	return r.errorSink
 }
 
@@ -335,9 +335,19 @@ func AdaptRequest(req interface{}) (HyPhyRequest, error) {
 		adapter.startingPointsSet = adapter.startingPoints > 0
 	}
 
-	if field := v.FieldByName("ErrorSink"); field.IsValid() && field.Kind() == reflect.Bool {
-		adapter.errorSink = field.Bool()
-		adapter.errorSinkSet = true
+	// Extract error sink
+	if field := v.FieldByName("ErrorSink"); field.IsValid() {
+		if field.Kind() == reflect.Bool {
+			if field.Bool() {
+				adapter.errorSink = "Yes"
+			} else {
+				adapter.errorSink = "No"
+			}
+			adapter.errorSinkSet = true
+		} else if field.Kind() == reflect.String {
+			adapter.errorSink = field.String()
+			adapter.errorSinkSet = adapter.errorSink != ""
+		}
 	}
 
 	return adapter, nil

@@ -62,8 +62,11 @@ func getCommandArg(field reflect.StructField, value reflect.Value, argPrefix str
 	// Handle different types
 	switch value.Kind() {
 	case reflect.Bool:
+		// For boolean fields, convert to "Yes"/"No" for HyPhy compatibility
 		if value.Bool() {
-			return fmt.Sprintf(" --%s", argName)
+			return fmt.Sprintf(" --%s Yes", argName)
+		} else {
+			return fmt.Sprintf(" --%s No", argName)
 		}
 	case reflect.String:
 		if str := value.String(); str != "" {
@@ -211,7 +214,7 @@ func (m *HyPhyMethod) GetCommand() string {
 		// Add error-sink parameter only if it was explicitly set
 		if hyPhyReq.IsErrorSinkSet() {
 			errorSink := hyPhyReq.GetErrorSink()
-			cmd += fmt.Sprintf(" --error-sink %v", errorSink)
+			cmd += fmt.Sprintf(" --error-sink %s", errorSink)
 		}
 	} else {
 		// Use reflection to iterate over request fields

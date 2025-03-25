@@ -1039,8 +1039,8 @@ components:
       example:
         genetic_code: Universal
         site_multihit: Estimate
-        ci: false
-        srv: true
+        ci: "No"
+        srv: "Yes"
         multiple_hits: None
         tree: tree
         alignment: alignment
@@ -1056,13 +1056,19 @@ components:
           pattern: "^[a-zA-Z0-9]+$"
           type: string
         ci:
-          default: false
+          default: "No"
           description: Compute confidence intervals for estimated rates
-          type: boolean
+          enum:
+          - "Yes"
+          - "No"
+          type: string
         srv:
-          default: true
+          default: "Yes"
           description: Include synonymous rate variation in the model
-          type: boolean
+          enum:
+          - "Yes"
+          - "No"
+          type: string
         resample:
           default: 0
           description: Number of bootstrap resamples
@@ -1295,7 +1301,7 @@ components:
         - branches
         - branches
         starting_points: 1
-        error_sink: false
+        error_sink: "No"
       properties:
         alignment:
           pattern: "^[a-zA-Z0-9]+$"
@@ -1352,10 +1358,13 @@ components:
           minimum: 1
           type: integer
         error_sink:
-          default: false
+          default: "No"
           description: An advanced experimental setting; include a rate class to capture
             misalignment artifacts
-          type: boolean
+          enum:
+          - "Yes"
+          - "No"
+          type: string
       type: object
     BustedResult:
       example:
@@ -1463,7 +1472,7 @@ components:
     AbsrelRequest:
       example:
         genetic_code: Universal
-        srv: true
+        srv: "Yes"
         multiple_hits: None
         tree: tree
         blb: 0.08008281904610115
@@ -1479,9 +1488,12 @@ components:
           pattern: "^[a-zA-Z0-9]+$"
           type: string
         srv:
-          default: true
+          default: "Yes"
           description: Include synonymous rate variation in the model
-          type: boolean
+          enum:
+          - "Yes"
+          - "No"
+          type: string
         multiple_hits:
           default: None
           description: Specify handling of multiple nucleotide substitutions
@@ -2258,7 +2270,7 @@ components:
       description: Request parameters for MULTI-HIT analysis
       example:
         genetic_code: Universal
-        triple_islands: false
+        triple_islands: "No"
         alignment_file: alignment_file
         rate_classes: 1
       properties:
@@ -2270,9 +2282,12 @@ components:
           description: The genetic code to use for the analysis
           type: string
         triple_islands:
-          default: false
+          default: "No"
           description: Toggle for accounting synonymous triple-hit substitutions
-          type: boolean
+          enum:
+          - "Yes"
+          - "No"
+          type: string
         rate_classes:
           default: 3
           description: Number of rate classes to use

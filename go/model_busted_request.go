@@ -40,5 +40,5 @@ type BustedRequest struct {
 	StartingPoints int32 `json:"starting_points,omitempty"`
 
 	// An advanced experimental setting; include a rate class to capture misalignment artifacts
-	ErrorSink bool `json:"error_sink,omitempty"`
+	ErrorSink string `json:"error_sink,omitempty"`
 }

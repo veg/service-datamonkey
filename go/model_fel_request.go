@@ -17,10 +17,10 @@ type FelRequest struct {
 	Tree string `json:"tree,omitempty" validate:"regexp=^[a-zA-Z0-9]+$"`
 
 	// Compute confidence intervals for estimated rates
-	Ci bool `json:"ci,omitempty"`
+	Ci string `json:"ci,omitempty"`
 
 	// Include synonymous rate variation in the model
-	Srv bool `json:"srv,omitempty"`
+	Srv string `json:"srv,omitempty"`
 
 	// Number of bootstrap resamples
 	Resample float32 `json:"resample,omitempty"`

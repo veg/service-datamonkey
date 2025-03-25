@@ -17,7 +17,7 @@ type AbsrelRequest struct {
 	Tree string `json:"tree,omitempty" validate:"regexp=^[a-zA-Z0-9]+$"`
 
 	// Include synonymous rate variation in the model
-	Srv bool `json:"srv,omitempty"`
+	Srv string `json:"srv,omitempty"`
 
 	// Specify handling of multiple nucleotide substitutions
 	MultipleHits string `json:"multiple_hits,omitempty"`

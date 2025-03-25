@@ -20,7 +20,7 @@ type MultihitRequest struct {
 	GeneticCode string `json:"genetic_code"`
 
 	// Toggle for accounting synonymous triple-hit substitutions
-	TripleIslands bool `json:"triple_islands,omitempty"`
+	TripleIslands string `json:"triple_islands,omitempty"`
 
 	// Number of rate classes to use
 	RateClasses int32 `json:"rate_classes,omitempty"`
