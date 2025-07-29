@@ -133,6 +133,9 @@ func initAPIHandlers(scheduler sw.SchedulerInterface, datasetTracker sw.DatasetT
 		CONTRASTFELAPI:     *sw.NewCONTRASTFELAPI(basePath, hyPhyPath, scheduler, datasetTracker),
 		RELAXAPI:           *sw.NewRELAXAPI(basePath, hyPhyPath, scheduler, datasetTracker),
 		BGMAPI:             *sw.NewBGMAPI(basePath, hyPhyPath, scheduler, datasetTracker),
+		NRMAPI:             *sw.NewNRMAPI(basePath, hyPhyPath, scheduler, datasetTracker),
+		FADEAPI:            *sw.NewFADEAPI(basePath, hyPhyPath, scheduler, datasetTracker),
+		SLATKINAPI:         *sw.NewSLATKINAPI(basePath, hyPhyPath, scheduler, datasetTracker),
 		FileUploadAndQCAPI: *sw.NewFileUploadAndQCAPI(datasetTracker),
 		HealthAPI:          sw.HealthAPI{Scheduler: scheduler},
 	}

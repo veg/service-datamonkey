@@ -23,6 +23,9 @@ const (
 	MethodCONTRASTFEL HyPhyMethodType = "contrast-fel"
 	MethodRELAX       HyPhyMethodType = "relax"
 	MethodBGM         HyPhyMethodType = "bgm"
+	MethodNRM         HyPhyMethodType = "nrm"
+	MethodFADE        HyPhyMethodType = "fade"
+	MethodSLATKIN     HyPhyMethodType = "slatkin"
 )
 
 // HyPhyMethod implements ComputeMethodInterface for all HyPhy analyses
@@ -364,6 +367,39 @@ func (m *HyPhyMethod) ParseResult(output string) (interface{}, error) {
 		}
 		return result, nil
 
+	case MethodNRM:
+		// Create a wrapper structure to match the expected format
+		wrappedJSON := fmt.Sprintf(`{"job_id":"test_job","result":%s}`, output)
+
+		var result NrmResult
+		err := json.Unmarshal([]byte(wrappedJSON), &result)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse NRM result: %v", err)
+		}
+		return result, nil
+
+	case MethodFADE:
+		// Create a wrapper structure to match the expected format
+		wrappedJSON := fmt.Sprintf(`{"job_id":"test_job","result":%s}`, output)
+
+		var result FadeResult
+		err := json.Unmarshal([]byte(wrappedJSON), &result)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse FADE result: %v", err)
+		}
+		return result, nil
+
+	case MethodSLATKIN:
+		// Create a wrapper structure to match the expected format
+		wrappedJSON := fmt.Sprintf(`{"job_id":"test_job","result":%s}`, output)
+
+		var result SlatkinResult
+		err := json.Unmarshal([]byte(wrappedJSON), &result)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse SLATKIN result: %v", err)
+		}
+		return result, nil
+
 	default:
 		return nil, fmt.Errorf("unknown method type: %s", m.MethodType)
 	}
@@ -432,6 +468,15 @@ func (m *HyPhyMethod) ValidateInput(dataset DatasetInterface) error {
 
 	case *BgmRequest:
 		// Basic validation for BGM
+
+	case *NrmRequest:
+		// Basic validation for NRM
+
+	case *FadeRequest:
+		// Basic validation for FADE
+
+	case *SlatkinRequest:
+		// Basic validation for SLATKIN
 	}
 
 	return nil
