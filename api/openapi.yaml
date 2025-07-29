@@ -54,6 +54,15 @@ tags:
 - description: Examples starting jobs and fetching results for SLAC (Single Likelihood
     Ancestor Counting) analysis
   name: SLAC
+- description: Examples starting jobs and fetching results for NRM (Nucleotide Non-Reversible
+    Model) analysis
+  name: NRM
+- description: Examples starting jobs and fetching results for FADE (FUBAR Approach
+    to Directional Evolution) analysis
+  name: FADE
+- description: Examples starting jobs and fetching results for SLATKIN (Slatkin-Maddison)
+    analysis
+  name: SLATKIN
 - description: Examples building codon-aware alignments from uploaded data. Somewhere
     over the rainbow..
   name: Codon Aware Alignments
@@ -1442,6 +1451,371 @@ paths:
       summary: Get SLAC analysis results
       tags:
       - SLAC
+  /methods/nrm-start:
+    post:
+      operationId: startNRMJob
+      parameters:
+      - description: Pretty print response
+        explode: true
+        in: query
+        name: pretty_print
+        required: false
+        schema:
+          type: boolean
+        style: form
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NrmRequest'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobStatus'
+          description: Success
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvalidDataError'
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerError'
+          description: Internal Server Error
+      summary: Start and monitor an NRM (Nucleotide Non-Reversible Model) job
+      tags:
+      - NRM
+  /methods/nrm-result:
+    get:
+      operationId: getNRMJobById
+      parameters:
+      - description: Pretty print response
+        explode: true
+        in: query
+        name: pretty_print
+        required: false
+        schema:
+          type: boolean
+        style: form
+      - description: Job ID to fetch results for
+        explode: true
+        in: query
+        name: job_id
+        required: true
+        schema:
+          $ref: '#/components/schemas/Hash'
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NrmResult'
+          description: Success
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+          description: Job not found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerError'
+          description: Internal Server Error
+      summary: Get an NRM job result by job ID
+      tags:
+      - NRM
+    post:
+      operationId: getNRMJob
+      parameters:
+      - description: Pretty print response
+        explode: true
+        in: query
+        name: pretty_print
+        required: false
+        schema:
+          type: boolean
+        style: form
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NrmRequest'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NrmResult'
+          description: Success
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+          description: Job not found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerError'
+          description: Internal Server Error
+      summary: Get an NRM job result
+      tags:
+      - NRM
+  /methods/fade-start:
+    post:
+      description: |
+        Start a FADE (FUBAR Approach to Directional Evolution) job. FADE is a fast method to test  whether or not a subset of sites in a protein alignment evolve towards a particular residue  along a subset of branches at accelerated rates compared to reference model. FADE uses a  random effects model and latent Dirichlet allocation (LDA) - inspired approximation methods  to allocate sites to rate classes.
+      operationId: startFadeJob
+      parameters:
+      - description: Pretty print response
+        explode: true
+        in: query
+        name: pretty_print
+        required: false
+        schema:
+          type: boolean
+        style: form
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FadeRequest'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobStatus'
+          description: Success
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvalidDataError'
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerError'
+          description: Internal Server Error
+      summary: Start a FADE job
+      tags:
+      - FADE
+  /methods/fade-result:
+    get:
+      operationId: getFadeResultsById
+      parameters:
+      - description: Pretty print response
+        explode: true
+        in: query
+        name: pretty_print
+        required: false
+        schema:
+          type: boolean
+        style: form
+      - description: Job ID to fetch results for
+        explode: true
+        in: query
+        name: job_id
+        required: true
+        schema:
+          $ref: '#/components/schemas/Hash'
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FadeResult'
+          description: Success
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+          description: Job not found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerError'
+          description: Internal Server Error
+      summary: Get a FADE job result by job ID
+      tags:
+      - FADE
+    post:
+      operationId: getFadeResults
+      parameters:
+      - description: Pretty print response
+        explode: true
+        in: query
+        name: pretty_print
+        required: false
+        schema:
+          type: boolean
+        style: form
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FadeRequest'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FadeResult'
+          description: Success
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+          description: Job not found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerError'
+          description: Internal Server Error
+      summary: Get a FADE job result
+      tags:
+      - FADE
+  /methods/slatkin-start:
+    post:
+      operationId: startSlatkinJob
+      parameters:
+      - description: Pretty print response
+        explode: true
+        in: query
+        name: pretty_print
+        required: false
+        schema:
+          type: boolean
+        style: form
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SlatkinRequest'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobStatus'
+          description: Success
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvalidDataError'
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerError'
+          description: Internal Server Error
+      summary: Start a Slatkin-Maddison analysis
+      tags:
+      - SLATKIN
+  /methods/slatkin-result:
+    get:
+      operationId: getSlatkinResultsById
+      parameters:
+      - description: Pretty print response
+        explode: true
+        in: query
+        name: pretty_print
+        required: false
+        schema:
+          type: boolean
+        style: form
+      - description: Job ID to fetch results for
+        explode: true
+        in: query
+        name: job_id
+        required: true
+        schema:
+          $ref: '#/components/schemas/Hash'
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SlatkinResult'
+          description: Success
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+          description: Job not found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerError'
+          description: Internal Server Error
+      summary: Get a Slatkin-Maddison job result by job ID
+      tags:
+      - SLATKIN
+    post:
+      operationId: getSlatkinResults
+      parameters:
+      - description: Pretty print response
+        explode: true
+        in: query
+        name: pretty_print
+        required: false
+        schema:
+          type: boolean
+        style: form
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SlatkinRequest'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SlatkinResult'
+          description: Success
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+          description: Job not found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerError'
+          description: Internal Server Error
+      summary: Get a Slatkin-Maddison job result
+      tags:
+      - SLATKIN
   /datasets:
     get:
       operationId: getDatasetsList
@@ -3057,6 +3431,311 @@ components:
           type: string
         result:
           $ref: '#/components/schemas/SlacResult_result'
+      type: object
+    NrmRequest:
+      example:
+        genetic_code: Universal
+        save_fit: false
+        tree: tree
+        alignment: alignment
+      properties:
+        alignment:
+          pattern: "^[a-zA-Z0-9]+$"
+          type: string
+        tree:
+          pattern: "^[a-zA-Z0-9]+$"
+          type: string
+        genetic_code:
+          $ref: '#/components/schemas/GeneticCode'
+        save_fit:
+          default: false
+          description: Save NRM+F model fit to a file
+          type: boolean
+      type: object
+    NrmResult:
+      example:
+        result:
+          input:
+            trees:
+              key: trees
+          characters:
+          - - characters
+            - characters
+          - - characters
+            - characters
+          timers:
+            key:
+              timer: 6
+              order: 0
+          data partitions:
+            key:
+              coverage:
+              - - 1
+                - 1
+              - - 1
+                - 1
+              name: name
+          test results:
+            key:
+              p-value: 1.2315135367772556
+              Corrected P-value: 1.0246457001441578
+              LRT: 7.386281948385884
+          branch attributes:
+            key:
+              key:
+                NREV6: 9.301444243932576
+                GTR: 7.061401241503109
+                observed frequencies:
+                - 4.145608029883936
+                - 4.145608029883936
+                NREV12: 3.616076749251911
+                NREV12+F: 2.027123023002322
+                original name: original name
+          tested: true
+          runtime: runtime
+          analysis:
+            settings:
+              site_filter: "{}"
+            contact: john.smith@example.com
+          fits:
+            key:
+              Log Likelihood: 6.027456183070403
+              estimated parameters: 5.637376656633329
+              Rate Distributions:
+              - - 1.4658129805029452
+                - 1.4658129805029452
+              - - 1.4658129805029452
+                - 1.4658129805029452
+              AIC-c: 0.8008281904610115
+              display order: 5.962133916683182
+              Equilibrium frequencies:
+              - - 2.3021358869347655
+                - 2.3021358869347655
+              - - 2.3021358869347655
+                - 2.3021358869347655
+        job_id: job_id
+      properties:
+        job_id:
+          pattern: "^[a-zA-Z0-9]+$"
+          type: string
+        result:
+          $ref: '#/components/schemas/NrmResult_result'
+      type: object
+    FadeRequest:
+      example:
+        bayes_factor_threshold: 81
+        tree: tree
+        alignment: alignment
+      properties:
+        alignment:
+          pattern: "^[a-zA-Z0-9]+$"
+          type: string
+        tree:
+          pattern: "^[a-zA-Z0-9]+$"
+          type: string
+        bayes_factor_threshold:
+          default: 100
+          description: Bayes Factor threshold for determining significant sites (default
+            100)
+          maximum: 1000
+          minimum: 1
+          type: integer
+      type: object
+    FadeResult:
+      example:
+        input:
+          file: file
+          partition_count: 4
+          sites: 2
+          sequences: 3
+        timers:
+          key:
+            timer: 7
+            order: 9
+        site annotations:
+          site annotations:
+            key:
+              key:
+              - site annotations
+              - site annotations
+        tested:
+          key: tested
+        MLE:
+          content:
+            key:
+              key:
+              - - 2.3021358869347655
+                - 2.3021358869347655
+              - - 2.3021358869347655
+                - 2.3021358869347655
+        analysis:
+          requirements: requirements
+          citation: citation
+          contact: contact
+          version: version
+          info: info
+          authors: authors
+        fits:
+          key:
+            Log Likelihood: 0.8008281904610115
+            estimated parameters: 6
+            Rate Distributions: "{}"
+            AIC-c: 1.4658129805029452
+            display order: 5
+            Equilibrium frequencies:
+            - - 5.962133916683182
+              - 5.962133916683182
+            - - 5.962133916683182
+              - 5.962133916683182
+      properties:
+        analysis:
+          $ref: '#/components/schemas/FadeResult_analysis'
+        fits:
+          additionalProperties:
+            $ref: '#/components/schemas/FadeResult_fits_value'
+          description: Model fit information
+          type: object
+        MLE:
+          $ref: '#/components/schemas/FadeResult_MLE'
+        site annotations:
+          $ref: '#/components/schemas/FadeResult_site_annotations'
+        timers:
+          additionalProperties:
+            $ref: '#/components/schemas/FadeResult_timers_value'
+          description: Execution time information
+          type: object
+        input:
+          $ref: '#/components/schemas/FadeResult_input'
+        tested:
+          additionalProperties:
+            description: Branch classification
+            type: string
+          description: Information about tested branches
+          type: object
+      type: object
+    SlatkinRequest:
+      example:
+        use_bootstrap: true
+        tree: tree
+        groups: 9
+        weight: 0.14658129805029452
+        compartment_definitions:
+        - regexp: regexp
+          description: description
+        - regexp: regexp
+          description: description
+        replicates: 602746
+      properties:
+        tree:
+          pattern: "^[a-zA-Z0-9]+$"
+          type: string
+        groups:
+          default: 2
+          description: The number of compartments/groups to test
+          maximum: 100
+          minimum: 2
+          type: integer
+        compartment_definitions:
+          description: Array of compartment definitions
+          items:
+            $ref: '#/components/schemas/SlatkinRequest_compartment_definitions_inner'
+          type: array
+        replicates:
+          default: 1000
+          description: The number of bootstrap replicates
+          maximum: 1000000
+          minimum: 1
+          type: integer
+        weight:
+          default: 0.2
+          description: "Probability of branch selection for structured permutation\
+            \ [0-1]; 0 = classical Slatkin-Maddison, 1 = fully structured"
+          maximum: 1
+          minimum: 0
+          type: number
+        use_bootstrap:
+          default: true
+          description: Whether to use bootstrap weights to respect well-supported
+            clades
+          type: boolean
+      type: object
+    SlatkinResult:
+      example:
+        partitions:
+          key:
+            key: partitions
+        p-value:
+          panmictic: 5.962133916683182
+          structured: 5.637376656633329
+        migrations: 1
+        leaf-count: 6
+        node-migrations:
+          key: 9
+        partition-counts:
+          key: 2
+        structured-cutoff: 3
+        replicates: 7
+        compartments: 0
+        node-p-value:
+          panmictic:
+            key: 2.027123023002322
+          structured:
+            key: 4.145608029883936
+        events:
+          key:
+            from: from
+            to: to
+        simulations:
+          panmictic:
+          - 7.386281948385884
+          - 7.386281948385884
+          structured:
+          - 1.2315135367772556
+          - 1.2315135367772556
+      properties:
+        compartments:
+          description: Number of compartments in the analysis
+          type: integer
+        events:
+          additionalProperties:
+            $ref: '#/components/schemas/SlatkinResult_events_value'
+          description: Migration events between compartments
+          type: object
+        leaf-count:
+          description: Number of leaves in the tree
+          type: integer
+        migrations:
+          description: Number of migration events
+          type: integer
+        p-value:
+          $ref: '#/components/schemas/SlatkinResult_p_value'
+        partition-counts:
+          additionalProperties:
+            type: integer
+          description: Number of sequences in each partition/compartment
+          type: object
+        partitions:
+          additionalProperties:
+            additionalProperties:
+              type: string
+            type: object
+          description: Sequences in each partition/compartment
+          type: object
+        replicates:
+          description: Number of bootstrap replicates used
+          type: integer
+        node-migrations:
+          additionalProperties:
+            type: integer
+          description: Number of migrations at each node
+          type: object
+        structured-cutoff:
+          description: Cutoff value for structured test
+          type: integer
+        node-p-value:
+          $ref: '#/components/schemas/SlatkinResult_node_p_value'
+        simulations:
+          $ref: '#/components/schemas/SlatkinResult_simulations'
       type: object
     DatasetMeta:
       properties:
@@ -5433,4 +6112,387 @@ components:
             type: array
           description: Site-specific results
           type: object
+      type: object
+    NrmResult_result_allOf_fits_value:
+      example:
+        Log Likelihood: 6.027456183070403
+        estimated parameters: 5.637376656633329
+        Rate Distributions:
+        - - 1.4658129805029452
+          - 1.4658129805029452
+        - - 1.4658129805029452
+          - 1.4658129805029452
+        AIC-c: 0.8008281904610115
+        display order: 5.962133916683182
+        Equilibrium frequencies:
+        - - 2.3021358869347655
+          - 2.3021358869347655
+        - - 2.3021358869347655
+          - 2.3021358869347655
+      properties:
+        AIC-c:
+          type: number
+        Log Likelihood:
+          type: number
+        Rate Distributions:
+          items:
+            items:
+              type: number
+            type: array
+          type: array
+        display order:
+          type: number
+        estimated parameters:
+          type: number
+        Equilibrium frequencies:
+          items:
+            items:
+              type: number
+            type: array
+          type: array
+      type: object
+    NrmResult_result_allOf_branch_attributes_value_value:
+      example:
+        NREV6: 9.301444243932576
+        GTR: 7.061401241503109
+        observed frequencies:
+        - 4.145608029883936
+        - 4.145608029883936
+        NREV12: 3.616076749251911
+        NREV12+F: 2.027123023002322
+        original name: original name
+      properties:
+        GTR:
+          type: number
+        NREV6:
+          type: number
+        NREV12:
+          type: number
+        NREV12+F:
+          type: number
+        observed frequencies:
+          items:
+            type: number
+          type: array
+        original name:
+          type: string
+      type: object
+    NrmResult_result_allOf_test_results_value:
+      example:
+        p-value: 1.2315135367772556
+        Corrected P-value: 1.0246457001441578
+        LRT: 7.386281948385884
+      properties:
+        LRT:
+          type: number
+        p-value:
+          type: number
+        Corrected P-value:
+          type: number
+      type: object
+    NrmResult_result:
+      allOf:
+      - $ref: '#/components/schemas/BaseResponse'
+      - properties:
+          fits:
+            additionalProperties:
+              $ref: '#/components/schemas/NrmResult_result_allOf_fits_value'
+            type: object
+          branch attributes:
+            additionalProperties:
+              additionalProperties:
+                $ref: '#/components/schemas/NrmResult_result_allOf_branch_attributes_value_value'
+              type: object
+            type: object
+          test results:
+            additionalProperties:
+              $ref: '#/components/schemas/NrmResult_result_allOf_test_results_value'
+            type: object
+          tested:
+            type: boolean
+          characters:
+            items:
+              items:
+                type: string
+              type: array
+            type: array
+        type: object
+      example:
+        input:
+          trees:
+            key: trees
+        characters:
+        - - characters
+          - characters
+        - - characters
+          - characters
+        timers:
+          key:
+            timer: 6
+            order: 0
+        data partitions:
+          key:
+            coverage:
+            - - 1
+              - 1
+            - - 1
+              - 1
+            name: name
+        test results:
+          key:
+            p-value: 1.2315135367772556
+            Corrected P-value: 1.0246457001441578
+            LRT: 7.386281948385884
+        branch attributes:
+          key:
+            key:
+              NREV6: 9.301444243932576
+              GTR: 7.061401241503109
+              observed frequencies:
+              - 4.145608029883936
+              - 4.145608029883936
+              NREV12: 3.616076749251911
+              NREV12+F: 2.027123023002322
+              original name: original name
+        tested: true
+        runtime: runtime
+        analysis:
+          settings:
+            site_filter: "{}"
+          contact: john.smith@example.com
+        fits:
+          key:
+            Log Likelihood: 6.027456183070403
+            estimated parameters: 5.637376656633329
+            Rate Distributions:
+            - - 1.4658129805029452
+              - 1.4658129805029452
+            - - 1.4658129805029452
+              - 1.4658129805029452
+            AIC-c: 0.8008281904610115
+            display order: 5.962133916683182
+            Equilibrium frequencies:
+            - - 2.3021358869347655
+              - 2.3021358869347655
+            - - 2.3021358869347655
+              - 2.3021358869347655
+    FadeResult_analysis:
+      description: Metadata about the FADE analysis
+      example:
+        requirements: requirements
+        citation: citation
+        contact: contact
+        version: version
+        info: info
+        authors: authors
+      properties:
+        info:
+          description: Description of the FADE method
+          type: string
+        version:
+          description: Version of the FADE method
+          type: string
+        citation:
+          description: Citation for the FADE method
+          type: string
+        authors:
+          description: Authors of the FADE method
+          type: string
+        contact:
+          description: Contact information for the FADE method
+          type: string
+        requirements:
+          description: Requirements for the FADE method
+          type: string
+      type: object
+    FadeResult_fits_value:
+      example:
+        Log Likelihood: 0.8008281904610115
+        estimated parameters: 6
+        Rate Distributions: "{}"
+        AIC-c: 1.4658129805029452
+        display order: 5
+        Equilibrium frequencies:
+        - - 5.962133916683182
+          - 5.962133916683182
+        - - 5.962133916683182
+          - 5.962133916683182
+      properties:
+        Log Likelihood:
+          description: Log likelihood of the model fit
+          type: number
+        estimated parameters:
+          description: Number of estimated parameters
+          type: integer
+        AIC-c:
+          description: AIC-c score for the model
+          type: number
+        Equilibrium frequencies:
+          description: Equilibrium frequencies for the model
+          items:
+            items:
+              type: number
+            type: array
+          type: array
+        Rate Distributions:
+          description: Rate distributions for the model
+          nullable: true
+          type: object
+        display order:
+          description: Display order for the model
+          type: integer
+      type: object
+    FadeResult_MLE:
+      description: Maximum likelihood estimates
+      example:
+        content:
+          key:
+            key:
+            - - 2.3021358869347655
+              - 2.3021358869347655
+            - - 2.3021358869347655
+              - 2.3021358869347655
+      properties:
+        content:
+          additionalProperties:
+            additionalProperties:
+              description: Site-specific data arrays
+              items:
+                description: "[rate, bias, Prob[bias>0], BayesFactor[bias>0]]"
+                items:
+                  type: number
+                type: array
+              type: array
+            type: object
+          description: MLE content organized by amino acid and partition
+          type: object
+      type: object
+    FadeResult_site_annotations:
+      description: Annotations for each site
+      example:
+        site annotations:
+          key:
+            key:
+            - site annotations
+            - site annotations
+      properties:
+        site annotations:
+          additionalProperties:
+            additionalProperties:
+              description: "[composition, substitutions]"
+              items:
+                type: string
+              type: array
+            type: object
+          description: Site annotations by partition
+          type: object
+      type: object
+    FadeResult_timers_value:
+      example:
+        timer: 7
+        order: 9
+      properties:
+        timer:
+          description: Execution time in milliseconds
+          type: integer
+        order:
+          description: Order of execution
+          type: integer
+      type: object
+    FadeResult_input:
+      description: Input data information
+      example:
+        file: file
+        partition_count: 4
+        sites: 2
+        sequences: 3
+      properties:
+        file:
+          description: Input file path
+          type: string
+        sequences:
+          description: Number of sequences in the alignment
+          type: integer
+        sites:
+          description: Number of sites in the alignment
+          type: integer
+        partition_count:
+          description: Number of partitions in the analysis
+          type: integer
+      type: object
+    SlatkinRequest_compartment_definitions_inner:
+      example:
+        regexp: regexp
+        description: description
+      properties:
+        description:
+          description: Description for sequences in this compartment
+          type: string
+        regexp:
+          description: Regular expression to select the branches in this compartment
+          type: string
+      required:
+      - description
+      - regexp
+      type: object
+    SlatkinResult_events_value:
+      example:
+        from: from
+        to: to
+      properties:
+        from:
+          description: Source compartment
+          type: string
+        to:
+          description: Destination compartment
+          type: string
+      type: object
+    SlatkinResult_p_value:
+      description: P-values for compartmentalization tests
+      example:
+        panmictic: 5.962133916683182
+        structured: 5.637376656633329
+      properties:
+        panmictic:
+          description: P-value for full panmixia test
+          type: number
+        structured:
+          description: P-value for structured test
+          type: number
+      type: object
+    SlatkinResult_node_p_value:
+      description: P-values for each node
+      example:
+        panmictic:
+          key: 2.027123023002322
+        structured:
+          key: 4.145608029883936
+      properties:
+        panmictic:
+          additionalProperties:
+            type: number
+          type: object
+        structured:
+          additionalProperties:
+            type: number
+          type: object
+      type: object
+    SlatkinResult_simulations:
+      description: Simulation results
+      example:
+        panmictic:
+        - 7.386281948385884
+        - 7.386281948385884
+        structured:
+        - 1.2315135367772556
+        - 1.2315135367772556
+      properties:
+        panmictic:
+          items:
+            type: number
+          type: array
+        structured:
+          items:
+            type: number
+          type: array
       type: object

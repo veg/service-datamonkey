@@ -71,6 +71,8 @@ type ApiHandleFunctions struct {
 	BUSTEDAPI BUSTEDAPI
 	// Routes for the CONTRASTFELAPI part of the API
 	CONTRASTFELAPI CONTRASTFELAPI
+	// Routes for the FADEAPI part of the API
+	FADEAPI FADEAPI
 	// Routes for the FELAPI part of the API
 	FELAPI FELAPI
 	// Routes for the FUBARAPI part of the API
@@ -85,10 +87,14 @@ type ApiHandleFunctions struct {
 	MEMEAPI MEMEAPI
 	// Routes for the MULTIHITAPI part of the API
 	MULTIHITAPI MULTIHITAPI
+	// Routes for the NRMAPI part of the API
+	NRMAPI NRMAPI
 	// Routes for the RELAXAPI part of the API
 	RELAXAPI RELAXAPI
 	// Routes for the SLACAPI part of the API
 	SLACAPI SLACAPI
+	// Routes for the SLATKINAPI part of the API
+	SLATKINAPI SLATKINAPI
 }
 
 func getRoutes(handleFunctions ApiHandleFunctions) []Route {
@@ -164,6 +170,24 @@ func getRoutes(handleFunctions ApiHandleFunctions) []Route {
 			http.MethodPost,
 			"/api/v1/methods/contrast-fel-start",
 			handleFunctions.CONTRASTFELAPI.StartCONTRASTFELJob,
+		},
+		{
+			"GetFadeResults",
+			http.MethodPost,
+			"/api/v1/methods/fade-result",
+			handleFunctions.FADEAPI.GetFadeResults,
+		},
+		{
+			"GetFadeResultsById",
+			http.MethodGet,
+			"/api/v1/methods/fade-result",
+			handleFunctions.FADEAPI.GetFadeResultsById,
+		},
+		{
+			"StartFadeJob",
+			http.MethodPost,
+			"/api/v1/methods/fade-start",
+			handleFunctions.FADEAPI.StartFadeJob,
 		},
 		{
 			"GetFELJob",
@@ -274,6 +298,24 @@ func getRoutes(handleFunctions ApiHandleFunctions) []Route {
 			handleFunctions.MULTIHITAPI.StartMULTIHITJob,
 		},
 		{
+			"GetNRMJob",
+			http.MethodPost,
+			"/api/v1/methods/nrm-result",
+			handleFunctions.NRMAPI.GetNRMJob,
+		},
+		{
+			"GetNRMJobById",
+			http.MethodGet,
+			"/api/v1/methods/nrm-result",
+			handleFunctions.NRMAPI.GetNRMJobById,
+		},
+		{
+			"StartNRMJob",
+			http.MethodPost,
+			"/api/v1/methods/nrm-start",
+			handleFunctions.NRMAPI.StartNRMJob,
+		},
+		{
 			"GetRELAXJob",
 			http.MethodPost,
 			"/api/v1/methods/relax-result",
@@ -308,6 +350,24 @@ func getRoutes(handleFunctions ApiHandleFunctions) []Route {
 			http.MethodPost,
 			"/api/v1/methods/slac-start",
 			handleFunctions.SLACAPI.StartSLACJob,
+		},
+		{
+			"GetSlatkinResults",
+			http.MethodPost,
+			"/api/v1/methods/slatkin-result",
+			handleFunctions.SLATKINAPI.GetSlatkinResults,
+		},
+		{
+			"GetSlatkinResultsById",
+			http.MethodGet,
+			"/api/v1/methods/slatkin-result",
+			handleFunctions.SLATKINAPI.GetSlatkinResultsById,
+		},
+		{
+			"StartSlatkinJob",
+			http.MethodPost,
+			"/api/v1/methods/slatkin-start",
+			handleFunctions.SLATKINAPI.StartSlatkinJob,
 		},
 	}
 }
