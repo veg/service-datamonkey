@@ -37,27 +37,10 @@ func NewHyPhyBaseAPI(basePath, hyPhyPath string, scheduler SchedulerInterface, d
 	}
 }
 
-// HandleGetJob handles retrieving job status and results for any HyPhy method
-func (api *HyPhyBaseAPI) HandleGetJob(c *gin.Context, request HyPhyRequest, methodType HyPhyMethodType) (interface{}, error) {
-	// Create HyPhyMethod instance with explicit method type
-	method := NewHyPhyMethod(request, api.BasePath, api.HyPhyPath, methodType, api.DatasetTracker.GetDatasetDir())
-
-	// Create job instance
-	job := NewHyPhyJob(request, method, api.Scheduler)
-
-	// Get job status
-	status, err := job.GetStatus()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get job status: %v", err)
-	}
-
-	// If job is not complete, return error
-	if status != JobStatusComplete {
-		return nil, fmt.Errorf("job is not complete")
-	}
-
+// getJobResults is a utility function to get job results by job ID
+func (api *HyPhyBaseAPI) getJobResults(jobId string, method *HyPhyMethod, status JobStatusValue) (interface{}, error) {
 	// Read results
-	outputPath := method.GetOutputPath(job.GetId())
+	outputPath := method.GetOutputPath(jobId)
 	results, err := os.ReadFile(outputPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read results: %v", err)
@@ -77,10 +60,60 @@ func (api *HyPhyBaseAPI) HandleGetJob(c *gin.Context, request HyPhyRequest, meth
 	}
 
 	return map[string]interface{}{
-		"jobId":   job.GetId(),
+		"jobId":   jobId,
 		"status":  status,
 		"results": json.RawMessage(cleanedResults),
 	}, nil
+}
+
+// HandleGetJob handles retrieving job status and results for any HyPhy method
+func (api *HyPhyBaseAPI) HandleGetJob(c *gin.Context, request HyPhyRequest, methodType HyPhyMethodType) (interface{}, error) {
+	// Create HyPhyMethod instance with explicit method type
+	method := NewHyPhyMethod(request, api.BasePath, api.HyPhyPath, methodType, api.DatasetTracker.GetDatasetDir())
+
+	// Create job instance
+	job := NewHyPhyJob(request, method, api.Scheduler)
+
+	// Get job status
+	status, err := job.GetStatus()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get job status: %v", err)
+	}
+
+	// If job is not complete, return error
+	if status != JobStatusComplete {
+		return nil, fmt.Errorf("job is not complete")
+	}
+
+	// Use shared function to get job results
+	return api.getJobResults(job.GetId(), method, status)
+}
+
+// HandleGetJobById handles retrieving job status and results for any HyPhy method by job ID
+func (api *HyPhyBaseAPI) HandleGetJobById(jobId string, methodType HyPhyMethodType) (interface{}, error) {
+	// Create HyPhyMethod instance with explicit method type
+	method := NewHyPhyMethod(nil, api.BasePath, api.HyPhyPath, methodType, api.DatasetTracker.GetDatasetDir())
+
+	// Create a base job with the provided job ID
+	job := &BaseJob{
+		Id:        jobId,
+		Scheduler: api.Scheduler,
+		Method:    method,
+	}
+
+	// Get job status
+	status, err := job.GetStatus()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get job status: %v", err)
+	}
+
+	// If job is not complete, return error
+	if status != JobStatusComplete {
+		return nil, fmt.Errorf("job is not complete")
+	}
+
+	// Use shared function to get job results
+	return api.getJobResults(jobId, method, status)
 }
 
 // HandleStartJob handles starting a new job for any HyPhy method

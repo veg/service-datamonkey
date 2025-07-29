@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -28,6 +29,52 @@ func NewRELAXAPI(basePath, hyPhyPath string, scheduler SchedulerInterface, datas
 	return &RELAXAPI{
 		HyPhyBaseAPI: NewHyPhyBaseAPI(basePath, hyPhyPath, scheduler, datasetTracker),
 	}
+}
+
+// formatRELAXJobResults formats the raw JSON results for RELAX jobs
+func (api *RELAXAPI) formatRELAXJobResults(jobId string, rawResults json.RawMessage) (map[string]interface{}, error) {
+	// Log the raw results for debugging
+	log.Printf("Raw results: %s", string(rawResults))
+
+	// Check if the raw results are valid JSON
+	var testMap map[string]interface{}
+	if err := json.Unmarshal(rawResults, &testMap); err != nil {
+		log.Printf("Raw results are not valid JSON: %v", err)
+	} else {
+		log.Printf("Raw results are valid JSON with %d top-level keys", len(testMap))
+		for k := range testMap {
+			log.Printf("Found top-level key: %s", k)
+		}
+	}
+
+	// Create a wrapper structure to match the expected format
+	wrappedJSON := fmt.Sprintf(`{"job_id":"%s","result":%s}`, jobId, string(rawResults))
+	log.Printf("Wrapped JSON: %s", wrappedJSON)
+
+	var relaxResult RelaxResult
+	if err := json.Unmarshal([]byte(wrappedJSON), &relaxResult); err != nil {
+		log.Printf("Error unmarshaling wrapped results: %v", err)
+		// Try to unmarshal as a generic map to see what's in there
+		var resultAsMap map[string]interface{}
+		if mapErr := json.Unmarshal(rawResults, &resultAsMap); mapErr != nil {
+			log.Printf("Error unmarshaling as map: %v", mapErr)
+		} else {
+			log.Printf("Results as map: %+v", resultAsMap)
+		}
+		return nil, fmt.Errorf("failed to parse results: %v", err)
+	}
+
+	// Log the parsed result structure
+	log.Printf("Parsed RelaxResult: %+v", relaxResult)
+
+	// Create the response map
+	resultMap := map[string]interface{}{
+		"jobId":   jobId,
+		"status":  JobStatusComplete,
+		"results": relaxResult.Result,
+	}
+
+	return resultMap, nil
 }
 
 // GetRELAXJob retrieves the status and results of a RELAX job
@@ -57,46 +104,70 @@ func (api *RELAXAPI) GetRELAXJob(c *gin.Context) {
 	// Parse the raw JSON results into RelaxResult
 	resultMap := result.(map[string]interface{})
 
-	// Log the raw results for debugging
+	// Get the job ID from the result map
+	jobId := resultMap["jobId"].(string)
+
+	// Get the raw results
 	rawResults := resultMap["results"].(json.RawMessage)
-	log.Printf("Raw results: %s", string(rawResults))
 
-	// Check if the raw results are valid JSON
-	var testMap map[string]interface{}
-	if err := json.Unmarshal(rawResults, &testMap); err != nil {
-		log.Printf("Raw results are not valid JSON: %v", err)
-	} else {
-		log.Printf("Raw results are valid JSON with %d top-level keys", len(testMap))
-		for k := range testMap {
-			log.Printf("Found top-level key: %s", k)
-		}
-	}
-
-	// Create a wrapper structure to match the expected format
-	wrappedJSON := fmt.Sprintf(`{"job_id":"test_job","result":%s}`, string(rawResults))
-	log.Printf("Wrapped JSON: %s", wrappedJSON)
-
-	var relaxResult RelaxResult
-	if err := json.Unmarshal([]byte(wrappedJSON), &relaxResult); err != nil {
-		log.Printf("Error unmarshaling wrapped results: %v", err)
-		// Try to unmarshal as a generic map to see what's in there
-		var resultAsMap map[string]interface{}
-		if mapErr := json.Unmarshal(rawResults, &resultAsMap); mapErr != nil {
-			log.Printf("Error unmarshaling as map: %v", mapErr)
-		} else {
-			log.Printf("Results as map: %+v", resultAsMap)
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to parse results: %v", err)})
+	// Format the results using the shared utility function
+	formattedResult, err := api.formatRELAXJobResults(jobId, rawResults)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Log the parsed result structure
-	log.Printf("Parsed RelaxResult: %+v", relaxResult)
+	c.JSON(http.StatusOK, formattedResult)
+}
 
-	// Update the results in the resultMap
-	resultMap["results"] = relaxResult.Result
+// GetRELAXJobById retrieves the status and results of a RELAX job by job ID from query parameter
+func (api *RELAXAPI) GetRELAXJobById(c *gin.Context) {
+	// Get job ID from query parameter
+	jobId := c.Query("job_id")
+	if jobId == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing job_id parameter"})
+		return
+	}
 
-	c.JSON(http.StatusOK, resultMap)
+	// Use the shared helper to get job results
+	result, err := api.HyPhyBaseAPI.HandleGetJobById(jobId, MethodRELAX)
+	if err != nil {
+		if err.Error() == "job not found" || err.Error() == "failed to get job status" || strings.Contains(err.Error(), "failed to read results") {
+			c.JSON(http.StatusNotFound, gin.H{
+				"error":  "Job not found",
+				"status": 404,
+				"job_id": jobId,
+			})
+		} else if err.Error() == "job is not complete" {
+			c.JSON(http.StatusConflict, gin.H{"error": "Job is not complete"})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to get job results: %v", err)})
+		}
+		return
+	}
+
+	// Parse the raw JSON results into RelaxResult
+	resultMap, ok := result.(map[string]interface{})
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid result format"})
+		return
+	}
+
+	// Extract the raw JSON results
+	rawResults, ok := resultMap["results"].(json.RawMessage)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid results format"})
+		return
+	}
+
+	// Format the results using the shared utility function
+	formattedResult, err := api.formatRELAXJobResults(jobId, rawResults)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, formattedResult)
 }
 
 // StartRELAXJob starts a new RELAX analysis job
