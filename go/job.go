@@ -54,6 +54,48 @@ type BaseJob struct {
 	LogPath    string                 `json:"log_path"`
 	CreatedAt  time.Time              `json:"created_at"`
 	UpdatedAt  time.Time              `json:"updated_at"`
+	Metadata   map[string]interface{} `json:"metadata,omitempty"`
+}
+
+// Validate performs common validation checks on a job
+func (j *BaseJob) Validate() error {
+	// Check for nil job
+	if j == nil {
+		return fmt.Errorf("job cannot be nil")
+	}
+
+	// Check for empty job ID
+	if j.Id == "" {
+		return fmt.Errorf("job ID cannot be empty")
+	}
+
+	// Check for empty dataset ID
+	if j.DatasetId == "" {
+		return fmt.Errorf("dataset ID is required")
+	}
+
+	// Check for empty log path
+	if j.LogPath == "" {
+		return fmt.Errorf("job log path cannot be empty")
+	}
+
+	// Check for nil scheduler
+	if j.Scheduler == nil {
+		return fmt.Errorf("scheduler is required")
+	}
+
+	// Check for nil method
+	if j.Method == nil {
+		return fmt.Errorf("job method cannot be nil")
+	}
+
+	// Check for empty command
+	command := j.Method.GetCommand()
+	if command == "" {
+		return fmt.Errorf("job command cannot be empty")
+	}
+
+	return nil
 }
 
 // NewBaseJob creates a new BaseJob instance
@@ -100,20 +142,6 @@ func (j *BaseJob) GetOutputPath() string {
 // GetLogPath returns the path to the job log file
 func (j *BaseJob) GetLogPath() string {
 	return j.LogPath
-}
-
-// Validate performs basic validation of the job
-func (j *BaseJob) Validate() error {
-	if j.DatasetId == "" {
-		return fmt.Errorf("dataset ID is required")
-	}
-	if j.Scheduler == nil {
-		return fmt.Errorf("scheduler is required")
-	}
-	if j.Method == nil {
-		return fmt.Errorf("compute method is required")
-	}
-	return nil
 }
 
 // Submit submits the job to the scheduler

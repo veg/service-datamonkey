@@ -72,8 +72,8 @@ func initJobTracker() sw.JobTracker {
 	}
 }
 
-// initSlurmConfig initializes and returns Slurm configuration
-func initSlurmConfig() sw.SlurmRestConfig {
+// initSlurmRestConfig initializes and returns Slurm REST configuration
+func initSlurmRestConfig() sw.SlurmRestConfig {
 	apiPath := getEnvWithFatal("SLURM_REST_API_PATH")
 	// Use SLURM_REST_SUBMIT_API_PATH if set, otherwise fall back to SLURM_REST_API_PATH
 	submitApiPath := getEnvWithDefault("SLURM_REST_SUBMIT_API_PATH", apiPath)
@@ -100,14 +100,30 @@ func initSlurmConfig() sw.SlurmRestConfig {
 	}
 }
 
+// initLocalSlurmConfig initializes and returns local Slurm configuration
+func initLocalSlurmConfig() sw.SlurmConfig {
+	// Get the partition from environment, with a default if not set
+	partition := getEnvWithDefault("SLURM_PARTITION", "normal")
+	
+	// Create a basic configuration with only the critical parameter (partition)
+	// Other parameters will use defaults or be set per-job
+	return sw.SlurmConfig{
+		Partition: partition,
+		QueueName: getEnvWithDefault("SLURM_QUEUE_NAME", ""),
+	}
+}
+
 // initScheduler initializes and returns a scheduler based on environment configuration
 func initScheduler(jobTracker sw.JobTracker) sw.SchedulerInterface {
 	schedulerType := getEnvWithDefault("SCHEDULER_TYPE", "SlurmRestScheduler")
 
 	switch schedulerType {
 	case "SlurmRestScheduler":
-		config := initSlurmConfig()
+		config := initSlurmRestConfig()
 		return sw.NewSlurmRestScheduler(config, jobTracker)
+	case "SlurmScheduler":
+		config := initLocalSlurmConfig()
+		return sw.NewSlurmScheduler(config, jobTracker)
 	default:
 		log.Fatalf("Unknown scheduler type: %s", schedulerType)
 		return nil
