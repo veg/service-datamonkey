@@ -47,7 +47,7 @@ func (s *SlurmScheduler) GetJobConfig(job *BaseJob) SlurmJobConfig {
 	config := SlurmJobConfig{
 		NodeCount:     1,
 		CoresPerNode:  1,
-		MemoryPerNode: "1G",
+		MemoryPerNode: "900M",
 		MaxTime:       "01:00:00",
 	}
 
@@ -76,9 +76,16 @@ func (s *SlurmScheduler) GetJobConfig(job *BaseJob) SlurmJobConfig {
 // Submit submits a job to Slurm
 func (s *SlurmScheduler) Submit(job JobInterface) error {
 	// Convert to BaseJob for validation and configuration
-	baseJob, ok := job.(*BaseJob)
-	if !ok {
-		return fmt.Errorf("job must be of type *BaseJob")
+	var baseJob *BaseJob
+
+	// Try direct type assertion first
+	if bj, ok := job.(*BaseJob); ok {
+		baseJob = bj
+	} else if hyPhyJob, ok := job.(*HyPhyJob); ok {
+		// Handle HyPhyJob which embeds BaseJob
+		baseJob = hyPhyJob.BaseJob
+	} else {
+		return fmt.Errorf("job must be of type *BaseJob or *HyPhyJob")
 	}
 
 	// Use the consolidated validation method
@@ -142,8 +149,23 @@ func (s *SlurmScheduler) Submit(job JobInterface) error {
 
 // Cancel cancels a running Slurm job
 func (s *SlurmScheduler) Cancel(job JobInterface) error {
+	// Check if JobTracker is configured
+	if s.JobTracker == nil {
+		return fmt.Errorf("job tracker is not configured")
+	}
+
+	// Ensure we can handle both *BaseJob and *HyPhyJob
+	var baseJob *BaseJob
+	if bj, ok := job.(*BaseJob); ok {
+		baseJob = bj
+	} else if hyPhyJob, ok := job.(*HyPhyJob); ok {
+		baseJob = hyPhyJob.BaseJob
+	} else {
+		return fmt.Errorf("job must be of type *BaseJob or *HyPhyJob")
+	}
+
 	// Get the Slurm job ID from the tracker
-	slurmJobID, err := s.JobTracker.GetSchedulerJobID(job.GetId())
+	slurmJobID, err := s.JobTracker.GetSchedulerJobID(baseJob.GetId())
 	if err != nil {
 		return fmt.Errorf("failed to get scheduler job ID: %v", err)
 	}
@@ -165,8 +187,23 @@ func (s *SlurmScheduler) Cancel(job JobInterface) error {
 
 // GetStatus gets the current status of a Slurm job
 func (s *SlurmScheduler) GetStatus(job JobInterface) (JobStatusValue, error) {
+	// Check if JobTracker is configured
+	if s.JobTracker == nil {
+		return "", fmt.Errorf("job tracker is not configured")
+	}
+
+	// Ensure we can handle both *BaseJob and *HyPhyJob
+	var baseJob *BaseJob
+	if bj, ok := job.(*BaseJob); ok {
+		baseJob = bj
+	} else if hyPhyJob, ok := job.(*HyPhyJob); ok {
+		baseJob = hyPhyJob.BaseJob
+	} else {
+		return "", fmt.Errorf("job must be of type *BaseJob or *HyPhyJob")
+	}
+
 	// Get the Slurm job ID from the tracker
-	slurmJobID, err := s.JobTracker.GetSchedulerJobID(job.GetId())
+	slurmJobID, err := s.JobTracker.GetSchedulerJobID(baseJob.GetId())
 	if err != nil {
 		return "", fmt.Errorf("failed to get scheduler job ID: %v", err)
 	}
@@ -177,16 +214,16 @@ func (s *SlurmScheduler) GetStatus(job JobInterface) (JobStatusValue, error) {
 		// Check if the error is because the job is not found (completed)
 		if strings.Contains(string(output), "Invalid job id specified") {
 			// Check if the job completed successfully by looking at the exit code
-			if s.checkJobSuccess(job, slurmJobID) {
+			if s.checkJobSuccess(baseJob, slurmJobID) {
 				// Delete the job mapping after successful completion
-				if deleteErr := s.JobTracker.DeleteJobMapping(job.GetId()); deleteErr != nil {
+				if deleteErr := s.JobTracker.DeleteJobMapping(baseJob.GetId()); deleteErr != nil {
 					// Log the error but don't fail the status check
 					fmt.Printf("Warning: failed to delete job mapping: %v\n", deleteErr)
 				}
 				return JobStatusComplete, nil
 			}
 			// Delete the job mapping after failure
-			if deleteErr := s.JobTracker.DeleteJobMapping(job.GetId()); deleteErr != nil {
+			if deleteErr := s.JobTracker.DeleteJobMapping(baseJob.GetId()); deleteErr != nil {
 				// Log the error but don't fail the status check
 				fmt.Printf("Warning: failed to delete job mapping: %v\n", deleteErr)
 			}
@@ -203,21 +240,21 @@ func (s *SlurmScheduler) GetStatus(job JobInterface) (JobStatusValue, error) {
 		return JobStatusRunning, nil
 	case "COMPLETED":
 		// Delete the job mapping after successful completion
-		if deleteErr := s.JobTracker.DeleteJobMapping(job.GetId()); deleteErr != nil {
+		if deleteErr := s.JobTracker.DeleteJobMapping(baseJob.GetId()); deleteErr != nil {
 			// Log the error but don't fail the status check
 			fmt.Printf("Warning: failed to delete job mapping: %v\n", deleteErr)
 		}
 		return JobStatusComplete, nil
 	case "FAILED", "TIMEOUT", "OUT_OF_MEMORY":
 		// Delete the job mapping after failure
-		if deleteErr := s.JobTracker.DeleteJobMapping(job.GetId()); deleteErr != nil {
+		if deleteErr := s.JobTracker.DeleteJobMapping(baseJob.GetId()); deleteErr != nil {
 			// Log the error but don't fail the status check
 			fmt.Printf("Warning: failed to delete job mapping: %v\n", deleteErr)
 		}
 		return JobStatusFailed, nil
 	case "CANCELLED":
 		// Delete the job mapping after cancellation
-		if deleteErr := s.JobTracker.DeleteJobMapping(job.GetId()); deleteErr != nil {
+		if deleteErr := s.JobTracker.DeleteJobMapping(baseJob.GetId()); deleteErr != nil {
 			// Log the error but don't fail the status check
 			fmt.Printf("Warning: failed to delete job mapping: %v\n", deleteErr)
 		}
@@ -251,7 +288,7 @@ func (s *SlurmScheduler) CheckHealth() (bool, string, error) {
 	cmd := exec.Command("sinfo", "--version")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return false, "Slurm command-line tools unavailable", 
+		return false, "Slurm command-line tools unavailable",
 			fmt.Errorf("failed to execute sinfo: %v, output: %s", err, string(output))
 	}
 
@@ -263,7 +300,7 @@ func (s *SlurmScheduler) CheckHealth() (bool, string, error) {
 		cmd = exec.Command("sinfo", "-p", s.Config.Partition, "--noheader", "--format=%P,%a")
 		output, err = cmd.CombinedOutput()
 		if err != nil {
-			return false, fmt.Sprintf("Partition %s check failed", s.Config.Partition), 
+			return false, fmt.Sprintf("Partition %s check failed", s.Config.Partition),
 				fmt.Errorf("failed to check partition: %v, output: %s", err, string(output))
 		}
 
@@ -275,7 +312,7 @@ func (s *SlurmScheduler) CheckHealth() (bool, string, error) {
 		}
 
 		if !strings.Contains(outputStr, "up") {
-			return false, fmt.Sprintf("Partition %s is not available", s.Config.Partition), 
+			return false, fmt.Sprintf("Partition %s is not available", s.Config.Partition),
 				fmt.Errorf("partition %s is not available: %s", s.Config.Partition, outputStr)
 		}
 	} else {

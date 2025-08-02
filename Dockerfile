@@ -13,8 +13,8 @@ RUN go build -o datamonkey .
 FROM alpine:3.19 AS runtime
 ENV GIN_MODE=release
 
-# Install shadow package for su command
-RUN apk add --no-cache shadow
+# Install shadow package for su command and sshpass for SSH automation
+RUN apk add --no-cache shadow sshpass openssh-client
 
 # Create slurm user and group with the same UID/GID as in the Slurm container
 RUN addgroup -g 990 slurm && \
@@ -33,6 +33,15 @@ RUN mkdir -p /usr/local/etc/jwt && \
 
 # Copy the binary from the build stage
 COPY --from=build /go/src/datamonkey /usr/local/bin/
+
+# Copy Slurm wrapper script
+COPY bin/slurm-ssh-wrapper.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/slurm-ssh-wrapper.sh
+
+# Create symbolic links for each Slurm command
+RUN for cmd in sbatch squeue sacct scancel sinfo; do \
+    ln -sf /usr/local/bin/slurm-ssh-wrapper.sh "/usr/local/bin/$cmd"; \
+    done
 
 # Add after copying the binary
 COPY docker-entrypoint.sh /usr/local/bin/

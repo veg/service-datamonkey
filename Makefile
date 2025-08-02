@@ -36,6 +36,17 @@ default:
 	@echo "$(C_BLUE)    make stop$(C_NONE)"
 	@echo "      alias to docker compose down, stops all relevant services"
 	@echo ""
+	@echo "$(C_CYAN)  ####### Slurm Testing #######$(C_NONE)"
+	@echo ""
+	@echo "$(C_BLUE)    make start-slurm-rest$(C_NONE)"
+	@echo "      start service-datamonkey with service-slurm in REST mode"
+	@echo ""
+	@echo "$(C_BLUE)    make start-slurm-cli$(C_NONE)"
+	@echo "      start service-datamonkey with service-slurm in CLI mode"
+	@echo ""
+	@echo "$(C_BLUE)    make test-slurm-modes$(C_NONE)"
+	@echo "      test both REST and CLI modes"
+	@echo ""
 
 
 .PHONY: install
@@ -62,3 +73,20 @@ start:
 .PHONY: stop
 stop:
 	@docker compose down
+
+
+# Slurm testing targets
+.PHONY: start-slurm-rest
+start-slurm-rest:
+	@echo "Starting service-datamonkey with service-slurm in REST mode..."
+	@./bin/switch-slurm-mode.sh rest
+
+.PHONY: start-slurm-cli
+start-slurm-cli:
+	@echo "Starting service-datamonkey with service-slurm in CLI mode..."
+	@./bin/switch-slurm-mode.sh cli
+
+.PHONY: test-slurm-modes
+test-slurm-modes:
+	@echo "Testing both REST and CLI modes..."
+	@./bin/test-slurm-modes.sh

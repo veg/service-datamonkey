@@ -1,36 +1,53 @@
 # service-datamonkey
 
-This is a WIP REST service intended to drive Datamonkey3 server-side. It is designed to conform to the OpenAPI specification defined at [api-datamonkey](https://github.com/d-callan/api-datamonkey) using the [go-gin-server](https://openapi-generator.tech/docs/generators/go-gin-server) generator from OpenAPI Generator. 
+This is a REST service intended to drive Datamonkey3 server-side. It is designed to conform to the OpenAPI specification defined at [api-datamonkey](https://github.com/d-callan/api-datamonkey) using the [go-gin-server](https://openapi-generator.tech/docs/generators/go-gin-server) generator from OpenAPI Generator. 
 
 ## Development
 
 Handy helpers:
 
  - `make update` to pull down the OpenAPI specification from api-datamonkey and generate a GO Gin server stub from it.
- - `make build` to build just the service-datamonkey container
+ - `make build` to build just the service-datamonkey container (only needed if you want to force a rebuild)
  - `make start` to start the entire datamonkey 3 backend for dev/testing using docker compose
  - `make stop` to stop the datamonkey 3 backend containers
+ - `make start-slurm-rest` to start service-datamonkey with service-slurm in REST mode
+ - `make start-slurm-cli` to start service-datamonkey with service-slurm in CLI mode
+ - `make test-slurm-modes` to test both REST and CLI modes
 
 
 Hopefully it'll eventually have options like:
  - `make install` to manage dependencies. for now, have to manage them yourself if you mean to do anything more than run whats already been developed. The important ones are golang >= 1.20 and npx w openapitools/openapi-generator-cli
 
-**NOTE** for now you should also check out [service-slurm](https://github.com/d-callan/service-slurm) and simply `docker compose up -d` and then `docker compose down` before using this repo. I'll fix that eventually, but its just to get built slurm images this docker compose can use.
+**NOTE** This repository can be used with [service-slurm](https://github.com/d-callan/service-slurm) in both REST and CLI modes. See the [Slurm Testing](#slurm-testing) section below for details.
 
 The service uses environment variables for configuration. These can be set in a `.env` file in the root directory. A template `.env.example` file is provided with default values.
 
 ### TLDR
 
-For now that means if its your first time here, starting in the parent directory for this project you should do the following:
+For your first time here, starting in the parent directory for this project you should do the following:
 ```
-git clone git@github.com:d-callan/service-slurm.git
-cd service-slurm
-docker compose up -d
-docker compose down
-cd ../service-datamonkey
-make build
+# Clone both repositories side by side
+git clone git@github.com:veg/service-slurm.git
+git clone git@github.com:veg/service-datamonkey.git
+
+# Enter service-datamonkey directory
+cd service-datamonkey
+
+# Create your configuration file
 cp .env.example .env
-make start
+
+# Start the service in REST mode (default)
+# This will automatically build both service-datamonkey and service-slurm images if needed
+make start-slurm-rest
+
+# Or start in CLI mode
+# make start-slurm-cli
+
+# Note: If you want to force a rebuild of the service-datamonkey image, you can run:
+# make build
+# Then restart the stack with either:
+# make start-slurm-rest  # for REST mode
+# make start-slurm-cli   # for CLI mode
 ```
 
 ## Environment Variables
@@ -175,6 +192,128 @@ This is slightly more involved than adding a new method, but is also a good task
    }
    ```
    *NOTE* add appropriate validation for new parameters in the `ValidateInput` method of `HyPhyMethod`.
+
+## Slurm Mode Management
+
+This repository supports testing with service-slurm in both REST and CLI modes.
+
+### Prerequisites
+
+1. Both repositories should be cloned side by side:
+   ```
+   /path/to/service-datamonkey
+   /path/to/service-slurm
+   ```
+
+2. Docker and Docker Compose installed on your system.
+
+3. **Image Building Process**:
+   - Both service-datamonkey and service-slurm images are built automatically by Docker Compose if they don't exist
+   - No manual building is required for first-time setup
+   - If you want to force a rebuild of the service-datamonkey image, you can run `make build`, then restart the stack with either `make start-slurm-rest` or `make start-slurm-cli`
+   - The service-slurm build context is set using the `SLURM_SERVICE_PATH` environment variable, which defaults to `../service-slurm` (assuming the repositories are cloned side by side)
+
+### Configuration
+
+The system uses a single `.env` file for configuration. If you don't have one, copy `.env.example` to `.env` and customize as needed:
+
+```bash
+cp .env.example .env
+```
+
+The key configuration variables for Slurm testing are:
+
+```
+# Set mode: 'rest' or 'cli'
+SLURM_INTERFACE=rest
+
+# For REST mode
+SCHEDULER_TYPE=SlurmRestScheduler
+
+# For CLI mode
+# SCHEDULER_TYPE=SlurmScheduler
+# SLURM_SERVICE_PATH=../service-slurm
+```
+
+### Testing Modes
+
+#### REST Mode (Default)
+
+In REST mode, service-datamonkey communicates with service-slurm via its REST API.
+
+##### JWT Key Setup for REST Mode
+
+REST mode requires JWT authentication. You need to generate and share a JWT key between both services:
+
+1. Navigate to the service-slurm directory and run:
+   ```bash
+   cd ../service-slurm
+   ./generate-jwt-key.sh
+   ```
+
+2. This will create a JWT key file that will be mounted into both services.
+
+##### Starting REST Mode
+
+To start service-datamonkey with service-slurm in REST mode:
+
+```bash
+make start-slurm-rest
+```
+
+This will:
+1. Stop any running containers
+2. Update your `.env` file to set `SLURM_INTERFACE=rest` and `SCHEDULER_TYPE=SlurmRestScheduler`
+3. Start the services using Docker Compose with the REST profile
+4. Build the service-slurm image if it doesn't already exist
+
+#### CLI Mode
+
+In CLI mode, service-datamonkey executes Slurm commands directly via SSH to the service-slurm container.
+
+**Note:** JWT keys are NOT required for CLI mode.
+
+##### Starting CLI Mode
+
+To start service-datamonkey with service-slurm in CLI mode:
+
+```bash
+make start-slurm-cli
+```
+
+This will:
+1. Stop any running containers
+2. Update your `.env` file to set `SLURM_INTERFACE=cli` and `SCHEDULER_TYPE=SlurmScheduler`
+3. Start the services using Docker Compose without any profile
+4. Build the service-slurm image if it doesn't already exist
+
+### Testing Both Modes
+
+To test both modes sequentially, you can use the Makefile targets to switch between them:
+
+```bash
+# Start in REST mode
+make start-slurm-rest
+
+# Run your tests...
+
+# Switch to CLI mode
+make start-slurm-cli
+
+# Run your tests...
+```
+
+### Switching Modes
+
+You can also use the `bin/switch-slurm-mode.sh` script directly:
+
+```bash
+# Switch to REST mode
+./bin/switch-slurm-mode.sh rest
+
+# Switch to CLI mode
+./bin/switch-slurm-mode.sh cli
+```
 
 ## Testing
 

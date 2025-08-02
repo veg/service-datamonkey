@@ -207,6 +207,8 @@ func (s *SlurmRestScheduler) Submit(job JobInterface) error {
 	}
 
 	submitReq.Header.Set("X-SLURM-USER-TOKEN", authToken)
+	// Add the required X-SLURM-USER-NAME header
+	submitReq.Header.Set("X-SLURM-USER-NAME", s.Config.JWTUsername)
 	submitReq.Header.Set("Content-Type", "application/json")
 
 	client := &http.Client{}
@@ -263,6 +265,8 @@ func (s *SlurmRestScheduler) GetStatus(job JobInterface) (JobStatusValue, error)
 	}
 
 	statusReq.Header.Set("X-SLURM-USER-TOKEN", authToken)
+	// Add the required X-SLURM-USER-NAME header
+	statusReq.Header.Set("X-SLURM-USER-NAME", s.Config.JWTUsername)
 
 	client := &http.Client{}
 	statusResp, err := client.Do(statusReq)
@@ -347,6 +351,8 @@ func (s *SlurmRestScheduler) Cancel(job JobInterface) error {
 	}
 
 	cancelReq.Header.Set("X-SLURM-USER-TOKEN", authToken)
+	// Add the required X-SLURM-USER-NAME header
+	cancelReq.Header.Set("X-SLURM-USER-NAME", s.Config.JWTUsername)
 
 	client := &http.Client{}
 	cancelResp, err := client.Do(cancelReq)
@@ -388,6 +394,8 @@ func (s *SlurmRestScheduler) CheckHealth() (bool, string, error) {
 	}
 
 	req.Header.Set("X-SLURM-USER-TOKEN", authToken)
+	// Add the required X-SLURM-USER-NAME header
+	req.Header.Set("X-SLURM-USER-NAME", s.Config.JWTUsername)
 
 	resp, err := client.Do(req)
 	if err != nil {
