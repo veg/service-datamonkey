@@ -243,24 +243,15 @@ In REST mode, service-datamonkey communicates with service-slurm via its REST AP
 
 ##### JWT Key Setup for REST Mode
 
-REST mode requires JWT authentication. You need to generate and share a JWT key between both services. You can generate the key using either of these methods:
+REST mode requires JWT authentication. You need to generate and share a JWT key between both services:
 
-**Option 1: Using service-datamonkey's script (Recommended):**
-```bash
-# From service-datamonkey directory
-./bin/generate-jwt-key.sh
-```
+1. Navigate to the service-slurm directory and run:
+   ```bash
+   cd ../service-slurm
+   ./generate-jwt-key.sh
+   ```
 
-**Option 2: Using service-slurm's script directly:**
-```bash
-# Navigate to service-slurm directory
-cd ../service-slurm
-./bin/generate-jwt-key.sh
-# Return to service-datamonkey directory
-cd ../service-datamonkey
-```
-
-Either method will create a JWT key file in the `keys` directory that will be mounted into both services.
+2. This will create a JWT key file that will be mounted into both services.
 
 ##### Starting REST Mode
 
