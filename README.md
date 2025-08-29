@@ -30,17 +30,29 @@ For your first time here, starting in the parent directory for this project you 
 git clone git@github.com:veg/service-slurm.git
 git clone git@github.com:veg/service-datamonkey.git
 
+# Generate JWT key in service-slurm directory
+cd service-slurm
+./bin/generate-jwt-key.sh
+
+# Add the JWT key configuration to your .env file
+# The script will output the lines you need to add
+
 # Enter service-datamonkey directory
-cd service-datamonkey
+cd ../service-datamonkey
 
 # Create your configuration file
 cp .env.example .env
+
+# Edit your .env file to add the JWT key configuration
+# Add these lines (adjust path if you used a different location):
+# JWT_KEY_PATH=/var/spool/slurm/statesave/jwt_hs256.key
+# JWT_KEY_VOLUME=../service-slurm/keys/jwt_hs256.key:/var/spool/slurm/statesave/jwt_hs256.key:rw
 
 # Start the service in REST mode (default)
 # This will automatically build both service-datamonkey and service-slurm images if needed
 make start-slurm-rest
 
-# Or start in CLI mode
+# Or start in CLI mode (WIP)
 # make start-slurm-cli
 
 # Note: If you want to force a rebuild of the service-datamonkey image, you can run:
