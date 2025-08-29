@@ -52,11 +52,11 @@ services:
 
   # Common Slurm service for both modes
   c2:
-    image: slurm-docker-cluster:${IMAGE_TAG:-21.08}
+    image: slurm-docker-cluster:${IMAGE_TAG:-21.08.6}
     build:
       context: ${SLURM_SERVICE_PATH:-../service-slurm}
       args:
-        SLURM_TAG: ${SLURM_TAG:-slurm-23-02-6-1}
+        SLURM_TAG: ${SLURM_TAG:-slurm-21-08-6-1}
     entrypoint: [ "sh", "-c" ]
     command: [ "/usr/share/bin/slurm-interface.sh" ]
     hostname: c2
@@ -102,11 +102,11 @@ services:
       - datamonkey
 
   slurmdbd:
-    image: slurm-docker-cluster:${IMAGE_TAG:-21.08}
+    image: slurm-docker-cluster:${IMAGE_TAG:-21.08.6}
     build:
       context: ${SLURM_SERVICE_PATH:-../service-slurm}
       args:
-        SLURM_TAG: ${SLURM_TAG:-slurm-23-02-6-1}
+        SLURM_TAG: ${SLURM_TAG:-slurm-21-08-6-1}
     command: [ "slurmdbd" ]
     container_name: slurmdbd
     hostname: slurmdbd
@@ -125,7 +125,7 @@ services:
       - datamonkey
 
   slurmctld:
-    image: slurm-docker-cluster:${IMAGE_TAG:-21.08}
+    image: slurm-docker-cluster:${IMAGE_TAG:-21.08.6}
     command: [ "slurmctld" ]
     container_name: slurmctld
     hostname: slurmctld
@@ -145,7 +145,7 @@ services:
       - datamonkey
 
   c1:
-    image: slurm-docker-cluster:${IMAGE_TAG:-21.08}
+    image: slurm-docker-cluster:${IMAGE_TAG:-21.08.6}
     command: [ "slurmd" ]
     hostname: c1
     container_name: c1
