@@ -3292,22 +3292,29 @@ components:
         analysis
       example:
         genetic_code: Universal
+        tree: tree
         pvalue: 0.6027456183070403
-        alignment_file: alignment_file
-        branches: All
+        alignment: alignment
+        branches:
+        - branches
+        - branches
         samples: 1
       properties:
-        alignment_file:
-          description: "Path to the alignment file (e.g., .fasta, .nex, .phy)"
+        alignment:
+          pattern: "^[a-zA-Z0-9]+$"
+          type: string
+        tree:
+          pattern: "^[a-zA-Z0-9]+$"
           type: string
         genetic_code:
-          default: Universal
-          description: The genetic code to use for the analysis
-          type: string
+          $ref: '#/components/schemas/GeneticCode'
         branches:
-          default: All
-          description: Specify branches to test
-          type: string
+          default: []
+          description: "Branches to include in the analysis. If empty, all branches\
+            \ are included."
+          items:
+            type: string
+          type: array
         samples:
           default: 100
           description: Number of samples for ancestral reconstruction uncertainty
@@ -3319,9 +3326,6 @@ components:
           maximum: 1
           minimum: 0
           type: number
-      required:
-      - alignment_file
-      - genetic_code
       type: object
     SlacResult:
       description: Results from a SLAC (Single Likelihood Ancestor Counting) analysis

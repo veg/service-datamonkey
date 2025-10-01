@@ -13,14 +13,14 @@ package datamonkey
 // SlacRequest - Request parameters for SLAC (Single Likelihood Ancestor Counting) analysis
 type SlacRequest struct {
 
-	// Path to the alignment file (e.g., .fasta, .nex, .phy)
-	AlignmentFile string `json:"alignment_file"`
+	Alignment string `json:"alignment,omitempty" validate:"regexp=^[a-zA-Z0-9]+$"`
 
-	// The genetic code to use for the analysis
-	GeneticCode string `json:"genetic_code"`
+	Tree string `json:"tree,omitempty" validate:"regexp=^[a-zA-Z0-9]+$"`
 
-	// Specify branches to test
-	Branches string `json:"branches,omitempty"`
+	GeneticCode GeneticCode `json:"genetic_code,omitempty"`
+
+	// Branches to include in the analysis. If empty, all branches are included.
+	Branches []string `json:"branches,omitempty"`
 
 	// Number of samples for ancestral reconstruction uncertainty
 	Samples int32 `json:"samples,omitempty"`
