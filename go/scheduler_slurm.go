@@ -273,7 +273,14 @@ func (s *SlurmScheduler) checkJobSuccess(job JobInterface, slurmJobID string) bo
 		return false
 	}
 
-	exitCode := strings.TrimSpace(string(output))
+	// sacct returns multiple lines (one for the job, one for the batch step)
+	// We only need to check the first line
+	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
+	if len(lines) == 0 {
+		return false
+	}
+	
+	exitCode := strings.TrimSpace(lines[0])
 	return exitCode == "0:0"
 }
 
