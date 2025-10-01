@@ -3,11 +3,13 @@ package datamonkey
 import (
 	"bufio"
 	"context"
+	"database/sql"
 	"fmt"
 	"os"
 	"strings"
 	"sync"
 
+	_ "github.com/mattn/go-sqlite3"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -235,9 +237,102 @@ func (t *RedisJobTracker) DeleteJobMapping(jobID string) error {
 	return nil
 }
 
+// SQLiteJobTracker implements JobTracker using SQLite database
+type SQLiteJobTracker struct {
+	db *sql.DB
+}
+
+// NewSQLiteJobTracker creates a new SQLiteJobTracker instance
+func NewSQLiteJobTracker(dbPath string) (*SQLiteJobTracker, error) {
+	db, err := sql.Open("sqlite3", dbPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open database: %v", err)
+	}
+
+	// Enable WAL mode for better concurrency
+	if _, err := db.Exec("PRAGMA journal_mode=WAL"); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("failed to enable WAL mode: %v", err)
+	}
+
+	// Create job_mappings table if it doesn't exist
+	createTableSQL := `
+	CREATE TABLE IF NOT EXISTS job_mappings (
+		job_id TEXT PRIMARY KEY,
+		scheduler_job_id TEXT NOT NULL,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+	);
+	CREATE INDEX IF NOT EXISTS idx_job_mappings_scheduler_id ON job_mappings(scheduler_job_id);
+	`
+
+	if _, err := db.Exec(createTableSQL); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("failed to create table: %v", err)
+	}
+
+	return &SQLiteJobTracker{
+		db: db,
+	}, nil
+}
+
+// StoreJobMapping stores a mapping between our job ID and the scheduler's job ID
+func (t *SQLiteJobTracker) StoreJobMapping(jobID string, schedulerJobID string) error {
+	query := `INSERT INTO job_mappings (job_id, scheduler_job_id) VALUES (?, ?)`
+
+	_, err := t.db.Exec(query, jobID, schedulerJobID)
+	if err != nil {
+		return fmt.Errorf("failed to store job mapping: %v", err)
+	}
+
+	return nil
+}
+
+// GetSchedulerJobID retrieves the scheduler's job ID for our job ID
+func (t *SQLiteJobTracker) GetSchedulerJobID(jobID string) (string, error) {
+	query := `SELECT scheduler_job_id FROM job_mappings WHERE job_id = ?`
+
+	var schedulerJobID string
+	err := t.db.QueryRow(query, jobID).Scan(&schedulerJobID)
+	if err == sql.ErrNoRows {
+		return "", fmt.Errorf("job ID not found in tracker")
+	}
+	if err != nil {
+		return "", fmt.Errorf("failed to get scheduler job ID: %v", err)
+	}
+
+	return schedulerJobID, nil
+}
+
+// DeleteJobMapping removes a job mapping
+func (t *SQLiteJobTracker) DeleteJobMapping(jobID string) error {
+	query := `DELETE FROM job_mappings WHERE job_id = ?`
+
+	result, err := t.db.Exec(query, jobID)
+	if err != nil {
+		return fmt.Errorf("failed to delete job mapping: %v", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %v", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("job ID not found in tracker")
+	}
+
+	return nil
+}
+
+// Close closes the database connection
+func (t *SQLiteJobTracker) Close() error {
+	return t.db.Close()
+}
+
 // Ensure implementations satisfy the JobTracker interface
 var (
 	_ JobTracker = (*FileJobTracker)(nil)
 	_ JobTracker = (*InMemoryJobTracker)(nil)
 	_ JobTracker = (*RedisJobTracker)(nil)
+	_ JobTracker = (*SQLiteJobTracker)(nil)
 )

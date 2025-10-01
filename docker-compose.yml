@@ -9,7 +9,9 @@ services:
     hostname: service-datamonkey
     container_name: service-datamonkey
     volumes:
-      - application_data:/data/uploads
+      - user_data:/data/uploads
+      - tracker_data:/data/stores
+      - output_data:/data/output
       # Mount JWT key for REST mode
       - ${JWT_KEY_VOLUME:-}
     expose: 
@@ -18,15 +20,17 @@ services:
       - 9300:9300
     environment:
       # Common environment variables
-      - DATASET_TRACKER_TYPE=${DATASET_TRACKER_TYPE:-FileDatasetTracker}
+      - DATASET_TRACKER_TYPE=${DATASET_TRACKER_TYPE:-SQLiteDatasetTracker}
       - DATASET_LOCATION=${DATASET_LOCATION:-/data/uploads}
-      - JOB_TRACKER_TYPE=${JOB_TRACKER_TYPE:-FileJobTracker}
-      - JOB_TRACKER_LOCATION=${JOB_TRACKER_LOCATION:-/data/uploads}
+      - DATASET_TRACKER_DB_PATH=${DATASET_TRACKER_DB_PATH:-/data/stores/datasets.db}
+      - JOB_TRACKER_TYPE=${JOB_TRACKER_TYPE:-SQLiteJobTracker}
+      - JOB_TRACKER_LOCATION=${JOB_TRACKER_LOCATION:-/data/stores}
+      - JOB_TRACKER_DB_PATH=${JOB_TRACKER_DB_PATH:-/data/stores/jobs.db}
       - SLURM_INTERFACE=${SLURM_INTERFACE:-rest}
       - SLURM_QUEUE_NAME=${SLURM_QUEUE_NAME:-normal}
       - SERVICE_DATAMONKEY_PORT=${SERVICE_DATAMONKEY_PORT:-9300}
       - HYPHY_PATH=${HYPHY_PATH:-hyphy}
-      - HYPHY_BASE_PATH=${HYPHY_BASE_PATH:-/data/uploads}
+      - HYPHY_BASE_PATH=${HYPHY_BASE_PATH:-/data/output}
       # REST mode variables
       - SLURM_REST_URL=${SLURM_REST_URL:-http://c2:9200}
       - SLURM_REST_API_PATH=${SLURM_REST_API_PATH:-/slurmdb/v0.0.37}
@@ -67,7 +71,8 @@ services:
       JWT_KEY_PATH: ${JWT_KEY_PATH:-/var/spool/slurm/statesave/jwt_hs256.key}
     volumes:
       # Common volumes
-      - application_data:/data/uploads
+      - user_data:/data/uploads
+      - output_data:/data/output
       # Volume mounts - these will be used based on the mode
       # For REST mode, use named volumes
       - etc_munge:/etc/munge
@@ -156,7 +161,8 @@ services:
       - etc_slurm:/etc/slurm
       - slurm_jobdir:/data
       - var_log_slurm:/var/log/slurm
-      - application_data:/data/uploads
+      - user_data:/data/uploads
+      - output_data:/data/output
       - ${JWT_KEY_VOLUME:-}
     expose:
       - "6818"
@@ -176,4 +182,6 @@ volumes:
   slurm_jobdir:
   var_lib_mysql:
   var_log_slurm:
-  application_data:
+  user_data:
+  tracker_data:
+  output_data:

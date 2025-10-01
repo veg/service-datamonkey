@@ -2,7 +2,10 @@ module github.com/d-callan/service-datamonkey
 
 go 1.19
 
-require github.com/gin-gonic/gin v1.9.1
+require (
+	github.com/gin-gonic/gin v1.9.1
+	github.com/mattn/go-sqlite3 v1.14.32
+)
 
 require (
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect

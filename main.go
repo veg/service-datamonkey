@@ -39,13 +39,20 @@ func getEnvWithFatal(key string) string {
 
 // initDatasetTracker initializes and returns a dataset tracker based on environment configuration
 func initDatasetTracker() sw.DatasetTracker {
-	trackerType := getEnvWithDefault("DATASET_TRACKER_TYPE", "FileDatasetTracker")
+	trackerType := getEnvWithDefault("DATASET_TRACKER_TYPE", "SQLiteDatasetTracker")
 	// for now we assume to put the tracker file, if needed, in the same directory as the datasets
 	dataDir := getEnvWithDefault("DATASET_LOCATION", "/data/uploads")
 
 	switch trackerType {
 	case "FileDatasetTracker":
 		return sw.NewFileDatasetTracker(filepath.Join(dataDir, "datasets.json"), dataDir)
+	case "SQLiteDatasetTracker":
+		dbPath := getEnvWithDefault("DATASET_TRACKER_DB_PATH", "/data/stores/datasets.db")
+		tracker, err := sw.NewSQLiteDatasetTracker(dbPath, dataDir)
+		if err != nil {
+			log.Fatalf("Failed to initialize SQLite dataset tracker: %v", err)
+		}
+		return tracker
 	case "OtherTracker":
 		log.Fatalf("OtherTracker is not implemented")
 		return nil
@@ -57,12 +64,19 @@ func initDatasetTracker() sw.DatasetTracker {
 
 // initJobTracker initializes and returns a job tracker based on environment configuration
 func initJobTracker() sw.JobTracker {
-	trackerType := getEnvWithDefault("JOB_TRACKER_TYPE", "FileJobTracker")
+	trackerType := getEnvWithDefault("JOB_TRACKER_TYPE", "SQLiteJobTracker")
 	trackerDir := getEnvWithDefault("JOB_TRACKER_LOCATION", "/data/uploads")
 
 	switch trackerType {
 	case "FileJobTracker":
 		return sw.NewFileJobTracker(filepath.Join(trackerDir, "jobs.json"))
+	case "SQLiteJobTracker":
+		dbPath := getEnvWithDefault("JOB_TRACKER_DB_PATH", "/data/stores/jobs.db")
+		tracker, err := sw.NewSQLiteJobTracker(dbPath)
+		if err != nil {
+			log.Fatalf("Failed to initialize SQLite job tracker: %v", err)
+		}
+		return tracker
 	case "OtherJobTracker":
 		log.Fatalf("OtherJobTracker is not implemented")
 		return nil
