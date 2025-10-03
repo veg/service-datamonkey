@@ -22,9 +22,14 @@ if ! command -v sshpass &> /dev/null; then
     exit 1
 fi
 
+# Create a debug log directory with proper permissions if it doesn't exist
+DEBUG_LOG_DIR="/data/logs"
+mkdir -p "$DEBUG_LOG_DIR" 2>/dev/null || true
+touch "$DEBUG_LOG_DIR/slurm-ssh-debug.log" 2>/dev/null || true
+
 # Debug output
-echo "[$(date)] Executing: $CMD with args: $*" >> /tmp/slurm-ssh-debug.log
-echo "[$(date)] SSH_HOST=$SSH_HOST SSH_PORT=$SSH_PORT SSH_USER=$SSH_USER" >> /tmp/slurm-ssh-debug.log
+echo "[$(date)] Executing: $CMD with args: $*" >> "$DEBUG_LOG_DIR/slurm-ssh-debug.log" 2>/dev/null || true
+echo "[$(date)] SSH_HOST=$SSH_HOST SSH_PORT=$SSH_PORT SSH_USER=$SSH_USER" >> "$DEBUG_LOG_DIR/slurm-ssh-debug.log" 2>/dev/null || true
 
 # Special handling for sbatch with --wrap option
 if [ "$CMD" = "sbatch" ] && echo "$*" | grep -q -- "--wrap"; then
@@ -39,7 +44,7 @@ if [ "$CMD" = "sbatch" ] && echo "$*" | grep -q -- "--wrap"; then
     for ARG in "$@"; do
         # Check if this is a memory specification that's too close to the limit
         if echo "$ARG" | grep -q "^--mem=\?1G\|^--mem=\?1024M\|^--mem=\?1000M"; then
-            echo "[$(date)] Adjusting memory request from $ARG to --mem=900M" >> /tmp/slurm-ssh-debug.log
+            echo "[$(date)] Adjusting memory request from $ARG to --mem=900M" >> "$DEBUG_LOG_DIR/slurm-ssh-debug.log" 2>/dev/null || true
             ADJUSTED_ARGS="$ADJUSTED_ARGS --mem=900M"
         elif [ $FOUND_WRAP -eq 1 ]; then
             # We found the argument after --wrap, which is the command to wrap
@@ -58,18 +63,18 @@ if [ "$CMD" = "sbatch" ] && echo "$*" | grep -q -- "--wrap"; then
     ARGS="$ADJUSTED_ARGS"
     
     # Log the parsed arguments
-    echo "[$(date)] Parsed sbatch args: $ARGS" >> /tmp/slurm-ssh-debug.log
-    echo "[$(date)] Parsed wrap command: $WRAP_CMD" >> /tmp/slurm-ssh-debug.log
+    echo "[$(date)] Parsed sbatch args: $ARGS" >> "$DEBUG_LOG_DIR/slurm-ssh-debug.log" 2>/dev/null || true
+    echo "[$(date)] Parsed wrap command: $WRAP_CMD" >> "$DEBUG_LOG_DIR/slurm-ssh-debug.log" 2>/dev/null || true
     
     # Execute sbatch with properly quoted wrap command
-    echo "[$(date)] Running SSH command: sshpass -p <PASSWORD> ssh -p $SSH_PORT -o StrictHostKeyChecking=no -o BatchMode=no $SSH_USER@$SSH_HOST '$CMD $ARGS --wrap="$WRAP_CMD"'" >> /tmp/slurm-ssh-debug.log
+    echo "[$(date)] Running SSH command: sshpass -p <PASSWORD> ssh -p $SSH_PORT -o StrictHostKeyChecking=no -o BatchMode=no $SSH_USER@$SSH_HOST '$CMD $ARGS --wrap="$WRAP_CMD"'" >> "$DEBUG_LOG_DIR/slurm-ssh-debug.log" 2>/dev/null || true
     
     # Capture both stdout and stderr
     OUTPUT=$(sshpass -p "$SSH_PASSWORD" ssh -p "$SSH_PORT" -o StrictHostKeyChecking=no -o BatchMode=no "$SSH_USER@$SSH_HOST" "$CMD $ARGS --wrap=\"$WRAP_CMD\"" 2>&1)
     
 else
     # Standard execution for other commands
-    echo "[$(date)] Running SSH command: sshpass -p <PASSWORD> ssh -p $SSH_PORT -o StrictHostKeyChecking=no -o BatchMode=no $SSH_USER@$SSH_HOST '$CMD $*'" >> /tmp/slurm-ssh-debug.log
+    echo "[$(date)] Running SSH command: sshpass -p <PASSWORD> ssh -p $SSH_PORT -o StrictHostKeyChecking=no -o BatchMode=no $SSH_USER@$SSH_HOST '$CMD $*'" >> "$DEBUG_LOG_DIR/slurm-ssh-debug.log" 2>/dev/null || true
     
     # Capture both stdout and stderr
     OUTPUT=$(sshpass -p "$SSH_PASSWORD" ssh -p "$SSH_PORT" -o StrictHostKeyChecking=no -o BatchMode=no "$SSH_USER@$SSH_HOST" "$CMD $*" 2>&1)
@@ -77,8 +82,8 @@ fi
 EXIT_CODE=$?
 
 # Log the output and exit code
-echo "[$(date)] Exit code: $EXIT_CODE" >> /tmp/slurm-ssh-debug.log
-echo "[$(date)] Output: $OUTPUT" >> /tmp/slurm-ssh-debug.log
+echo "[$(date)] Exit code: $EXIT_CODE" >> "$DEBUG_LOG_DIR/slurm-ssh-debug.log" 2>/dev/null || true
+echo "[$(date)] Output: $OUTPUT" >> "$DEBUG_LOG_DIR/slurm-ssh-debug.log" 2>/dev/null || true
 
 # Output the result to stdout/stderr as appropriate
 if [ $EXIT_CODE -eq 0 ]; then

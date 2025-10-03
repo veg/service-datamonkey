@@ -30,9 +30,10 @@ fi
 # Ensure data directories exist and have correct permissions
 DATA_DIR=${DATASET_LOCATION:-/data/uploads}
 JOB_DIR=${JOB_TRACKER_LOCATION:-/data/uploads}
+LOG_DIR=/data/logs
 
 # Create directories if they don't exist
-mkdir -p "$DATA_DIR" "$JOB_DIR"
+mkdir -p "$DATA_DIR" "$JOB_DIR" "$LOG_DIR"
 
 # Try to set permissions
 chown -R slurm:slurm "$DATA_DIR" 2>/dev/null || echo "Warning: Could not change ownership on $DATA_DIR (likely mounted read-only)"
@@ -40,6 +41,10 @@ chmod -R 755 "$DATA_DIR" 2>/dev/null || echo "Warning: Could not change permissi
 
 chown -R slurm:slurm "$JOB_DIR" 2>/dev/null || echo "Warning: Could not change ownership on $JOB_DIR (likely mounted read-only)"
 chmod -R 755 "$JOB_DIR" 2>/dev/null || echo "Warning: Could not change permissions on $JOB_DIR (likely mounted read-only)"
+
+# Set permissions for the log directory
+chown -R slurm:slurm "$LOG_DIR" 2>/dev/null || echo "Warning: Could not change ownership on $LOG_DIR (likely mounted read-only)"
+chmod -R 755 "$LOG_DIR" 2>/dev/null || echo "Warning: Could not change permissions on $LOG_DIR (likely mounted read-only)"
 
 # Check if we can write to the mounted volumes
 if ! su -s /bin/sh slurm -c "touch \"$JOB_DIR/test_write_access\"" 2>/dev/null; then
