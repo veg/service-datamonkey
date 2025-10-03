@@ -110,6 +110,9 @@ func (s *SlurmScheduler) Submit(job JobInterface) error {
 	// Get the command from the job method
 	command := baseJob.Method.GetCommand()
 
+	// Add --output parameter for HyPhy
+	command += " --output " + baseJob.GetOutputPath()
+
 	// Submit the job to Slurm
 	cmd := exec.Command("sbatch",
 		"--partition", s.Config.Partition,
