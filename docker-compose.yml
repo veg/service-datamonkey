@@ -72,6 +72,7 @@ services:
     volumes:
       # Common volumes
       - user_data:/data/uploads
+      - tracker_data:/data/stores
       - output_data:/data/output
       # Volume mounts - these will be used based on the mode
       # For REST mode, use named volumes
@@ -162,6 +163,7 @@ services:
       - slurm_jobdir:/data
       - var_log_slurm:/var/log/slurm
       - user_data:/data/uploads
+      - tracker_data:/data/stores
       - output_data:/data/output
       - ${JWT_KEY_VOLUME:-}
     expose:

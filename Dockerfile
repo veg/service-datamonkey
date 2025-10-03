@@ -1,5 +1,9 @@
-FROM golang:1.24 AS build
+FROM golang:1.24-alpine3.22 AS build
 WORKDIR /go/src
+
+# Install build dependencies for CGO and SQLite
+RUN apk add --no-cache gcc musl-dev sqlite-dev
+
 COPY go ./go
 COPY main.go .
 COPY go.sum .
@@ -11,11 +15,11 @@ ENV CGO_ENABLED=1
 RUN go mod tidy
 RUN go build -o datamonkey .
 
-FROM alpine:3.19 AS runtime
+FROM alpine:3.22 AS runtime
 ENV GIN_MODE=release
 
 # Install shadow package for su command, sshpass for SSH automation, and sqlite for database support
-RUN apk add --no-cache shadow sshpass openssh-client sqlite-libs gcc musl-dev
+RUN apk add --no-cache shadow sshpass openssh-client sqlite sqlite-libs gcc musl-dev
 
 # Create slurm user and group with the same UID/GID as in the Slurm container
 RUN addgroup -g 990 slurm && \

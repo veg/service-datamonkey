@@ -173,7 +173,9 @@ func initAPIHandlers(scheduler sw.SchedulerInterface, datasetTracker sw.DatasetT
 
 func main() {
 	// Initialize components
+	log.Printf("Initializing dataset tracker with type: %s", getEnvWithDefault("DATASET_TRACKER_TYPE", "SQLiteDatasetTracker"))
 	datasetTracker := initDatasetTracker()
+	log.Printf("Initializing job tracker with type: %s", getEnvWithDefault("JOB_TRACKER_TYPE", "SQLiteJobTracker"))
 	jobTracker := initJobTracker()
 	scheduler := initScheduler(jobTracker)
 

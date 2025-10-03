@@ -50,11 +50,14 @@ else
     rm "$JOB_DIR/test_write_access"
     echo "Using $JOB_DIR for job tracking"
     
-    # Create jobs.json if it doesn't exist
-    if [ ! -f "$JOB_DIR/jobs.json" ]; then
-        echo "{}" > "$JOB_DIR/jobs.json"
-        chown slurm:slurm "$JOB_DIR/jobs.json" 2>/dev/null
-        chmod 644 "$JOB_DIR/jobs.json" 2>/dev/null
+    # Create jobs.json only if using FileJobTracker
+    if [ "${JOB_TRACKER_TYPE:-FileJobTracker}" = "FileJobTracker" ]; then
+        if [ ! -f "$JOB_DIR/jobs.json" ]; then
+            echo "{}" > "$JOB_DIR/jobs.json"
+            chown slurm:slurm "$JOB_DIR/jobs.json" 2>/dev/null
+            chmod 644 "$JOB_DIR/jobs.json" 2>/dev/null
+            echo "Created jobs.json for FileJobTracker"
+        fi
     fi
 fi
 
@@ -66,11 +69,14 @@ else
     rm "$DATA_DIR/test_write_access"
     echo "Using $DATA_DIR for dataset storage"
     
-    # Create datasets.json if it doesn't exist
-    if [ ! -f "$DATA_DIR/datasets.json" ]; then
-        echo "{}" > "$DATA_DIR/datasets.json"
-        chown slurm:slurm "$DATA_DIR/datasets.json" 2>/dev/null
-        chmod 644 "$DATA_DIR/datasets.json" 2>/dev/null
+    # Create datasets.json only if using FileDatasetTracker
+    if [ "${DATASET_TRACKER_TYPE:-FileDatasetTracker}" = "FileDatasetTracker" ]; then
+        if [ ! -f "$DATA_DIR/datasets.json" ]; then
+            echo "{}" > "$DATA_DIR/datasets.json"
+            chown slurm:slurm "$DATA_DIR/datasets.json" 2>/dev/null
+            chmod 644 "$DATA_DIR/datasets.json" 2>/dev/null
+            echo "Created datasets.json for FileDatasetTracker"
+        fi
     fi
 fi
 
