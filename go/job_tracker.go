@@ -277,9 +277,29 @@ func NewSQLiteJobTracker(dbPath string) (*SQLiteJobTracker, error) {
 
 // StoreJobMapping stores a mapping between our job ID and the scheduler's job ID
 func (t *SQLiteJobTracker) StoreJobMapping(jobID string, schedulerJobID string) error {
-	query := `INSERT INTO job_mappings (job_id, scheduler_job_id) VALUES (?, ?)`
+	// First check if the mapping already exists
+	existingID, err := t.GetSchedulerJobID(jobID)
+	if err == nil {
+		// Job mapping already exists
+		if existingID == schedulerJobID {
+			// If it's the same scheduler job ID, just return success
+			return nil
+		}
+		// If it's a different scheduler job ID, update the existing mapping
+		updateQuery := `UPDATE job_mappings SET scheduler_job_id = ? WHERE job_id = ?`
+		_, err := t.db.Exec(updateQuery, schedulerJobID, jobID)
+		if err != nil {
+			return fmt.Errorf("failed to update existing job mapping: %v", err)
+		}
+		return nil
+	} else if !strings.Contains(err.Error(), "job ID not found") {
+		// If there was an error other than "job ID not found", return it
+		return fmt.Errorf("failed to check for existing job mapping: %v", err)
+	}
 
-	_, err := t.db.Exec(query, jobID, schedulerJobID)
+	// If we get here, the job mapping doesn't exist, so insert a new one
+	insertQuery := `INSERT INTO job_mappings (job_id, scheduler_job_id) VALUES (?, ?)`
+	_, err = t.db.Exec(insertQuery, jobID, schedulerJobID)
 	if err != nil {
 		return fmt.Errorf("failed to store job mapping: %v", err)
 	}

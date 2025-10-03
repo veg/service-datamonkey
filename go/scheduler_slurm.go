@@ -211,80 +211,52 @@ func (s *SlurmScheduler) GetStatus(job JobInterface) (JobStatusValue, error) {
 		return "", fmt.Errorf("failed to get scheduler job ID: %v", err)
 	}
 
-	cmd := exec.Command("squeue", "--job", slurmJobID, "--format=%T", "--noheader")
+	// Use sacct to get job state and exit code - this works for both running and completed jobs
+	cmd := exec.Command("sacct", "-j", slurmJobID, "--format=State,ExitCode", "--noheader", "--parsable2")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		// Check if the error is because the job is not found (completed)
-		if strings.Contains(string(output), "Invalid job id specified") {
-			// Check if the job completed successfully by looking at the exit code
-			if s.checkJobSuccess(baseJob, slurmJobID) {
-				// Delete the job mapping after successful completion
-				if deleteErr := s.JobTracker.DeleteJobMapping(baseJob.GetId()); deleteErr != nil {
-					// Log the error but don't fail the status check
-					fmt.Printf("Warning: failed to delete job mapping: %v\n", deleteErr)
-				}
-				return JobStatusComplete, nil
-			}
-			// Delete the job mapping after failure
-			if deleteErr := s.JobTracker.DeleteJobMapping(baseJob.GetId()); deleteErr != nil {
-				// Log the error but don't fail the status check
-				fmt.Printf("Warning: failed to delete job mapping: %v\n", deleteErr)
-			}
-			return JobStatusFailed, nil
-		}
+		// If sacct fails, we can't determine the job status
 		return "", fmt.Errorf("failed to get job status: %v, output: %s", err, string(output))
 	}
 
-	status := strings.TrimSpace(string(output))
-	switch status {
-	case "PENDING":
+	// Parse the output
+	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
+	if len(lines) == 0 {
+		return "", fmt.Errorf("no output from sacct")
+	}
+
+	// Parse the first line (job info)
+	fields := strings.Split(lines[0], "|")
+	if len(fields) < 2 {
+		return "", fmt.Errorf("unexpected sacct output format: %s", lines[0])
+	}
+
+	jobState := strings.TrimSpace(fields[0])
+	exitCode := strings.TrimSpace(fields[1])
+
+	// Map the state to our job status
+	switch jobState {
+	case "PENDING", "CONFIGURING", "REQUEUED":
 		return JobStatusPending, nil
-	case "RUNNING":
+	case "RUNNING", "RESIZING", "SUSPENDED":
 		return JobStatusRunning, nil
 	case "COMPLETED":
-		// Delete the job mapping after successful completion
-		if deleteErr := s.JobTracker.DeleteJobMapping(baseJob.GetId()); deleteErr != nil {
-			// Log the error but don't fail the status check
-			fmt.Printf("Warning: failed to delete job mapping: %v\n", deleteErr)
+		// Check exit code for success
+		if exitCode == "0:0" {
+			// Keep job mapping for future reference
+			return JobStatusComplete, nil
 		}
-		return JobStatusComplete, nil
-	case "FAILED", "TIMEOUT", "OUT_OF_MEMORY":
-		// Delete the job mapping after failure
-		if deleteErr := s.JobTracker.DeleteJobMapping(baseJob.GetId()); deleteErr != nil {
-			// Log the error but don't fail the status check
-			fmt.Printf("Warning: failed to delete job mapping: %v\n", deleteErr)
-		}
+		// Job completed but with non-zero exit code
+		return JobStatusFailed, nil
+	case "FAILED", "TIMEOUT", "OUT_OF_MEMORY", "NODE_FAIL", "DEADLINE", "BOOT_FAIL":
+		// Keep job mapping for future reference
 		return JobStatusFailed, nil
 	case "CANCELLED":
-		// Delete the job mapping after cancellation
-		if deleteErr := s.JobTracker.DeleteJobMapping(baseJob.GetId()); deleteErr != nil {
-			// Log the error but don't fail the status check
-			fmt.Printf("Warning: failed to delete job mapping: %v\n", deleteErr)
-		}
+		// Keep job mapping for future reference
 		return JobStatusCancelled, nil
 	default:
 		return JobStatusFailed, nil
 	}
-}
-
-// checkJobSuccess checks if a completed job was successful
-func (s *SlurmScheduler) checkJobSuccess(job JobInterface, slurmJobID string) bool {
-	cmd := exec.Command("sacct", "-j", slurmJobID, "--format=ExitCode", "--noheader")
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		fmt.Printf("Warning: failed to check job success: %v\n", err)
-		return false
-	}
-
-	// sacct returns multiple lines (one for the job, one for the batch step)
-	// We only need to check the first line
-	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
-	if len(lines) == 0 {
-		return false
-	}
-	
-	exitCode := strings.TrimSpace(lines[0])
-	return exitCode == "0:0"
 }
 
 // CheckHealth checks if the Slurm scheduler is operational
