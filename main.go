@@ -118,7 +118,7 @@ func initSlurmRestConfig() sw.SlurmRestConfig {
 func initLocalSlurmConfig() sw.SlurmConfig {
 	// Get the partition from environment, with a default if not set
 	partition := getEnvWithDefault("SLURM_PARTITION", "normal")
-	
+
 	// Create a basic configuration with only the critical parameter (partition)
 	// Other parameters will use defaults or be set per-job
 	return sw.SlurmConfig{
@@ -168,6 +168,7 @@ func initAPIHandlers(scheduler sw.SchedulerInterface, datasetTracker sw.DatasetT
 		SLATKINAPI:         *sw.NewSLATKINAPI(basePath, hyPhyPath, scheduler, datasetTracker),
 		FileUploadAndQCAPI: *sw.NewFileUploadAndQCAPI(datasetTracker),
 		HealthAPI:          sw.HealthAPI{Scheduler: scheduler},
+		ChatAPI:            *sw.NewChatAPI(),
 	}
 }
 
