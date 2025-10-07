@@ -164,8 +164,46 @@ func initConversationTracker() sw.ConversationTracker {
 	}
 }
 
+// initTokenService initializes the token service for user authentication
+func initTokenService() *sw.TokenService {
+	// Check if token service is enabled
+	enabled := getEnvWithDefault("USER_TOKEN_ENABLED", "true") == "true"
+	if !enabled {
+		log.Println("User token service is disabled")
+		return nil
+	}
+
+	// Get JWT key path from environment or use default
+	jwtKeyPath := getEnvWithDefault("USER_JWT_KEY_PATH", "")
+	// Use SLURM JWT key if user key is not specified
+	if jwtKeyPath == "" {
+		slurmKeyPath := getEnvWithDefault("JWT_KEY_PATH", "")
+		if slurmKeyPath != "" {
+			log.Printf("Using Slurm JWT key for user tokens: %s", slurmKeyPath)
+			jwtKeyPath = slurmKeyPath
+		} else {
+			log.Fatalf("No JWT key specified for user tokens")
+			return nil
+		}
+	}
+
+	// Get token expiration from environment or use default
+	expirationSecs := int64(86400) // Default to 24 hours
+
+	// Create token service config
+	config := sw.TokenConfig{
+		KeyPath:         jwtKeyPath,
+		Username:        "datamonkey",
+		ExpirationSecs:  expirationSecs,
+		RefreshInterval: 12 * time.Hour,
+	}
+
+	log.Printf("Initializing token service with key path: %s", jwtKeyPath)
+	return sw.NewTokenService(config)
+}
+
 // initAPIHandlers initializes the API handlers with the given components
-func initAPIHandlers(scheduler sw.SchedulerInterface, datasetTracker sw.DatasetTracker, conversationTracker sw.ConversationTracker) sw.ApiHandleFunctions {
+func initAPIHandlers(scheduler sw.SchedulerInterface, datasetTracker sw.DatasetTracker, conversationTracker sw.ConversationTracker, tokenService *sw.TokenService) sw.ApiHandleFunctions {
 	// Get HyPhy executable path from environment or use default
 	hyPhyPath := getEnvWithDefault("HYPHY_PATH", "hyphy")
 	// TODO: change this default so that upload files and log/ results are stored in a different directory
@@ -188,7 +226,7 @@ func initAPIHandlers(scheduler sw.SchedulerInterface, datasetTracker sw.DatasetT
 		SLATKINAPI:         *sw.NewSLATKINAPI(basePath, hyPhyPath, scheduler, datasetTracker),
 		FileUploadAndQCAPI: *sw.NewFileUploadAndQCAPI(datasetTracker),
 		HealthAPI:          sw.HealthAPI{Scheduler: scheduler},
-		ChatAPI:            *sw.NewChatAPI(conversationTracker),
+		ChatAPI:            *sw.NewChatAPI(conversationTracker, tokenService),
 	}
 }
 
@@ -200,6 +238,7 @@ func main() {
 	jobTracker := initJobTracker()
 	conversationTracker := initConversationTracker()
 	scheduler := initScheduler(jobTracker)
+	tokenService := initTokenService()
 
 	// Ensure proper shutdown of components
 	if slurmScheduler, ok := scheduler.(*sw.SlurmRestScheduler); ok {
@@ -209,7 +248,7 @@ func main() {
 	}
 
 	// Initialize API handlers
-	routes := initAPIHandlers(scheduler, datasetTracker, conversationTracker)
+	routes := initAPIHandlers(scheduler, datasetTracker, conversationTracker, tokenService)
 
 	// Start server
 	port := getEnvWithDefault("SERVICE_DATAMONKEY_PORT", "9300")
