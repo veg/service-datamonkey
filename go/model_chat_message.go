@@ -10,11 +10,15 @@
 
 package datamonkey
 
-type JobStatus struct {
+// ChatMessage - A message in a chat session
+type ChatMessage struct {
 
-	JobId string `json:"job_id,omitempty" validate:"regexp=^[a-zA-Z0-9]+$"`
+	// Role of the message sender
+	Role string `json:"role"`
 
-	Status string `json:"status,omitempty"`
+	// Content of the message
+	Content string `json:"content"`
 
-	ErrorMessage string `json:"error_message,omitempty"`
+	// Timestamp when the message was sent (Unix timestamp in milliseconds)
+	Timestamp int64 `json:"timestamp,omitempty"`
 }

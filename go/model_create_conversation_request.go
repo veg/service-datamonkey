@@ -10,11 +10,8 @@
 
 package datamonkey
 
-type JobStatus struct {
+type CreateConversationRequest struct {
 
-	JobId string `json:"job_id,omitempty" validate:"regexp=^[a-zA-Z0-9]+$"`
-
-	Status string `json:"status,omitempty"`
-
-	ErrorMessage string `json:"error_message,omitempty"`
+	// Optional title for the conversation
+	Title string `json:"title,omitempty"`
 }

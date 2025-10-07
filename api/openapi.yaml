@@ -9,7 +9,7 @@ info:
     name: Apache 2.0
     url: http://www.apache.org/licenses/LICENSE-2.0.html
   title: Datamonkey API
-  version: 1.0.0
+  version: 1.1.0
   x-logo:
     url: https://raw.githubusercontent.com/veg/datamonkey-js/refs/heads/master/public/assets/img/header-logo.svg
     altText: Datamonkey.org logo
@@ -22,6 +22,8 @@ servers:
 tags:
 - description: Check health of Datamonkey server
   name: Health
+- description: Chat with an AI assistant to analyze data and run HyPhy methods
+  name: Chat
 - description: Examples uploading files to Datamonkey
   name: File Upload and QC
 - description: Examples starting jobs and fetching results for FEL
@@ -104,6 +106,203 @@ paths:
       summary: Check health of Datamonkey
       tags:
       - Health
+  /chat:
+    get:
+      operationId: listUserConversations
+      parameters:
+      - description: Token identifying the user
+        explode: false
+        in: header
+        name: user_token
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/listUserConversations_200_response'
+          description: List of user's conversations
+        "401":
+          description: Unauthorized - Invalid or missing user token
+      summary: List conversations for the authenticated user
+      tags:
+      - Chat
+    post:
+      operationId: createConversation
+      parameters:
+      - description: Token identifying the user
+        explode: false
+        in: header
+        name: user_token
+        required: true
+        schema:
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/createConversation_request'
+        required: false
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatConversation'
+          description: Conversation created
+        "401":
+          description: Unauthorized - Invalid or missing user token
+      summary: Create a new conversation
+      tags:
+      - Chat
+  /chat/{conversationId}:
+    delete:
+      operationId: deleteConversation
+      parameters:
+      - description: ID of the conversation
+        explode: false
+        in: path
+        name: conversationId
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: Token identifying the user
+        explode: false
+        in: header
+        name: user_token
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "204":
+          description: Conversation deleted
+        "401":
+          description: Unauthorized - Invalid or missing user token
+        "403":
+          description: Forbidden - User does not own this conversation
+        "404":
+          description: Conversation not found
+      summary: Delete a conversation
+      tags:
+      - Chat
+    get:
+      operationId: getConversation
+      parameters:
+      - description: ID of the conversation
+        explode: false
+        in: path
+        name: conversationId
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: Token identifying the user
+        explode: false
+        in: header
+        name: user_token
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatConversation'
+          description: Conversation details
+        "401":
+          description: Unauthorized - Invalid or missing user token
+        "403":
+          description: Forbidden - User does not own this conversation
+        "404":
+          description: Conversation not found
+      summary: Get a conversation by ID
+      tags:
+      - Chat
+  /chat/{conversationId}/messages:
+    get:
+      operationId: getConversationMessages
+      parameters:
+      - description: ID of the conversation
+        explode: false
+        in: path
+        name: conversationId
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: Token identifying the user
+        explode: false
+        in: header
+        name: user_token
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/getConversationMessages_200_response'
+          description: List of conversation messages
+        "401":
+          description: Unauthorized - Invalid or missing user token
+        "403":
+          description: Forbidden - User does not own this conversation
+        "404":
+          description: Conversation not found
+      summary: Get messages from a conversation
+      tags:
+      - Chat
+    post:
+      operationId: sendConversationMessage
+      parameters:
+      - description: ID of the conversation
+        explode: false
+        in: path
+        name: conversationId
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: Token identifying the user
+        explode: false
+        in: header
+        name: user_token
+        required: true
+        schema:
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/sendConversationMessage_request'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/sendConversationMessage_200_response'
+          description: AI response
+        "401":
+          description: Unauthorized - Invalid or missing user token
+        "403":
+          description: Forbidden - User does not own this conversation
+        "404":
+          description: Conversation not found
+      summary: Send a message to the conversation
+      tags:
+      - Chat
   /methods/fel-start:
     post:
       operationId: startFELJob
@@ -1896,6 +2095,76 @@ components:
           $ref: '#/components/schemas/Status'
         details:
           $ref: '#/components/schemas/Health_details'
+      type: object
+    ChatMessage:
+      description: A message in a chat session
+      example:
+        role: user
+        content: content
+        timestamp: 1
+      properties:
+        role:
+          description: Role of the message sender
+          enum:
+          - user
+          - assistant
+          type: string
+        content:
+          description: Content of the message
+          type: string
+        timestamp:
+          description: Timestamp when the message was sent (Unix timestamp in milliseconds)
+          format: int64
+          type: integer
+      required:
+      - content
+      - role
+      type: object
+    ChatConversation:
+      description: A conversation between a user and the AI assistant
+      example:
+        created: 0
+        messages:
+        - role: user
+          content: content
+          timestamp: 1
+        - role: user
+          content: content
+          timestamp: 1
+        id: id
+        user_token: user_token
+        title: title
+        updated: 6
+      properties:
+        id:
+          description: Unique identifier for the conversation
+          type: string
+        user_token:
+          description: Token identifying the user who owns this conversation
+          type: string
+        title:
+          description: Optional title for the conversation
+          type: string
+        created:
+          description: Timestamp when the conversation was created (Unix timestamp
+            in milliseconds)
+          format: int64
+          type: integer
+        updated:
+          description: Timestamp when the conversation was last updated (Unix timestamp
+            in milliseconds)
+          format: int64
+          type: integer
+        messages:
+          description: List of messages in the conversation
+          items:
+            $ref: '#/components/schemas/ChatMessage'
+          type: array
+      required:
+      - created
+      - id
+      - updated
+      - user_token
       type: object
     Hash:
       pattern: "^[a-zA-Z0-9]+$"
@@ -3803,6 +4072,78 @@ components:
         url:
           description: URL of the file to upload. incompatible with the file field
           type: string
+      type: object
+    listUserConversations_200_response:
+      example:
+        conversations:
+        - created: 0
+          messages:
+          - role: user
+            content: content
+            timestamp: 1
+          - role: user
+            content: content
+            timestamp: 1
+          id: id
+          user_token: user_token
+          title: title
+          updated: 6
+        - created: 0
+          messages:
+          - role: user
+            content: content
+            timestamp: 1
+          - role: user
+            content: content
+            timestamp: 1
+          id: id
+          user_token: user_token
+          title: title
+          updated: 6
+      properties:
+        conversations:
+          items:
+            $ref: '#/components/schemas/ChatConversation'
+          type: array
+      type: object
+    createConversation_request:
+      properties:
+        title:
+          description: Optional title for the conversation
+          type: string
+      type: object
+    getConversationMessages_200_response:
+      example:
+        messages:
+        - role: user
+          content: content
+          timestamp: 1
+        - role: user
+          content: content
+          timestamp: 1
+      properties:
+        messages:
+          items:
+            $ref: '#/components/schemas/ChatMessage'
+          type: array
+      type: object
+    sendConversationMessage_request:
+      properties:
+        message:
+          description: Message content to send
+          type: string
+      required:
+      - message
+      type: object
+    sendConversationMessage_200_response:
+      example:
+        message:
+          role: user
+          content: content
+          timestamp: 1
+      properties:
+        message:
+          $ref: '#/components/schemas/ChatMessage'
       type: object
     Health_details:
       example:
