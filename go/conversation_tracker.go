@@ -1,0 +1,339 @@
+package datamonkey
+
+import (
+	"database/sql"
+	"fmt"
+	"log"
+	"time"
+
+	_ "github.com/mattn/go-sqlite3"
+)
+
+// ConversationTracker defines the interface for tracking chat conversations
+type ConversationTracker interface {
+	// CreateConversation creates a new conversation
+	CreateConversation(conversation *ChatConversation) error
+
+	// GetConversation retrieves a conversation by ID
+	GetConversation(id string) (*ChatConversation, error)
+
+	// GetConversationMessages retrieves messages from a conversation
+	GetConversationMessages(conversationId string) ([]ChatMessage, error)
+
+	// ListUserConversations lists all conversations for a user
+	ListUserConversations(userToken string) ([]*ChatConversation, error)
+
+	// AddMessage adds a message to a conversation
+	AddMessage(conversationId string, message *ChatMessage) error
+
+	// DeleteConversation deletes a conversation
+	DeleteConversation(id string) error
+
+	// UpdateConversation updates a conversation's metadata
+	UpdateConversation(id string, updates map[string]interface{}) error
+
+	// Close closes any resources used by the store
+	Close() error
+}
+
+// SQLiteConversationTracker implements ConversationTracker using SQLite
+type SQLiteConversationTracker struct {
+	db *sql.DB
+}
+
+// NewSQLiteConversationTracker creates a new SQLiteConversationTracker
+func NewSQLiteConversationTracker(dbPath string) (*SQLiteConversationTracker, error) {
+	db, err := sql.Open("sqlite3", dbPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open database: %v", err)
+	}
+
+	// Enable WAL mode for better concurrency
+	if _, err := db.Exec("PRAGMA journal_mode=WAL"); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("failed to enable WAL mode: %v", err)
+	}
+
+	// Create conversations table if it doesn't exist
+	createConversationsTableSQL := `
+	CREATE TABLE IF NOT EXISTS conversations (
+		id TEXT PRIMARY KEY,
+		user_token TEXT NOT NULL,
+		title TEXT,
+		created INTEGER NOT NULL,
+		updated INTEGER NOT NULL
+	);
+	CREATE INDEX IF NOT EXISTS idx_conversations_user_token ON conversations(user_token);
+	CREATE INDEX IF NOT EXISTS idx_conversations_created ON conversations(created);
+	`
+
+	if _, err := db.Exec(createConversationsTableSQL); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("failed to create conversations table: %v", err)
+	}
+
+	// Create messages table if it doesn't exist
+	createMessagesTableSQL := `
+	CREATE TABLE IF NOT EXISTS messages (
+		id TEXT PRIMARY KEY,
+		conversation_id TEXT NOT NULL,
+		role TEXT NOT NULL,
+		content TEXT NOT NULL,
+		timestamp INTEGER NOT NULL,
+		FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
+	);
+	CREATE INDEX IF NOT EXISTS idx_messages_conversation_id ON messages(conversation_id);
+	CREATE INDEX IF NOT EXISTS idx_messages_timestamp ON messages(timestamp);
+	`
+
+	if _, err := db.Exec(createMessagesTableSQL); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("failed to create messages table: %v", err)
+	}
+
+	// Enable foreign key support
+	if _, err := db.Exec("PRAGMA foreign_keys = ON"); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("failed to enable foreign key support: %v", err)
+	}
+
+	return &SQLiteConversationTracker{
+		db: db,
+	}, nil
+}
+
+// CreateConversation creates a new conversation
+func (s *SQLiteConversationTracker) CreateConversation(conversation *ChatConversation) error {
+	// Insert the conversation
+	query := `
+	INSERT INTO conversations (
+		id, user_token, title, created, updated
+	) VALUES (?, ?, ?, ?, ?)
+	`
+
+	_, err := s.db.Exec(query,
+		conversation.Id,
+		conversation.UserToken,
+		conversation.Title,
+		conversation.Created,
+		conversation.Updated,
+	)
+
+	if err != nil {
+		return fmt.Errorf("failed to create conversation: %v", err)
+	}
+
+	// Insert any messages
+	if len(conversation.Messages) > 0 {
+		for _, message := range conversation.Messages {
+			if err := s.AddMessage(conversation.Id, &message); err != nil {
+				return fmt.Errorf("failed to add message: %v", err)
+			}
+		}
+	}
+
+	return nil
+}
+
+// GetConversation retrieves a conversation by ID
+func (s *SQLiteConversationTracker) GetConversation(id string) (*ChatConversation, error) {
+	// Query the conversation
+	query := `SELECT id, user_token, title, created, updated FROM conversations WHERE id = ?`
+
+	var conversation ChatConversation
+	err := s.db.QueryRow(query, id).Scan(
+		&conversation.Id,
+		&conversation.UserToken,
+		&conversation.Title,
+		&conversation.Created,
+		&conversation.Updated,
+	)
+
+	if err == sql.ErrNoRows {
+		return nil, fmt.Errorf("conversation not found: %s", id)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to get conversation: %v", err)
+	}
+
+	// Get messages for this conversation
+	messages, err := s.GetConversationMessages(id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get conversation messages: %v", err)
+	}
+
+	conversation.Messages = messages
+	return &conversation, nil
+}
+
+// GetConversationMessages retrieves messages from a conversation
+func (s *SQLiteConversationTracker) GetConversationMessages(conversationId string) ([]ChatMessage, error) {
+	// Query the messages
+	query := `SELECT role, content, timestamp FROM messages WHERE conversation_id = ? ORDER BY timestamp ASC`
+
+	rows, err := s.db.Query(query, conversationId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query messages: %v", err)
+	}
+	defer rows.Close()
+
+	var messages []ChatMessage
+	for rows.Next() {
+		var message ChatMessage
+		if err := rows.Scan(&message.Role, &message.Content, &message.Timestamp); err != nil {
+			return nil, fmt.Errorf("failed to scan message: %v", err)
+		}
+		messages = append(messages, message)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating messages: %v", err)
+	}
+
+	return messages, nil
+}
+
+// ListUserConversations lists all conversations for a user
+func (s *SQLiteConversationTracker) ListUserConversations(userToken string) ([]*ChatConversation, error) {
+	// Query the conversations
+	query := `SELECT id, user_token, title, created, updated FROM conversations WHERE user_token = ? ORDER BY updated DESC`
+
+	rows, err := s.db.Query(query, userToken)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query conversations: %v", err)
+	}
+	defer rows.Close()
+
+	var conversations []*ChatConversation
+	for rows.Next() {
+		var conversation ChatConversation
+		if err := rows.Scan(
+			&conversation.Id,
+			&conversation.UserToken,
+			&conversation.Title,
+			&conversation.Created,
+			&conversation.Updated,
+		); err != nil {
+			return nil, fmt.Errorf("failed to scan conversation: %v", err)
+		}
+		conversations = append(conversations, &conversation)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating conversations: %v", err)
+	}
+
+	return conversations, nil
+}
+
+// AddMessage adds a message to a conversation
+func (s *SQLiteConversationTracker) AddMessage(conversationId string, message *ChatMessage) error {
+	// Generate a message ID if not provided
+	messageId := fmt.Sprintf("msg-%d-%s", time.Now().UnixMilli(), generateRandomString(8))
+
+	// Insert the message
+	query := `
+	INSERT INTO messages (
+		id, conversation_id, role, content, timestamp
+	) VALUES (?, ?, ?, ?, ?)
+	`
+
+	_, err := s.db.Exec(query,
+		messageId,
+		conversationId,
+		message.Role,
+		message.Content,
+		message.Timestamp,
+	)
+
+	if err != nil {
+		return fmt.Errorf("failed to add message: %v", err)
+	}
+
+	// Update the conversation's updated timestamp
+	updateQuery := `UPDATE conversations SET updated = ? WHERE id = ?`
+	_, err = s.db.Exec(updateQuery, time.Now().UnixMilli(), conversationId)
+	if err != nil {
+		log.Printf("Warning: failed to update conversation timestamp: %v", err)
+	}
+
+	return nil
+}
+
+// DeleteConversation deletes a conversation
+func (s *SQLiteConversationTracker) DeleteConversation(id string) error {
+	// Delete the conversation (messages will be deleted via CASCADE)
+	query := `DELETE FROM conversations WHERE id = ?`
+
+	result, err := s.db.Exec(query, id)
+	if err != nil {
+		return fmt.Errorf("failed to delete conversation: %v", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %v", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("conversation not found: %s", id)
+	}
+
+	return nil
+}
+
+// UpdateConversation updates a conversation's metadata
+func (s *SQLiteConversationTracker) UpdateConversation(id string, updates map[string]interface{}) error {
+	// Get the current conversation
+	conversation, err := s.GetConversation(id)
+	if err != nil {
+		return err
+	}
+
+	// Apply updates
+	if title, ok := updates["title"].(string); ok {
+		conversation.Title = title
+	}
+
+	// Always update the updated timestamp
+	conversation.Updated = time.Now().UnixMilli()
+
+	// Update in database
+	query := `
+	UPDATE conversations SET
+		title = ?,
+		updated = ?
+	WHERE id = ?
+	`
+
+	_, err = s.db.Exec(query,
+		conversation.Title,
+		conversation.Updated,
+		id,
+	)
+
+	if err != nil {
+		return fmt.Errorf("failed to update conversation: %v", err)
+	}
+
+	return nil
+}
+
+// Close closes the database connection
+func (s *SQLiteConversationTracker) Close() error {
+	return s.db.Close()
+}
+
+// Helper function to generate a random string
+func generateRandomString(length int) string {
+	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	result := make([]byte, length)
+	for i := range result {
+		result[i] = charset[time.Now().UnixNano()%int64(len(charset))]
+		time.Sleep(1 * time.Nanosecond)
+	}
+	return string(result)
+}
+
+// Ensure implementation satisfies the ConversationTracker interface
+var _ ConversationTracker = (*SQLiteConversationTracker)(nil)
