@@ -144,8 +144,28 @@ func initScheduler(jobTracker sw.JobTracker) sw.SchedulerInterface {
 	}
 }
 
+// initConversationTracker initializes the conversation tracker
+func initConversationTracker() sw.ConversationTracker {
+	// Get the tracker type from environment or use default
+	trackerType := getEnvWithDefault("CONVERSATION_TRACKER_TYPE", "SQLiteConversationTracker")
+	log.Printf("Initializing conversation tracker with type: %s", trackerType)
+
+	switch trackerType {
+	case "SQLiteConversationTracker":
+		dbPath := getEnvWithDefault("CONVERSATION_DB_PATH", "./data/conversations.db")
+		tracker, err := sw.NewSQLiteConversationTracker(dbPath)
+		if err != nil {
+			log.Fatalf("Failed to initialize SQLite conversation tracker: %v", err)
+		}
+		return tracker
+	default:
+		log.Fatalf("Unknown conversation tracker type: %s", trackerType)
+		return nil
+	}
+}
+
 // initAPIHandlers initializes the API handlers with the given components
-func initAPIHandlers(scheduler sw.SchedulerInterface, datasetTracker sw.DatasetTracker) sw.ApiHandleFunctions {
+func initAPIHandlers(scheduler sw.SchedulerInterface, datasetTracker sw.DatasetTracker, conversationTracker sw.ConversationTracker) sw.ApiHandleFunctions {
 	// Get HyPhy executable path from environment or use default
 	hyPhyPath := getEnvWithDefault("HYPHY_PATH", "hyphy")
 	// TODO: change this default so that upload files and log/ results are stored in a different directory
@@ -168,7 +188,7 @@ func initAPIHandlers(scheduler sw.SchedulerInterface, datasetTracker sw.DatasetT
 		SLATKINAPI:         *sw.NewSLATKINAPI(basePath, hyPhyPath, scheduler, datasetTracker),
 		FileUploadAndQCAPI: *sw.NewFileUploadAndQCAPI(datasetTracker),
 		HealthAPI:          sw.HealthAPI{Scheduler: scheduler},
-		ChatAPI:            *sw.NewChatAPI(),
+		ChatAPI:            *sw.NewChatAPI(conversationTracker),
 	}
 }
 
@@ -178,6 +198,7 @@ func main() {
 	datasetTracker := initDatasetTracker()
 	log.Printf("Initializing job tracker with type: %s", getEnvWithDefault("JOB_TRACKER_TYPE", "SQLiteJobTracker"))
 	jobTracker := initJobTracker()
+	conversationTracker := initConversationTracker()
 	scheduler := initScheduler(jobTracker)
 
 	// Ensure proper shutdown of components
@@ -188,7 +209,7 @@ func main() {
 	}
 
 	// Initialize API handlers
-	routes := initAPIHandlers(scheduler, datasetTracker)
+	routes := initAPIHandlers(scheduler, datasetTracker, conversationTracker)
 
 	// Start server
 	port := getEnvWithDefault("SERVICE_DATAMONKEY_PORT", "9300")
