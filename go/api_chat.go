@@ -1,38 +1,107 @@
 package datamonkey
 
 import (
+	"context"
+	"fmt"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
-	"github.com/d-callan/service-datamonkey/go/ai"
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 )
 
-// ChatAPI implements the chat API endpoints using our AI service
+// ChatAPI implements the chat API endpoints
 type ChatAPI struct {
-	chatService *ai.ChatService
+	genkitClient *GenkitClient
+	tracker      ConversationTracker
+	tokenService *TokenService
 }
 
 // NewChatAPI creates a new ChatAPI instance
-func NewChatAPI() *ChatAPI {
-	chatService, err := ai.NewChatService()
-	if err != nil {
-		log.Fatalf("Failed to create chat service: %v", err)
+func NewChatAPI(genkitClient *GenkitClient, tracker ConversationTracker, tokenService *TokenService) *ChatAPI {
+	return &ChatAPI{
+		genkitClient: genkitClient,
+		tracker:      tracker,
+		tokenService: tokenService,
+	}
+}
+
+// validateToken validates the user token and returns the token string and claims
+func (api *ChatAPI) validateToken(c *gin.Context) (string, jwt.MapClaims, error) {
+	// Check if token service is available
+	if api.tokenService == nil {
+		// If no token service, just return the user_token header without validation
+		userToken := c.GetHeader("user_token")
+		if userToken == "" {
+			return "", nil, fmt.Errorf("user token is required")
+		}
+		return userToken, nil, nil
 	}
 
-	return &ChatAPI{
-		chatService: chatService,
+	// Try to get token from Authorization header first
+	authHeader := c.GetHeader("Authorization")
+	userToken := ""
+
+	if authHeader != "" {
+		// Extract token from Bearer format
+		parts := strings.Split(authHeader, " ")
+		if len(parts) == 2 && parts[0] == "Bearer" {
+			userToken = parts[1]
+		}
 	}
+
+	// If not in Authorization header, try user_token header
+	if userToken == "" {
+		userToken = c.GetHeader("user_token")
+	}
+
+	// Validate the token
+	if userToken != "" {
+		claims, err := api.tokenService.ValidateToken(userToken)
+		if err != nil {
+			return "", nil, fmt.Errorf("invalid token: %v", err)
+		}
+		return userToken, claims, nil
+	}
+
+	return "", nil, fmt.Errorf("user token is required")
 }
 
 // CreateConversation creates a new conversation
 func (api *ChatAPI) CreateConversation(c *gin.Context) {
-	// Get user token from header
+	// Get user token from header or generate one
 	userToken := c.GetHeader("user_token")
-	if userToken == "" {
+	generatedToken := false
+
+	// Generate a token if not provided and token service is available
+	if userToken == "" && api.tokenService != nil {
+		// Generate a random user ID
+		userId := fmt.Sprintf("user-%d-%s", time.Now().UnixMilli(), generateRandomString(8))
+
+		// Generate a token for this user
+		token, err := api.tokenService.GenerateUserToken(userId)
+		if err != nil {
+			log.Printf("Error generating user token: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate user token"})
+			return
+		}
+
+		userToken = token
+		generatedToken = true
+	} else if userToken == "" {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User token is required"})
 		return
+	}
+
+	// If token was provided (not generated), validate it
+	if !generatedToken && api.tokenService != nil {
+		_, _, err := api.validateToken(c)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+			return
+		}
 	}
 
 	// Parse request body
@@ -47,7 +116,7 @@ func (api *ChatAPI) CreateConversation(c *gin.Context) {
 
 	// Create a new conversation
 	conversation := ChatConversation{
-		Id:        generateID("conv"),
+		Id:        fmt.Sprintf("conv-%d-%s", time.Now().UnixMilli(), generateRandomString(8)),
 		UserToken: userToken,
 		Title:     req.Title,
 		Created:   time.Now().UnixMilli(),
@@ -55,16 +124,31 @@ func (api *ChatAPI) CreateConversation(c *gin.Context) {
 		Messages:  []ChatMessage{},
 	}
 
-	// Return the new conversation
-	c.JSON(http.StatusCreated, conversation)
+	// Store the conversation
+	if err := api.tracker.CreateConversation(&conversation); err != nil {
+		log.Printf("Error creating conversation: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create conversation"})
+		return
+	}
+
+	// Return the new conversation with the generated token if applicable
+	response := conversation
+	if generatedToken {
+		c.JSON(http.StatusCreated, gin.H{
+			"conversation": response,
+			"user_token":   userToken,
+		})
+	} else {
+		c.JSON(http.StatusCreated, response)
+	}
 }
 
 // DeleteConversation deletes a conversation
 func (api *ChatAPI) DeleteConversation(c *gin.Context) {
-	// Get user token from header
-	userToken := c.GetHeader("user_token")
-	if userToken == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User token is required"})
+	// Validate user token
+	userToken, _, err := api.validateToken(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -75,8 +159,25 @@ func (api *ChatAPI) DeleteConversation(c *gin.Context) {
 		return
 	}
 
-	// In a real implementation, we would check if the user owns this conversation
-	// and delete it from storage
+	// Check if the conversation exists and belongs to this user
+	conversation, err := api.tracker.GetConversation(conversationId)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Conversation not found"})
+		return
+	}
+
+	// Verify ownership
+	if conversation.UserToken != userToken {
+		c.JSON(http.StatusForbidden, gin.H{"error": "You don't have permission to delete this conversation"})
+		return
+	}
+
+	// Delete the conversation
+	if err := api.tracker.DeleteConversation(conversationId); err != nil {
+		log.Printf("Error deleting conversation: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete conversation"})
+		return
+	}
 
 	// Return success
 	c.Status(http.StatusNoContent)
@@ -84,10 +185,10 @@ func (api *ChatAPI) DeleteConversation(c *gin.Context) {
 
 // GetConversation gets a conversation by ID
 func (api *ChatAPI) GetConversation(c *gin.Context) {
-	// Get user token from header
-	userToken := c.GetHeader("user_token")
-	if userToken == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User token is required"})
+	// Validate user token
+	userToken, _, err := api.validateToken(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -98,26 +199,17 @@ func (api *ChatAPI) GetConversation(c *gin.Context) {
 		return
 	}
 
-	// In a real implementation, we would fetch the conversation from storage
-	// For now, return a mock conversation
-	conversation := ChatConversation{
-		Id:        conversationId,
-		UserToken: userToken,
-		Title:     "Mock Conversation",
-		Created:   time.Now().Add(-24 * time.Hour).UnixMilli(),
-		Updated:   time.Now().UnixMilli(),
-		Messages: []ChatMessage{
-			{
-				Role:      "user",
-				Content:   "Hello, I need help with my genetic data.",
-				Timestamp: time.Now().Add(-1 * time.Hour).UnixMilli(),
-			},
-			{
-				Role:      "assistant",
-				Content:   "I'd be happy to help! Please provide your genetic data.",
-				Timestamp: time.Now().Add(-59 * time.Minute).UnixMilli(),
-			},
-		},
+	// Fetch the conversation from storage
+	conversation, err := api.tracker.GetConversation(conversationId)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Conversation not found"})
+		return
+	}
+
+	// Verify ownership
+	if conversation.UserToken != userToken {
+		c.JSON(http.StatusForbidden, gin.H{"error": "You don't have permission to access this conversation"})
+		return
 	}
 
 	c.JSON(http.StatusOK, conversation)
@@ -125,10 +217,10 @@ func (api *ChatAPI) GetConversation(c *gin.Context) {
 
 // GetConversationMessages gets messages from a conversation
 func (api *ChatAPI) GetConversationMessages(c *gin.Context) {
-	// Get user token from header
-	userToken := c.GetHeader("user_token")
-	if userToken == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User token is required"})
+	// Validate user token
+	userToken, _, err := api.validateToken(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -139,19 +231,25 @@ func (api *ChatAPI) GetConversationMessages(c *gin.Context) {
 		return
 	}
 
-	// In a real implementation, we would fetch the messages from storage
-	// For now, return mock messages
-	messages := []ChatMessage{
-		{
-			Role:      "user",
-			Content:   "Hello, I need help with my genetic data.",
-			Timestamp: time.Now().Add(-1 * time.Hour).UnixMilli(),
-		},
-		{
-			Role:      "assistant",
-			Content:   "I'd be happy to help! Please provide your genetic data.",
-			Timestamp: time.Now().Add(-59 * time.Minute).UnixMilli(),
-		},
+	// Check if the conversation exists and belongs to this user
+	conversation, err := api.tracker.GetConversation(conversationId)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Conversation not found"})
+		return
+	}
+
+	// Verify ownership
+	if conversation.UserToken != userToken {
+		c.JSON(http.StatusForbidden, gin.H{"error": "You don't have permission to access this conversation"})
+		return
+	}
+
+	// Get messages for this conversation
+	messages, err := api.tracker.GetConversationMessages(conversationId)
+	if err != nil {
+		log.Printf("Error getting conversation messages: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get conversation messages"})
+		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{"messages": messages})
@@ -159,30 +257,19 @@ func (api *ChatAPI) GetConversationMessages(c *gin.Context) {
 
 // ListUserConversations lists conversations for a user
 func (api *ChatAPI) ListUserConversations(c *gin.Context) {
-	// Get user token from header
-	userToken := c.GetHeader("user_token")
-	if userToken == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User token is required"})
+	// Validate user token
+	userToken, _, err := api.validateToken(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 
-	// In a real implementation, we would fetch the user's conversations from storage
-	// For now, return mock conversations
-	conversations := []ChatConversation{
-		{
-			Id:        generateID("conv"),
-			UserToken: userToken,
-			Title:     "First Conversation",
-			Created:   time.Now().Add(-48 * time.Hour).UnixMilli(),
-			Updated:   time.Now().Add(-24 * time.Hour).UnixMilli(),
-		},
-		{
-			Id:        generateID("conv"),
-			UserToken: userToken,
-			Title:     "Second Conversation",
-			Created:   time.Now().Add(-24 * time.Hour).UnixMilli(),
-			Updated:   time.Now().UnixMilli(),
-		},
+	// Fetch the user's conversations from storage
+	conversations, err := api.tracker.ListUserConversations(userToken)
+	if err != nil {
+		log.Printf("Error listing user conversations: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list conversations"})
+		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{"conversations": conversations})
@@ -190,10 +277,10 @@ func (api *ChatAPI) ListUserConversations(c *gin.Context) {
 
 // SendConversationMessage sends a message to a conversation
 func (api *ChatAPI) SendConversationMessage(c *gin.Context) {
-	// Get user token from header
-	userToken := c.GetHeader("user_token")
-	if userToken == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User token is required"})
+	// Validate user token
+	userToken, _, err := api.validateToken(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -201,6 +288,19 @@ func (api *ChatAPI) SendConversationMessage(c *gin.Context) {
 	conversationId := c.Param("conversationId")
 	if conversationId == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Conversation ID is required"})
+		return
+	}
+
+	// Check if the conversation exists and belongs to this user
+	conversation, err := api.tracker.GetConversation(conversationId)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Conversation not found"})
+		return
+	}
+
+	// Verify ownership
+	if conversation.UserToken != userToken {
+		c.JSON(http.StatusForbidden, gin.H{"error": "You don't have permission to access this conversation"})
 		return
 	}
 
@@ -218,38 +318,77 @@ func (api *ChatAPI) SendConversationMessage(c *gin.Context) {
 	// Create context with timeout
 	ctx := c.Request.Context()
 
-	// In a real implementation, we would fetch the conversation history
-	// and pass it to the chat service
-	// For now, just send the message without history
-	response, err := api.chatService.SendMessage(ctx, req.Message, nil)
+	// Get the conversation history for context
+	messages, err := api.tracker.GetConversationMessages(conversationId)
 	if err != nil {
+		log.Printf("Error getting conversation history: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get conversation history"})
+		return
+	}
+
+	// Convert messages to chat flow format
+	var history []Message
+	for _, msg := range messages {
+		history = append(history, Message{
+			Role:      msg.Role,
+			Content:   msg.Content,
+			Timestamp: msg.Timestamp,
+		})
+	}
+
+	// Call the Genkit chat flow with the new message and history
+	chatInput := &ChatInput{
+		Message: req.Message,
+		History: history,
+	}
+
+	result, err := api.genkitClient.ChatFlow()
+	if err != nil {
+		log.Printf("Error initializing chat flow: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to initialize chat"})
+		return
+	}
+
+	// Execute the flow
+	flowFunc, ok := result.(func(context.Context, *ChatInput) (*ChatResponse, error))
+	if !ok {
+		log.Printf("Chat flow has unexpected type")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Chat flow error"})
+		return
+	}
+
+	response, err := flowFunc(ctx, chatInput)
+	if err != nil {
+		log.Printf("Error executing chat flow: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process chat: " + err.Error()})
 		return
 	}
 
-	// Create a message from the response
-	message := ChatMessage{
+	// Now that we have a successful response, save both messages to the conversation
+	userMessage := ChatMessage{
+		Role:      "user",
+		Content:   req.Message,
+		Timestamp: time.Now().UnixMilli(),
+	}
+
+	if err := api.tracker.AddMessage(conversationId, &userMessage); err != nil {
+		log.Printf("Error adding user message: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save message"})
+		return
+	}
+
+	assistantMessage := ChatMessage{
 		Role:      "assistant",
 		Content:   response.Content,
 		Timestamp: time.Now().UnixMilli(),
 	}
 
-	// Return the response
-	c.JSON(http.StatusOK, gin.H{"message": message})
-}
-
-// Helper function to generate an ID with a prefix
-func generateID(prefix string) string {
-	return prefix + "-" + time.Now().Format("20060102150405") + "-" + randomString(8)
-}
-
-// Helper function to generate a random string
-func randomString(length int) string {
-	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-	result := make([]byte, length)
-	for i := range result {
-		result[i] = charset[time.Now().UnixNano()%int64(len(charset))]
-		time.Sleep(1 * time.Nanosecond)
+	if err := api.tracker.AddMessage(conversationId, &assistantMessage); err != nil {
+		log.Printf("Error adding assistant message: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save response"})
+		return
 	}
-	return string(result)
+
+	// Return the response
+	c.JSON(http.StatusOK, gin.H{"message": assistantMessage})
 }

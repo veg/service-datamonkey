@@ -11,6 +11,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -209,6 +210,13 @@ func initAPIHandlers(scheduler sw.SchedulerInterface, datasetTracker sw.DatasetT
 	// TODO: change this default so that upload files and log/ results are stored in a different directory
 	basePath := getEnvWithDefault("HYPHY_BASE_PATH", "/data/uploads")
 
+	// Initialize Genkit client for chat functionality
+	modelConfig := sw.GetModelConfig()
+	genkitClient, err := sw.NewGenkitClient(context.Background(), modelConfig)
+	if err != nil {
+		log.Fatalf("Failed to initialize Genkit client: %v", err)
+	}
+
 	return sw.ApiHandleFunctions{
 		ABSRELAPI:          *sw.NewABSRELAPI(basePath, hyPhyPath, scheduler, datasetTracker),
 		FELAPI:             *sw.NewFELAPI(basePath, hyPhyPath, scheduler, datasetTracker),
@@ -226,7 +234,7 @@ func initAPIHandlers(scheduler sw.SchedulerInterface, datasetTracker sw.DatasetT
 		SLATKINAPI:         *sw.NewSLATKINAPI(basePath, hyPhyPath, scheduler, datasetTracker),
 		FileUploadAndQCAPI: *sw.NewFileUploadAndQCAPI(datasetTracker),
 		HealthAPI:          sw.HealthAPI{Scheduler: scheduler},
-		ChatAPI:            *sw.NewChatAPI(conversationTracker, tokenService),
+		ChatAPI:            *sw.NewChatAPI(genkitClient, conversationTracker, tokenService),
 	}
 }
 
