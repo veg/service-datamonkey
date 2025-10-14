@@ -263,6 +263,9 @@ func initAPIHandlers(scheduler sw.SchedulerInterface, datasetTracker sw.DatasetT
 	// Create JobsAPI
 	jobsAPI := sw.NewJobsAPI(jobTracker, tokenValidator)
 
+	// Create MethodsAPI
+	methodsAPI := sw.NewMethodsAPIService()
+
 	return sw.ApiHandleFunctions{
 		ABSRELAPI:          *absrelAPI,
 		FELAPI:             *felAPI,
@@ -281,6 +284,7 @@ func initAPIHandlers(scheduler sw.SchedulerInterface, datasetTracker sw.DatasetT
 		FileUploadAndQCAPI: *sw.NewFileUploadAndQCAPI(datasetTracker),
 		HealthAPI:          sw.HealthAPI{Scheduler: scheduler},
 		JobsAPI:            *jobsAPI,
+		MethodsAPI:         methodsAPI,
 		ChatAPI:            *sw.NewChatAPI(genkitClient, conversationTracker, tokenService),
 	}
 }
