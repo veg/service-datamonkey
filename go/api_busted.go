@@ -25,9 +25,9 @@ type BUSTEDAPI struct {
 }
 
 // NewBUSTEDAPI creates a new BUSTEDAPI instance
-func NewBUSTEDAPI(basePath, hyPhyPath string, scheduler SchedulerInterface, datasetTracker DatasetTracker) *BUSTEDAPI {
+func NewBUSTEDAPI(basePath, hyPhyPath string, scheduler SchedulerInterface, datasetTracker DatasetTracker, jobTracker JobTracker) *BUSTEDAPI {
 	return &BUSTEDAPI{
-		HyPhyBaseAPI: NewHyPhyBaseAPI(basePath, hyPhyPath, scheduler, datasetTracker),
+		HyPhyBaseAPI: NewHyPhyBaseAPI(basePath, hyPhyPath, scheduler, datasetTracker, jobTracker),
 	}
 }
 
@@ -67,11 +67,11 @@ func (api *BUSTEDAPI) formatBUSTEDJobResults(jobId string, rawResults json.RawMe
 	// Log the parsed result structure
 	log.Printf("Parsed BustedResult: %+v", bustedResult)
 
-	// Create the response map
+	// Return the BustedResult directly as a map to match the API spec
+	// The spec expects: {"job_id": "...", "result": {...}}
 	resultMap := map[string]interface{}{
-		"jobId":   jobId,
-		"status":  JobStatusComplete,
-		"results": bustedResult.Result,
+		"job_id": jobId,
+		"result": bustedResult.Result,
 	}
 
 	return resultMap, nil
@@ -172,10 +172,75 @@ func (api *BUSTEDAPI) GetBUSTEDJobById(c *gin.Context) {
 
 // StartBUSTEDJob starts a new BUSTED analysis job
 func (api *BUSTEDAPI) StartBUSTEDJob(c *gin.Context) {
+	// Validate user token if token validator is available
+	if api.UserTokenValidator != nil {
+		// Just validate the token exists and is valid
+		_, err := api.UserTokenValidator.ValidateUserToken(c)
+		if err != nil {
+			if err.Error() == "missing user token" || strings.Contains(err.Error(), "invalid user token") {
+				c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized - " + err.Error()})
+				return
+			}
+
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Authentication error: " + err.Error()})
+			return
+		}
+	}
+
 	var request BustedRequest
 	if err := c.BindJSON(&request); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to parse job configuration"})
 		return
+	}
+
+	// Extract the user token from the request or from the header/query parameter
+	if request.UserToken == "" && api.UserTokenValidator != nil {
+		// Try to get token from query parameter first
+		userToken := c.Query("user_token")
+
+		// If not in query, try header
+		if userToken == "" {
+			userToken = c.GetHeader("user_token")
+		}
+
+		// Set the token in the request
+		if userToken != "" {
+			request.UserToken = userToken
+		}
+	}
+
+	// Check alignment dataset access before starting the job
+	if request.Alignment != "" && api.UserTokenValidator != nil && api.DatasetTracker != nil {
+		_, err := api.UserTokenValidator.CheckDatasetAccess(c, request.Alignment, api.DatasetTracker)
+		if err != nil {
+			if strings.Contains(err.Error(), "missing user token") || strings.Contains(err.Error(), "invalid user token") {
+				c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized - " + err.Error()})
+				return
+			}
+			if strings.Contains(err.Error(), "not found") {
+				c.JSON(http.StatusNotFound, gin.H{"error": "Alignment dataset not found"})
+				return
+			}
+			c.JSON(http.StatusForbidden, gin.H{"error": "Forbidden - You don't have access to this alignment"})
+			return
+		}
+	}
+
+	// Check tree dataset access before starting the job
+	if request.Tree != "" && api.UserTokenValidator != nil && api.DatasetTracker != nil {
+		_, err := api.UserTokenValidator.CheckDatasetAccess(c, request.Tree, api.DatasetTracker)
+		if err != nil {
+			if strings.Contains(err.Error(), "missing user token") || strings.Contains(err.Error(), "invalid user token") {
+				c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized - " + err.Error()})
+				return
+			}
+			if strings.Contains(err.Error(), "not found") {
+				c.JSON(http.StatusNotFound, gin.H{"error": "Tree dataset not found"})
+				return
+			}
+			c.JSON(http.StatusForbidden, gin.H{"error": "Forbidden - You don't have access to this tree"})
+			return
+		}
 	}
 
 	adapted, err := AdaptRequest(&request)

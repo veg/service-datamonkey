@@ -25,9 +25,9 @@ type FADEAPI struct {
 }
 
 // NewFADEAPI creates a new FADEAPI instance
-func NewFADEAPI(basePath, hyPhyPath string, scheduler SchedulerInterface, datasetTracker DatasetTracker) *FADEAPI {
+func NewFADEAPI(basePath, hyPhyPath string, scheduler SchedulerInterface, datasetTracker DatasetTracker, jobTracker JobTracker) *FADEAPI {
 	return &FADEAPI{
-		HyPhyBaseAPI: NewHyPhyBaseAPI(basePath, hyPhyPath, scheduler, datasetTracker),
+		HyPhyBaseAPI: NewHyPhyBaseAPI(basePath, hyPhyPath, scheduler, datasetTracker, jobTracker),
 	}
 }
 
@@ -61,17 +61,16 @@ func (api *FADEAPI) formatFADEJobResults(jobId string, rawResults json.RawMessag
 		} else {
 			log.Printf("Results as map: %+v", resultAsMap)
 		}
-		return nil, fmt.Errorf("failed to parse results: %v", err)
 	}
 
 	// Log the parsed result structure
 	log.Printf("Parsed FadeResult: %+v", fadeResult)
 
-	// Create the response map
+	// Return the FadeResult directly as a map to match the API spec
+	// The spec expects: {"job_id": "...", "result": {...}}
 	resultMap := map[string]interface{}{
-		"jobId":   jobId,
-		"status":  JobStatusComplete,
-		"results": rawResults,
+		"job_id": jobId,
+		"result": fadeResult.Result,
 	}
 
 	return resultMap, nil
@@ -122,10 +121,68 @@ func (api *FADEAPI) GetFadeResults(c *gin.Context) {
 
 // StartFadeJob starts a new FADE analysis job
 func (api *FADEAPI) StartFadeJob(c *gin.Context) {
+	// Validate user token if token validator is available
+	if api.UserTokenValidator != nil {
+		_, err := api.UserTokenValidator.ValidateUserToken(c)
+		if err != nil {
+			if err.Error() == "missing user token" || strings.Contains(err.Error(), "invalid user token") {
+				c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized - " + err.Error()})
+				return
+			}
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Authentication error: " + err.Error()})
+			return
+		}
+	}
+
 	var request FadeRequest
 	if err := c.BindJSON(&request); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to parse job configuration"})
 		return
+	}
+
+	// Extract the user token from the request or from the header/query parameter
+	if request.UserToken == "" && api.UserTokenValidator != nil {
+		userToken := c.Query("user_token")
+		if userToken == "" {
+			userToken = c.GetHeader("user_token")
+		}
+		if userToken != "" {
+			request.UserToken = userToken
+		}
+	}
+
+	// Check alignment dataset access
+	if request.Alignment != "" && api.UserTokenValidator != nil && api.DatasetTracker != nil {
+		_, err := api.UserTokenValidator.CheckDatasetAccess(c, request.Alignment, api.DatasetTracker)
+		if err != nil {
+			if strings.Contains(err.Error(), "missing user token") || strings.Contains(err.Error(), "invalid user token") {
+				c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized - " + err.Error()})
+				return
+			}
+			if strings.Contains(err.Error(), "not found") {
+				c.JSON(http.StatusNotFound, gin.H{"error": "Alignment dataset not found"})
+				return
+			}
+			c.JSON(http.StatusForbidden, gin.H{"error": "Forbidden - You don't have access to this alignment"})
+			return
+		}
+	}
+
+	// Check tree dataset access
+	if request.Tree != "" && api.UserTokenValidator != nil && api.DatasetTracker != nil {
+		_, err := api.UserTokenValidator.CheckDatasetAccess(c, request.Tree, api.DatasetTracker)
+		if err != nil {
+			if strings.Contains(err.Error(), "missing user token") || strings.Contains(err.Error(), "invalid user token") {
+				c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized - " + err.Error()})
+				return
+			}
+			if strings.Contains(err.Error(), "not found") {
+				c.JSON(http.StatusNotFound, gin.H{"error": "Tree dataset not found"})
+				return
+			}
+			c.JSON(http.StatusForbidden, gin.H{"error": "Forbidden - You don't have access to this tree"})
+			return
+		}
 	}
 
 	adapted, err := AdaptRequest(&request)

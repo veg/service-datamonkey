@@ -25,9 +25,9 @@ type SLACAPI struct {
 }
 
 // NewSLACAPI creates a new SLACAPI instance
-func NewSLACAPI(basePath, hyPhyPath string, scheduler SchedulerInterface, datasetTracker DatasetTracker) *SLACAPI {
+func NewSLACAPI(basePath, hyPhyPath string, scheduler SchedulerInterface, datasetTracker DatasetTracker, jobTracker JobTracker) *SLACAPI {
 	return &SLACAPI{
-		HyPhyBaseAPI: NewHyPhyBaseAPI(basePath, hyPhyPath, scheduler, datasetTracker),
+		HyPhyBaseAPI: NewHyPhyBaseAPI(basePath, hyPhyPath, scheduler, datasetTracker, jobTracker),
 	}
 }
 
@@ -67,11 +67,11 @@ func (api *SLACAPI) formatSLACJobResults(jobId string, rawResults json.RawMessag
 	// Log the parsed result structure
 	log.Printf("Parsed SlacResult: %+v", slacResult)
 
-	// Create the response map
+	// Return the SlacResult directly as a map to match the API spec
+	// The spec expects: {"job_id": "...", "result": {...}}
 	resultMap := map[string]interface{}{
-		"jobId":   jobId,
-		"status":  JobStatusComplete,
-		"results": slacResult.Result,
+		"job_id": jobId,
+		"result": slacResult.Result,
 	}
 
 	return resultMap, nil
@@ -79,6 +79,21 @@ func (api *SLACAPI) formatSLACJobResults(jobId string, rawResults json.RawMessag
 
 // GetSLACJob retrieves the status and results of a SLAC job
 func (api *SLACAPI) GetSLACJob(c *gin.Context) {
+	// Validate user token if token validator is available
+	if api.UserTokenValidator != nil {
+		// Just validate the token exists and is valid
+		_, err := api.UserTokenValidator.ValidateUserToken(c)
+		if err != nil {
+			if err.Error() == "missing user token" || strings.Contains(err.Error(), "invalid user token") {
+				c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized - " + err.Error()})
+				return
+			}
+
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Authentication error: " + err.Error()})
+			return
+		}
+	}
+
 	var request SlacRequest
 	if err := c.BindJSON(&request); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to parse job configuration"})
@@ -107,6 +122,19 @@ func (api *SLACAPI) GetSLACJob(c *gin.Context) {
 	// Get the job ID from the result map
 	jobId := resultMap["jobId"].(string)
 
+	// Check job access now that we have the job ID
+	if api.UserTokenValidator != nil {
+		_, err := api.UserTokenValidator.CheckJobAccess(c, jobId, api.JobTracker)
+		if err != nil {
+			if strings.Contains(err.Error(), "missing user token") || strings.Contains(err.Error(), "invalid user token") {
+				c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized - " + err.Error()})
+				return
+			}
+			c.JSON(http.StatusForbidden, gin.H{"error": "Forbidden - You don't have access to this job"})
+			return
+		}
+	}
+
 	// Get the raw results
 	rawResults := resultMap["results"].(json.RawMessage)
 
@@ -126,7 +154,24 @@ func (api *SLACAPI) GetSLACJobById(c *gin.Context) {
 	jobId := c.Query("job_id")
 	if jobId == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing job_id parameter"})
-		return
+	}
+
+	// Validate user token and check job access if token validator is available
+	if api.UserTokenValidator != nil {
+		// Validate the token and check job access
+		_, err := api.UserTokenValidator.CheckJobAccess(c, jobId, api.JobTracker)
+		if err != nil {
+			if err.Error() == "missing user token" || strings.Contains(err.Error(), "invalid user token") {
+				c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized - " + err.Error()})
+				return
+			}
+			
+			// For other errors, return forbidden
+			c.JSON(http.StatusForbidden, gin.H{"error": "Forbidden - You don't have access to this job"})
+			return
+		}
+		
+		log.Printf("User token validated successfully for job %s", jobId)
 	}
 
 	// Use the shared helper to get job results
@@ -172,10 +217,75 @@ func (api *SLACAPI) GetSLACJobById(c *gin.Context) {
 
 // StartSLACJob starts a new SLAC analysis job
 func (api *SLACAPI) StartSLACJob(c *gin.Context) {
+	// Validate user token if token validator is available
+	if api.UserTokenValidator != nil {
+		// Just validate the token exists and is valid
+		_, err := api.UserTokenValidator.ValidateUserToken(c)
+		if err != nil {
+			if err.Error() == "missing user token" || strings.Contains(err.Error(), "invalid user token") {
+				c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized - " + err.Error()})
+				return
+			}
+
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Authentication error: " + err.Error()})
+			return
+		}
+	}
+
 	var request SlacRequest
 	if err := c.BindJSON(&request); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to parse job configuration"})
 		return
+	}
+
+	// Extract the user token from the request or from the header/query parameter
+	if request.UserToken == "" && api.UserTokenValidator != nil {
+		// Try to get token from query parameter first
+		userToken := c.Query("user_token")
+
+		// If not in query, try header
+		if userToken == "" {
+			userToken = c.GetHeader("user_token")
+		}
+
+		// Set the token in the request
+		if userToken != "" {
+			request.UserToken = userToken
+		}
+	}
+
+	// Check alignment dataset access before starting the job
+	if request.Alignment != "" && api.UserTokenValidator != nil && api.DatasetTracker != nil {
+		_, err := api.UserTokenValidator.CheckDatasetAccess(c, request.Alignment, api.DatasetTracker)
+		if err != nil {
+			if strings.Contains(err.Error(), "missing user token") || strings.Contains(err.Error(), "invalid user token") {
+				c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized - " + err.Error()})
+				return
+			}
+			if strings.Contains(err.Error(), "not found") {
+				c.JSON(http.StatusNotFound, gin.H{"error": "Alignment dataset not found"})
+				return
+			}
+			c.JSON(http.StatusForbidden, gin.H{"error": "Forbidden - You don't have access to this alignment"})
+			return
+		}
+	}
+
+	// Check tree dataset access before starting the job
+	if request.Tree != "" && api.UserTokenValidator != nil && api.DatasetTracker != nil {
+		_, err := api.UserTokenValidator.CheckDatasetAccess(c, request.Tree, api.DatasetTracker)
+		if err != nil {
+			if strings.Contains(err.Error(), "missing user token") || strings.Contains(err.Error(), "invalid user token") {
+				c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized - " + err.Error()})
+				return
+			}
+			if strings.Contains(err.Error(), "not found") {
+				c.JSON(http.StatusNotFound, gin.H{"error": "Tree dataset not found"})
+				return
+			}
+			c.JSON(http.StatusForbidden, gin.H{"error": "Forbidden - You don't have access to this tree"})
+			return
+		}
 	}
 
 	adapted, err := AdaptRequest(&request)

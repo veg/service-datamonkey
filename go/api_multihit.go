@@ -25,9 +25,9 @@ type MULTIHITAPI struct {
 }
 
 // NewMULTIHITAPI creates a new MULTIHITAPI instance
-func NewMULTIHITAPI(basePath, hyPhyPath string, scheduler SchedulerInterface, datasetTracker DatasetTracker) *MULTIHITAPI {
+func NewMULTIHITAPI(basePath, hyPhyPath string, scheduler SchedulerInterface, datasetTracker DatasetTracker, jobTracker JobTracker) *MULTIHITAPI {
 	return &MULTIHITAPI{
-		HyPhyBaseAPI: NewHyPhyBaseAPI(basePath, hyPhyPath, scheduler, datasetTracker),
+		HyPhyBaseAPI: NewHyPhyBaseAPI(basePath, hyPhyPath, scheduler, datasetTracker, jobTracker),
 	}
 }
 
@@ -67,11 +67,12 @@ func (api *MULTIHITAPI) formatMULTIHITJobResults(jobId string, rawResults json.R
 	// Log the parsed result structure
 	log.Printf("Parsed MultihitResult: %+v", multihitResult)
 
-	// Create the response map
+	// Return the result directly as a map to match the API spec
+	// The spec expects: {"job_id": "...", "result": {...}}
 	resultMap := map[string]interface{}{
-		"jobId":   jobId,
-		"status":  JobStatusComplete,
-		"results": multihitResult.Result,
+		"job_id": jobId,
+		
+		"result": multihitResult.Result,
 	}
 
 	return resultMap, nil
@@ -172,10 +173,51 @@ func (api *MULTIHITAPI) GetMULTIHITJobById(c *gin.Context) {
 
 // StartMULTIHITJob starts a new MULTI-HIT analysis job
 func (api *MULTIHITAPI) StartMULTIHITJob(c *gin.Context) {
+	// Validate user token if token validator is available
+	if api.UserTokenValidator != nil {
+		_, err := api.UserTokenValidator.ValidateUserToken(c)
+		if err != nil {
+			if err.Error() == "missing user token" || strings.Contains(err.Error(), "invalid user token") {
+				c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized - " + err.Error()})
+				return
+			}
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Authentication error: " + err.Error()})
+			return
+		}
+	}
+
 	var request MultihitRequest
 	if err := c.BindJSON(&request); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to parse job configuration"})
 		return
+	}
+
+	// Extract the user token from the request or from the header/query parameter
+	if request.UserToken == "" && api.UserTokenValidator != nil {
+		userToken := c.Query("user_token")
+		if userToken == "" {
+			userToken = c.GetHeader("user_token")
+		}
+		if userToken != "" {
+			request.UserToken = userToken
+		}
+	}
+
+	// Check alignment dataset access (MULTIHIT only has alignment, no tree)
+	if request.Alignment != "" && api.UserTokenValidator != nil && api.DatasetTracker != nil {
+		_, err := api.UserTokenValidator.CheckDatasetAccess(c, request.Alignment, api.DatasetTracker)
+		if err != nil {
+			if strings.Contains(err.Error(), "missing user token") || strings.Contains(err.Error(), "invalid user token") {
+				c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized - " + err.Error()})
+				return
+			}
+			if strings.Contains(err.Error(), "not found") {
+				c.JSON(http.StatusNotFound, gin.H{"error": "Alignment dataset not found"})
+				return
+			}
+			c.JSON(http.StatusForbidden, gin.H{"error": "Forbidden - You don't have access to this alignment"})
+			return
+		}
 	}
 
 	adapted, err := AdaptRequest(&request)
