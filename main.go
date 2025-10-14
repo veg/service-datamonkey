@@ -204,7 +204,7 @@ func initTokenService() *sw.TokenService {
 }
 
 // initAPIHandlers initializes the API handlers with the given components
-func initAPIHandlers(scheduler sw.SchedulerInterface, datasetTracker sw.DatasetTracker, conversationTracker sw.ConversationTracker, tokenService *sw.TokenService) sw.ApiHandleFunctions {
+func initAPIHandlers(scheduler sw.SchedulerInterface, datasetTracker sw.DatasetTracker, jobTracker sw.JobTracker, conversationTracker sw.ConversationTracker, tokenService *sw.TokenService) sw.ApiHandleFunctions {
 	// Get HyPhy executable path from environment or use default
 	hyPhyPath := getEnvWithDefault("HYPHY_PATH", "hyphy")
 	// TODO: change this default so that upload files and log/ results are stored in a different directory
@@ -216,22 +216,65 @@ func initAPIHandlers(scheduler sw.SchedulerInterface, datasetTracker sw.DatasetT
 	if err != nil {
 		log.Fatalf("Failed to initialize Genkit client: %v", err)
 	}
+	
+	// Create a user token validator if token service is available
+	var tokenValidator *sw.UserTokenValidator
+	if tokenService != nil {
+		tokenValidator = sw.NewUserTokenValidator(tokenService)
+		log.Println("User token validator initialized")
+	} else {
+		log.Println("Token service not available, user token validation will be disabled")
+	}
+
+	// Create API handlers
+	absrelAPI := sw.NewABSRELAPI(basePath, hyPhyPath, scheduler, datasetTracker, jobTracker)
+	felAPI := sw.NewFELAPI(basePath, hyPhyPath, scheduler, datasetTracker, jobTracker)
+	bustedAPI := sw.NewBUSTEDAPI(basePath, hyPhyPath, scheduler, datasetTracker, jobTracker)
+	slacAPI := sw.NewSLACAPI(basePath, hyPhyPath, scheduler, datasetTracker, jobTracker)
+	multihitAPI := sw.NewMULTIHITAPI(basePath, hyPhyPath, scheduler, datasetTracker, jobTracker)
+	gardAPI := sw.NewGARDAPI(basePath, hyPhyPath, scheduler, datasetTracker, jobTracker)
+	memeAPI := sw.NewMEMEAPI(basePath, hyPhyPath, scheduler, datasetTracker, jobTracker)
+	fubarAPI := sw.NewFUBARAPI(basePath, hyPhyPath, scheduler, datasetTracker, jobTracker)
+	contrastfelAPI := sw.NewCONTRASTFELAPI(basePath, hyPhyPath, scheduler, datasetTracker, jobTracker)
+	relaxAPI := sw.NewRELAXAPI(basePath, hyPhyPath, scheduler, datasetTracker, jobTracker)
+	bgmAPI := sw.NewBGMAPI(basePath, hyPhyPath, scheduler, datasetTracker, jobTracker)
+	nrmAPI := sw.NewNRMAPI(basePath, hyPhyPath, scheduler, datasetTracker, jobTracker)
+	fadeAPI := sw.NewFADEAPI(basePath, hyPhyPath, scheduler, datasetTracker, jobTracker)
+	slatkinAPI := sw.NewSLATKINAPI(basePath, hyPhyPath, scheduler, datasetTracker, jobTracker)
+	
+	// Set the UserTokenValidator for each API
+	if tokenValidator != nil {
+		absrelAPI.HyPhyBaseAPI.UserTokenValidator = tokenValidator
+		felAPI.HyPhyBaseAPI.UserTokenValidator = tokenValidator
+		bustedAPI.HyPhyBaseAPI.UserTokenValidator = tokenValidator
+		slacAPI.HyPhyBaseAPI.UserTokenValidator = tokenValidator
+		multihitAPI.HyPhyBaseAPI.UserTokenValidator = tokenValidator
+		gardAPI.HyPhyBaseAPI.UserTokenValidator = tokenValidator
+		memeAPI.HyPhyBaseAPI.UserTokenValidator = tokenValidator
+		fubarAPI.HyPhyBaseAPI.UserTokenValidator = tokenValidator
+		contrastfelAPI.HyPhyBaseAPI.UserTokenValidator = tokenValidator
+		relaxAPI.HyPhyBaseAPI.UserTokenValidator = tokenValidator
+		bgmAPI.HyPhyBaseAPI.UserTokenValidator = tokenValidator
+		nrmAPI.HyPhyBaseAPI.UserTokenValidator = tokenValidator
+		fadeAPI.HyPhyBaseAPI.UserTokenValidator = tokenValidator
+		slatkinAPI.HyPhyBaseAPI.UserTokenValidator = tokenValidator
+	}
 
 	return sw.ApiHandleFunctions{
-		ABSRELAPI:          *sw.NewABSRELAPI(basePath, hyPhyPath, scheduler, datasetTracker),
-		FELAPI:             *sw.NewFELAPI(basePath, hyPhyPath, scheduler, datasetTracker),
-		BUSTEDAPI:          *sw.NewBUSTEDAPI(basePath, hyPhyPath, scheduler, datasetTracker),
-		SLACAPI:            *sw.NewSLACAPI(basePath, hyPhyPath, scheduler, datasetTracker),
-		MULTIHITAPI:        *sw.NewMULTIHITAPI(basePath, hyPhyPath, scheduler, datasetTracker),
-		GARDAPI:            *sw.NewGARDAPI(basePath, hyPhyPath, scheduler, datasetTracker),
-		MEMEAPI:            *sw.NewMEMEAPI(basePath, hyPhyPath, scheduler, datasetTracker),
-		FUBARAPI:           *sw.NewFUBARAPI(basePath, hyPhyPath, scheduler, datasetTracker),
-		CONTRASTFELAPI:     *sw.NewCONTRASTFELAPI(basePath, hyPhyPath, scheduler, datasetTracker),
-		RELAXAPI:           *sw.NewRELAXAPI(basePath, hyPhyPath, scheduler, datasetTracker),
-		BGMAPI:             *sw.NewBGMAPI(basePath, hyPhyPath, scheduler, datasetTracker),
-		NRMAPI:             *sw.NewNRMAPI(basePath, hyPhyPath, scheduler, datasetTracker),
-		FADEAPI:            *sw.NewFADEAPI(basePath, hyPhyPath, scheduler, datasetTracker),
-		SLATKINAPI:         *sw.NewSLATKINAPI(basePath, hyPhyPath, scheduler, datasetTracker),
+		ABSRELAPI:          *absrelAPI,
+		FELAPI:             *felAPI,
+		BUSTEDAPI:          *bustedAPI,
+		SLACAPI:            *slacAPI,
+		MULTIHITAPI:        *multihitAPI,
+		GARDAPI:            *gardAPI,
+		MEMEAPI:            *memeAPI,
+		FUBARAPI:           *fubarAPI,
+		CONTRASTFELAPI:     *contrastfelAPI,
+		RELAXAPI:           *relaxAPI,
+		BGMAPI:             *bgmAPI,
+		NRMAPI:             *nrmAPI,
+		FADEAPI:            *fadeAPI,
+		SLATKINAPI:         *slatkinAPI,
 		FileUploadAndQCAPI: *sw.NewFileUploadAndQCAPI(datasetTracker),
 		HealthAPI:          sw.HealthAPI{Scheduler: scheduler},
 		ChatAPI:            *sw.NewChatAPI(genkitClient, conversationTracker, tokenService),
@@ -256,7 +299,7 @@ func main() {
 	}
 
 	// Initialize API handlers
-	routes := initAPIHandlers(scheduler, datasetTracker, conversationTracker, tokenService)
+	routes := initAPIHandlers(scheduler, datasetTracker, jobTracker, conversationTracker, tokenService)
 
 	// Start server
 	port := getEnvWithDefault("SERVICE_DATAMONKEY_PORT", "9300")

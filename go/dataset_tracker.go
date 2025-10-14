@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"sync"
+	"time"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -35,6 +36,24 @@ type DatasetTracker interface {
 	// TODO: some day if this isnt in a typical file-based storage system, we should change this name
 	// for now i figure even if the tracker uses a db, it still needs to know where the datasets are stored
 	GetDatasetDir() string
+
+	// StoreWithUser stores a dataset with user ownership
+	StoreWithUser(dataset DatasetInterface, userID string) error
+
+	// GetByUser retrieves a dataset by ID and verifies user ownership
+	GetByUser(id string, userID string) (DatasetInterface, error)
+
+	// ListByUser returns all datasets owned by a specific user
+	ListByUser(userID string) ([]DatasetInterface, error)
+
+	// DeleteByUser removes a dataset only if owned by the user
+	DeleteByUser(id string, userID string) error
+
+	// UpdateByUser updates a dataset only if owned by the user
+	UpdateByUser(id string, userID string, updates map[string]interface{}) error
+
+	// GetOwner retrieves the user ID that owns a dataset
+	GetOwner(id string) (string, error)
 }
 
 // FileDatasetTracker implements DatasetTracker using a file-based storage
@@ -290,15 +309,47 @@ func (t *FileDatasetTracker) Update(id string, updates map[string]interface{}) e
 	return nil
 }
 
-// DeleteAll completely removes the tracker file
+// StoreWithUser stores a dataset with user ownership (not supported for file tracker)
+func (t *FileDatasetTracker) StoreWithUser(dataset DatasetInterface, userID string) error {
+	// File tracker doesn't support user tracking, just store normally
+	return t.Store(dataset)
+}
+
+// GetByUser retrieves a dataset by ID (not supported for file tracker)
+func (t *FileDatasetTracker) GetByUser(id string, userID string) (DatasetInterface, error) {
+	// File tracker doesn't support user tracking, just get normally
+	return t.Get(id)
+}
+
+// ListByUser returns datasets (not supported for file tracker)
+func (t *FileDatasetTracker) ListByUser(userID string) ([]DatasetInterface, error) {
+	// File tracker doesn't support user tracking, return all
+	return t.List()
+}
+
+// DeleteByUser removes a dataset (not supported for file tracker)
+func (t *FileDatasetTracker) DeleteByUser(id string, userID string) error {
+	// File tracker doesn't support user tracking, just delete
+	return t.Delete(id)
+}
+
+// UpdateByUser updates a dataset (not supported for file tracker)
+func (t *FileDatasetTracker) UpdateByUser(id string, userID string, updates map[string]interface{}) error {
+	// File tracker doesn't support user tracking, just update
+	return t.Update(id, updates)
+}
+
+// GetOwner retrieves the user ID (not supported for file tracker)
+func (t *FileDatasetTracker) GetOwner(id string) (string, error) {
+	return "", fmt.Errorf("user tracking not supported for file-based dataset tracker")
+}
+
+// DeleteAll completely removes all datasets from the tracker
 func (t *FileDatasetTracker) DeleteAll() error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
-	if err := os.Remove(t.filePath); err != nil && !os.IsNotExist(err) {
-		return fmt.Errorf("failed to remove tracker file: %v", err)
-	}
-	return nil
+	return os.Remove(t.filePath)
 }
 
 // readDatasets reads all datasets from the file
@@ -355,16 +406,23 @@ func NewSQLiteDatasetTracker(dbPath string, dataDir string) (*SQLiteDatasetTrack
 		metadata_created DATETIME NOT NULL,
 		metadata_updated DATETIME NOT NULL,
 		content_hash TEXT NOT NULL,
-		data_json TEXT NOT NULL
+		data_json TEXT NOT NULL,
+		user_id TEXT
 	);
 	CREATE INDEX IF NOT EXISTS idx_datasets_type ON datasets(metadata_type);
 	CREATE INDEX IF NOT EXISTS idx_datasets_created ON datasets(metadata_created);
+	CREATE INDEX IF NOT EXISTS idx_datasets_user_id ON datasets(user_id);
 	`
 
 	if _, err := db.Exec(createTableSQL); err != nil {
 		db.Close()
 		return nil, fmt.Errorf("failed to create table: %v", err)
 	}
+
+	// Add user_id column if it doesn't exist (for existing databases)
+	alterTableSQL := `ALTER TABLE datasets ADD COLUMN user_id TEXT`
+	// Ignore error if column already exists
+	db.Exec(alterTableSQL)
 
 	return &SQLiteDatasetTracker{
 		db:      db,
@@ -548,6 +606,158 @@ func (t *SQLiteDatasetTracker) Update(id string, updates map[string]interface{})
 	}
 
 	return nil
+}
+
+// StoreWithUser stores a dataset with user ownership
+func (t *SQLiteDatasetTracker) StoreWithUser(dataset DatasetInterface, userID string) error {
+	// First store the dataset normally
+	if err := t.Store(dataset); err != nil {
+		return err
+	}
+
+	// Then update the user_id
+	query := `UPDATE datasets SET user_id = ? WHERE id = ?`
+	_, err := t.db.Exec(query, sql.NullString{String: userID, Valid: userID != ""}, dataset.GetId())
+	if err != nil {
+		return fmt.Errorf("failed to set dataset owner: %v", err)
+	}
+
+	return nil
+}
+
+// GetByUser retrieves a dataset by ID and verifies user ownership
+func (t *SQLiteDatasetTracker) GetByUser(id string, userID string) (DatasetInterface, error) {
+	// First check ownership
+	query := `SELECT user_id FROM datasets WHERE id = ?`
+	var ownerID sql.NullString
+	err := t.db.QueryRow(query, id).Scan(&ownerID)
+	
+	if err == sql.ErrNoRows {
+		return nil, fmt.Errorf("dataset not found")
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to check dataset ownership: %v", err)
+	}
+
+	// Check if user owns the dataset (allow if no owner set - public dataset)
+	if ownerID.Valid && ownerID.String != "" && ownerID.String != userID {
+		return nil, fmt.Errorf("user does not have access to this dataset")
+	}
+
+	// Get the dataset
+	return t.Get(id)
+}
+
+// ListByUser returns all datasets owned by a specific user
+func (t *SQLiteDatasetTracker) ListByUser(userID string) ([]DatasetInterface, error) {
+	query := `
+	SELECT id, metadata_name, metadata_description, metadata_type, 
+	       metadata_created, metadata_updated, content_hash, data_json
+	FROM datasets
+	WHERE user_id = ?
+	ORDER BY metadata_created DESC
+	`
+
+	rows, err := t.db.Query(query, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query datasets: %v", err)
+	}
+	defer rows.Close()
+
+	var datasets []DatasetInterface
+	for rows.Next() {
+		var dataset BaseDataset
+		var dataJSON string
+		var created, updated string
+
+		err := rows.Scan(
+			&dataset.Id,
+			&dataset.Metadata.Name,
+			&dataset.Metadata.Description,
+			&dataset.Metadata.Type,
+			&created,
+			&updated,
+			&dataset.ContentHash,
+			&dataJSON,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan dataset: %v", err)
+		}
+
+		// Parse timestamps
+		dataset.Metadata.Created, _ = time.Parse(time.RFC3339, created)
+		dataset.Metadata.Updated, _ = time.Parse(time.RFC3339, updated)
+
+		datasets = append(datasets, &dataset)
+	}
+
+	return datasets, nil
+}
+
+// DeleteByUser removes a dataset only if owned by the user
+func (t *SQLiteDatasetTracker) DeleteByUser(id string, userID string) error {
+	// First check ownership
+	query := `SELECT user_id FROM datasets WHERE id = ?`
+	var ownerID sql.NullString
+	err := t.db.QueryRow(query, id).Scan(&ownerID)
+	
+	if err == sql.ErrNoRows {
+		return fmt.Errorf("dataset not found")
+	}
+	if err != nil {
+		return fmt.Errorf("failed to check dataset ownership: %v", err)
+	}
+
+	// Check if user owns the dataset
+	if ownerID.Valid && ownerID.String != "" && ownerID.String != userID {
+		return fmt.Errorf("user does not have permission to delete this dataset")
+	}
+
+	// Delete the dataset
+	return t.Delete(id)
+}
+
+// UpdateByUser updates a dataset only if owned by the user
+func (t *SQLiteDatasetTracker) UpdateByUser(id string, userID string, updates map[string]interface{}) error {
+	// First check ownership
+	query := `SELECT user_id FROM datasets WHERE id = ?`
+	var ownerID sql.NullString
+	err := t.db.QueryRow(query, id).Scan(&ownerID)
+	
+	if err == sql.ErrNoRows {
+		return fmt.Errorf("dataset not found")
+	}
+	if err != nil {
+		return fmt.Errorf("failed to check dataset ownership: %v", err)
+	}
+
+	// Check if user owns the dataset
+	if ownerID.Valid && ownerID.String != "" && ownerID.String != userID {
+		return fmt.Errorf("user does not have permission to update this dataset")
+	}
+
+	// Update the dataset
+	return t.Update(id, updates)
+}
+
+// GetOwner retrieves the user ID that owns a dataset
+func (t *SQLiteDatasetTracker) GetOwner(id string) (string, error) {
+	query := `SELECT user_id FROM datasets WHERE id = ?`
+	var ownerID sql.NullString
+	err := t.db.QueryRow(query, id).Scan(&ownerID)
+	
+	if err == sql.ErrNoRows {
+		return "", fmt.Errorf("dataset not found")
+	}
+	if err != nil {
+		return "", fmt.Errorf("failed to get dataset owner: %v", err)
+	}
+
+	if !ownerID.Valid {
+		return "", fmt.Errorf("dataset has no owner")
+	}
+
+	return ownerID.String, nil
 }
 
 // DeleteAll completely removes all datasets from the tracker

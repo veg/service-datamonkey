@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 )
 
@@ -126,4 +128,178 @@ func (s *TokenService) ValidateToken(tokenString string) (jwt.MapClaims, error) 
 	}
 
 	return claims, nil
+}
+
+// UserTokenValidator provides validation functions for user tokens
+type UserTokenValidator struct {
+	TokenService *TokenService
+}
+
+// NewUserTokenValidator creates a new UserTokenValidator instance
+func NewUserTokenValidator(tokenService *TokenService) *UserTokenValidator {
+	return &UserTokenValidator{
+		TokenService: tokenService,
+	}
+}
+
+// ValidateUserToken validates a user token from query parameter or header
+func (v *UserTokenValidator) ValidateUserToken(c *gin.Context) (string, error) {
+	// Check if token service is available
+	if v.TokenService == nil {
+		log.Println("Token service not available")
+		return "", fmt.Errorf("token service not available")
+	}
+
+	// Try to get token from query parameter first
+	userToken := c.Query("user_token")
+	
+	// If not in query, try header
+	if userToken == "" {
+		userToken = c.GetHeader("user_token")
+	}
+	
+	// Check if token is provided
+	if userToken == "" {
+		log.Println("Missing user token")
+		return "", fmt.Errorf("missing user token")
+	}
+	
+	// Validate the token
+	// Trim any whitespace from the token
+	userToken = strings.TrimSpace(userToken)
+	
+	claims, err := v.TokenService.ValidateToken(userToken)
+	if err != nil {
+		log.Printf("Invalid user token: %v", err)
+		return "", fmt.Errorf("invalid user token: %v", err)
+	}
+	
+	// Extract user ID from claims
+	userID, ok := claims["sub"].(string)
+	if !ok {
+		log.Println("Invalid token claims: missing user ID")
+		return "", fmt.Errorf("invalid token claims: missing user ID")
+	}
+	
+	return userID, nil
+}
+
+// CheckJobAccess verifies if a user has access to a specific job
+func (v *UserTokenValidator) CheckJobAccess(c *gin.Context, jobID string, jobTracker JobTracker) (string, error) {
+	// Validate the user token
+	userID, err := v.ValidateUserToken(c)
+	if err != nil {
+		return "", err
+	}
+	
+	// If no job tracker is provided, we can't verify ownership
+	if jobTracker == nil {
+		log.Println("Warning: Job tracker not provided, skipping ownership check")
+		return userID, nil
+	}
+	
+	// Get the job owner from the tracker
+	ownerID, err := jobTracker.GetJobOwner(jobID)
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			return "", fmt.Errorf("job not found: %s", jobID)
+		}
+		if strings.Contains(err.Error(), "not supported") {
+			// If user tracking is not supported, allow access
+			log.Printf("Warning: User tracking not supported for job tracker, allowing access to job %s", jobID)
+			return userID, nil
+		}
+		return "", fmt.Errorf("failed to check job ownership: %v", err)
+	}
+	
+	// Check if the user owns the job
+	if ownerID != userID {
+		return "", fmt.Errorf("user does not have access to this job")
+	}
+	
+	return userID, nil
+}
+
+// CheckDatasetAccess verifies if a user has access to a specific dataset
+func (v *UserTokenValidator) CheckDatasetAccess(c *gin.Context, datasetID string, datasetTracker DatasetTracker) (string, error) {
+	// Validate the user token
+	userID, err := v.ValidateUserToken(c)
+	if err != nil {
+		return "", err
+	}
+	
+	// If no dataset tracker is provided, we can't verify ownership
+	if datasetTracker == nil {
+		log.Println("Warning: Dataset tracker not provided, skipping ownership check")
+		return userID, nil
+	}
+	
+	// Get the dataset owner using the exposed interface method
+	ownerID, err := datasetTracker.GetOwner(datasetID)
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			return "", fmt.Errorf("dataset not found: %s", datasetID)
+		}
+		if strings.Contains(err.Error(), "not supported") {
+			// If user tracking is not supported, allow access
+			log.Printf("Warning: User tracking not supported for dataset tracker, allowing access to dataset %s", datasetID)
+			return userID, nil
+		}
+		if strings.Contains(err.Error(), "no associated user") {
+			// Public dataset - allow access
+			log.Printf("Dataset %s has no user_id, assuming public access", datasetID)
+			return userID, nil
+		}
+		return "", fmt.Errorf("failed to check dataset ownership: %v", err)
+	}
+	
+	// Check if the user owns the dataset
+	if ownerID != userID {
+		return "", fmt.Errorf("user does not have access to this dataset")
+	}
+	
+	return userID, nil
+}
+
+// CheckConversationAccess verifies if a user has access to a specific conversation
+func (v *UserTokenValidator) CheckConversationAccess(c *gin.Context, conversationID string, conversationTracker ConversationTracker) (string, error) {
+	// Validate the user token
+	userID, err := v.ValidateUserToken(c)
+	if err != nil {
+		return "", err
+	}
+	
+	// If no conversation tracker is provided, we can't verify ownership
+	if conversationTracker == nil {
+		log.Println("Warning: Conversation tracker not provided, skipping ownership check")
+		return userID, nil
+	}
+	
+	// Get the conversation using the exposed interface method
+	conversation, err := conversationTracker.GetConversation(conversationID)
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			return "", fmt.Errorf("conversation not found: %s", conversationID)
+		}
+		return "", fmt.Errorf("failed to get conversation: %v", err)
+	}
+	
+	// Validate the user token from the conversation
+	conversationClaims, err := v.TokenService.ValidateToken(conversation.UserToken)
+	if err != nil {
+		return "", fmt.Errorf("invalid conversation token: %v", err)
+	}
+	
+	// Extract user ID from claims
+	conversationUserID, ok := conversationClaims["sub"].(string)
+	if !ok {
+		return "", fmt.Errorf("invalid token claims: missing user ID in conversation token")
+	}
+	
+	// Check if the user owns the conversation
+	if conversationUserID != userID {
+		return "", fmt.Errorf("user does not have access to this conversation")
+	}
+	
+	return userID, nil
 }
