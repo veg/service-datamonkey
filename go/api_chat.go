@@ -145,13 +145,6 @@ func (api *ChatAPI) CreateConversation(c *gin.Context) {
 
 // DeleteConversation deletes a conversation
 func (api *ChatAPI) DeleteConversation(c *gin.Context) {
-	// Validate user token
-	userToken, _, err := api.validateToken(c)
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
-		return
-	}
-
 	// Get conversation ID from path
 	conversationId := c.Param("conversationId")
 	if conversationId == "" {
@@ -159,17 +152,41 @@ func (api *ChatAPI) DeleteConversation(c *gin.Context) {
 		return
 	}
 
-	// Check if the conversation exists and belongs to this user
-	conversation, err := api.tracker.GetConversation(conversationId)
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Conversation not found"})
-		return
-	}
+	// Check conversation access using the token validator if available
+	if api.tokenService != nil {
+		validator := NewUserTokenValidator(api.tokenService)
+		sqliteTracker, ok := api.tracker.(*SQLiteConversationTracker)
+		if ok {
+			_, err := validator.CheckConversationAccess(c, conversationId, sqliteTracker)
+			if err != nil {
+				if strings.Contains(err.Error(), "missing user token") || strings.Contains(err.Error(), "invalid user token") {
+					c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+				} else if strings.Contains(err.Error(), "not found") {
+					c.JSON(http.StatusNotFound, gin.H{"error": "Conversation not found"})
+				} else {
+					c.JSON(http.StatusForbidden, gin.H{"error": "You don't have permission to delete this conversation"})
+				}
+				return
+			}
+		} else {
+			// Fallback to old validation method
+			userToken, _, err := api.validateToken(c)
+			if err != nil {
+				c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+				return
+			}
 
-	// Verify ownership
-	if conversation.UserToken != userToken {
-		c.JSON(http.StatusForbidden, gin.H{"error": "You don't have permission to delete this conversation"})
-		return
+			conversation, err := api.tracker.GetConversation(conversationId)
+			if err != nil {
+				c.JSON(http.StatusNotFound, gin.H{"error": "Conversation not found"})
+				return
+			}
+
+			if conversation.UserToken != userToken {
+				c.JSON(http.StatusForbidden, gin.H{"error": "You don't have permission to delete this conversation"})
+				return
+			}
+		}
 	}
 
 	// Delete the conversation
@@ -185,18 +202,48 @@ func (api *ChatAPI) DeleteConversation(c *gin.Context) {
 
 // GetConversation gets a conversation by ID
 func (api *ChatAPI) GetConversation(c *gin.Context) {
-	// Validate user token
-	userToken, _, err := api.validateToken(c)
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
-		return
-	}
-
 	// Get conversation ID from path
 	conversationId := c.Param("conversationId")
 	if conversationId == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Conversation ID is required"})
 		return
+	}
+
+	// Check conversation access using the token validator if available
+	if api.tokenService != nil {
+		validator := NewUserTokenValidator(api.tokenService)
+		sqliteTracker, ok := api.tracker.(*SQLiteConversationTracker)
+		if ok {
+			_, err := validator.CheckConversationAccess(c, conversationId, sqliteTracker)
+			if err != nil {
+				if strings.Contains(err.Error(), "missing user token") || strings.Contains(err.Error(), "invalid user token") {
+					c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+				} else if strings.Contains(err.Error(), "not found") {
+					c.JSON(http.StatusNotFound, gin.H{"error": "Conversation not found"})
+				} else {
+					c.JSON(http.StatusForbidden, gin.H{"error": "You don't have permission to access this conversation"})
+				}
+				return
+			}
+		} else {
+			// Fallback to old validation method
+			userToken, _, err := api.validateToken(c)
+			if err != nil {
+				c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+				return
+			}
+
+			conversation, err := api.tracker.GetConversation(conversationId)
+			if err != nil {
+				c.JSON(http.StatusNotFound, gin.H{"error": "Conversation not found"})
+				return
+			}
+
+			if conversation.UserToken != userToken {
+				c.JSON(http.StatusForbidden, gin.H{"error": "You don't have permission to access this conversation"})
+				return
+			}
+		}
 	}
 
 	// Fetch the conversation from storage
@@ -206,24 +253,11 @@ func (api *ChatAPI) GetConversation(c *gin.Context) {
 		return
 	}
 
-	// Verify ownership
-	if conversation.UserToken != userToken {
-		c.JSON(http.StatusForbidden, gin.H{"error": "You don't have permission to access this conversation"})
-		return
-	}
-
 	c.JSON(http.StatusOK, conversation)
 }
 
 // GetConversationMessages gets messages from a conversation
 func (api *ChatAPI) GetConversationMessages(c *gin.Context) {
-	// Validate user token
-	userToken, _, err := api.validateToken(c)
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
-		return
-	}
-
 	// Get conversation ID from path
 	conversationId := c.Param("conversationId")
 	if conversationId == "" {
@@ -231,17 +265,41 @@ func (api *ChatAPI) GetConversationMessages(c *gin.Context) {
 		return
 	}
 
-	// Check if the conversation exists and belongs to this user
-	conversation, err := api.tracker.GetConversation(conversationId)
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Conversation not found"})
-		return
-	}
+	// Check conversation access using the token validator if available
+	if api.tokenService != nil {
+		validator := NewUserTokenValidator(api.tokenService)
+		sqliteTracker, ok := api.tracker.(*SQLiteConversationTracker)
+		if ok {
+			_, err := validator.CheckConversationAccess(c, conversationId, sqliteTracker)
+			if err != nil {
+				if strings.Contains(err.Error(), "missing user token") || strings.Contains(err.Error(), "invalid user token") {
+					c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+				} else if strings.Contains(err.Error(), "not found") {
+					c.JSON(http.StatusNotFound, gin.H{"error": "Conversation not found"})
+				} else {
+					c.JSON(http.StatusForbidden, gin.H{"error": "You don't have permission to access this conversation"})
+				}
+				return
+			}
+		} else {
+			// Fallback to old validation method
+			userToken, _, err := api.validateToken(c)
+			if err != nil {
+				c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+				return
+			}
 
-	// Verify ownership
-	if conversation.UserToken != userToken {
-		c.JSON(http.StatusForbidden, gin.H{"error": "You don't have permission to access this conversation"})
-		return
+			conversation, err := api.tracker.GetConversation(conversationId)
+			if err != nil {
+				c.JSON(http.StatusNotFound, gin.H{"error": "Conversation not found"})
+				return
+			}
+
+			if conversation.UserToken != userToken {
+				c.JSON(http.StatusForbidden, gin.H{"error": "You don't have permission to access this conversation"})
+				return
+			}
+		}
 	}
 
 	// Get messages for this conversation
@@ -277,13 +335,6 @@ func (api *ChatAPI) ListUserConversations(c *gin.Context) {
 
 // SendConversationMessage sends a message to a conversation
 func (api *ChatAPI) SendConversationMessage(c *gin.Context) {
-	// Validate user token
-	userToken, _, err := api.validateToken(c)
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
-		return
-	}
-
 	// Get conversation ID from path
 	conversationId := c.Param("conversationId")
 	if conversationId == "" {
@@ -291,17 +342,41 @@ func (api *ChatAPI) SendConversationMessage(c *gin.Context) {
 		return
 	}
 
-	// Check if the conversation exists and belongs to this user
-	conversation, err := api.tracker.GetConversation(conversationId)
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Conversation not found"})
-		return
-	}
+	// Check conversation access using the token validator if available
+	if api.tokenService != nil {
+		validator := NewUserTokenValidator(api.tokenService)
+		sqliteTracker, ok := api.tracker.(*SQLiteConversationTracker)
+		if ok {
+			_, err := validator.CheckConversationAccess(c, conversationId, sqliteTracker)
+			if err != nil {
+				if strings.Contains(err.Error(), "missing user token") || strings.Contains(err.Error(), "invalid user token") {
+					c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+				} else if strings.Contains(err.Error(), "not found") {
+					c.JSON(http.StatusNotFound, gin.H{"error": "Conversation not found"})
+				} else {
+					c.JSON(http.StatusForbidden, gin.H{"error": "You don't have permission to access this conversation"})
+				}
+				return
+			}
+		} else {
+			// Fallback to old validation method
+			userToken, _, err := api.validateToken(c)
+			if err != nil {
+				c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+				return
+			}
 
-	// Verify ownership
-	if conversation.UserToken != userToken {
-		c.JSON(http.StatusForbidden, gin.H{"error": "You don't have permission to access this conversation"})
-		return
+			conversation, err := api.tracker.GetConversation(conversationId)
+			if err != nil {
+				c.JSON(http.StatusNotFound, gin.H{"error": "Conversation not found"})
+				return
+			}
+
+			if conversation.UserToken != userToken {
+				c.JSON(http.StatusForbidden, gin.H{"error": "You don't have permission to access this conversation"})
+				return
+			}
+		}
 	}
 
 	// Parse request body

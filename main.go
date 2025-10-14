@@ -260,6 +260,9 @@ func initAPIHandlers(scheduler sw.SchedulerInterface, datasetTracker sw.DatasetT
 		slatkinAPI.HyPhyBaseAPI.UserTokenValidator = tokenValidator
 	}
 
+	// Create JobsAPI
+	jobsAPI := sw.NewJobsAPI(jobTracker, tokenValidator)
+
 	return sw.ApiHandleFunctions{
 		ABSRELAPI:          *absrelAPI,
 		FELAPI:             *felAPI,
@@ -277,6 +280,7 @@ func initAPIHandlers(scheduler sw.SchedulerInterface, datasetTracker sw.DatasetT
 		SLATKINAPI:         *slatkinAPI,
 		FileUploadAndQCAPI: *sw.NewFileUploadAndQCAPI(datasetTracker),
 		HealthAPI:          sw.HealthAPI{Scheduler: scheduler},
+		JobsAPI:            *jobsAPI,
 		ChatAPI:            *sw.NewChatAPI(genkitClient, conversationTracker, tokenService),
 	}
 }

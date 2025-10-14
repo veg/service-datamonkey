@@ -180,7 +180,7 @@ func (api *HyPhyBaseAPI) HandleStartJob(c *gin.Context, request HyPhyRequest, me
 		return nil, fmt.Errorf("failed to submit job: %v", err)
 	}
 
-	// Extract user ID from token if available and update job mapping
+	// Extract user ID from token if available and update job mapping with metadata
 	if api.UserTokenValidator != nil && api.JobTracker != nil {
 		userID, err := api.UserTokenValidator.ValidateUserToken(c)
 		if err == nil && userID != "" {
@@ -192,6 +192,16 @@ func (api *HyPhyBaseAPI) HandleStartJob(c *gin.Context, request HyPhyRequest, me
 					log.Printf("Warning: Failed to associate job %s with user %s: %v", job.GetId(), userID, err)
 				} else {
 					log.Printf("Associated job %s with user %s", job.GetId(), userID)
+				}
+				
+				// Store job metadata (alignment, tree, method type, status)
+				alignmentID := request.GetAlignment()
+				treeID := request.GetTree()
+				methodTypeStr := string(methodType)
+				if err := api.JobTracker.StoreJobMetadata(job.GetId(), alignmentID, treeID, methodTypeStr, "pending"); err != nil {
+					log.Printf("Warning: Failed to store metadata for job %s: %v", job.GetId(), err)
+				} else {
+					log.Printf("Stored metadata for job %s (alignment: %s, tree: %s, method: %s)", job.GetId(), alignmentID, treeID, methodTypeStr)
 				}
 			}
 		}
