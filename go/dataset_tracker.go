@@ -238,14 +238,16 @@ func (t *FileDatasetTracker) Update(id string, updates map[string]interface{}) e
 	}
 	defer f.Close()
 
-	dsBytes := []byte{}
 	found := false
 	for _, ds := range datasets {
+		var dsBytes []byte
+		var err error
+
 		if ds.GetId() == id {
 			found = true
 			// Convert the dataset to a map for updating
 			dsMap := make(map[string]interface{})
-			dsBytes, err := json.Marshal(ds)
+			dsBytes, err = json.Marshal(ds)
 			if err != nil {
 				os.Remove(tempFile)
 				return fmt.Errorf("failed to marshal dataset: %v", err)
@@ -260,18 +262,12 @@ func (t *FileDatasetTracker) Update(id string, updates map[string]interface{}) e
 				dsMap[k] = v
 			}
 
-			// Convert back to BaseDataset
-			updatedBytes, err := json.Marshal(dsMap)
+			// Convert back to bytes
+			dsBytes, err = json.Marshal(dsMap)
 			if err != nil {
 				os.Remove(tempFile)
 				return fmt.Errorf("failed to marshal updated dataset: %v", err)
 			}
-			var updated BaseDataset
-			if err := json.Unmarshal(updatedBytes, &updated); err != nil {
-				os.Remove(tempFile)
-				return fmt.Errorf("failed to unmarshal updated dataset: %v", err)
-			}
-			dsBytes = updatedBytes
 		} else {
 			dsBytes, err = json.Marshal(ds)
 			if err != nil {
@@ -280,7 +276,7 @@ func (t *FileDatasetTracker) Update(id string, updates map[string]interface{}) e
 			}
 		}
 
-		// Write updated dataset to file
+		// Write dataset to file
 		if _, err := fmt.Fprintln(f, string(dsBytes)); err != nil {
 			os.Remove(tempFile)
 			return fmt.Errorf("failed to write dataset: %v", err)

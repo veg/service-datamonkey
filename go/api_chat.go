@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v5"
 )
 
 // ChatAPI implements the chat API endpoints
@@ -28,16 +27,16 @@ func NewChatAPI(genkitClient *GenkitClient, tracker ConversationTracker, tokenSe
 	}
 }
 
-// validateToken validates the user token and returns the token string and claims
-func (api *ChatAPI) validateToken(c *gin.Context) (string, jwt.MapClaims, error) {
+// validateToken validates the user token and returns the token string
+func (api *ChatAPI) validateToken(c *gin.Context) (string, error) {
 	// Check if token service is available
 	if api.tokenService == nil {
 		// If no token service, just return the user_token header without validation
 		userToken := c.GetHeader("user_token")
 		if userToken == "" {
-			return "", nil, fmt.Errorf("user token is required")
+			return "", fmt.Errorf("user token is required")
 		}
-		return userToken, nil, nil
+		return userToken, nil
 	}
 
 	// Try to get token from Authorization header first
@@ -59,14 +58,14 @@ func (api *ChatAPI) validateToken(c *gin.Context) (string, jwt.MapClaims, error)
 
 	// Validate the token
 	if userToken != "" {
-		claims, err := api.tokenService.ValidateToken(userToken)
+		_, err := api.tokenService.ValidateToken(userToken)
 		if err != nil {
-			return "", nil, fmt.Errorf("invalid token: %v", err)
+			return "", fmt.Errorf("invalid token: %v", err)
 		}
-		return userToken, claims, nil
+		return userToken, nil
 	}
 
-	return "", nil, fmt.Errorf("user token is required")
+	return "", fmt.Errorf("user token is required")
 }
 
 // CreateConversation creates a new conversation
@@ -97,7 +96,7 @@ func (api *ChatAPI) CreateConversation(c *gin.Context) {
 
 	// If token was provided (not generated), validate it
 	if !generatedToken && api.tokenService != nil {
-		_, _, err := api.validateToken(c)
+		_, err := api.validateToken(c)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 			return
@@ -170,7 +169,7 @@ func (api *ChatAPI) DeleteConversation(c *gin.Context) {
 			}
 		} else {
 			// Fallback to old validation method
-			userToken, _, err := api.validateToken(c)
+			userToken, err := api.validateToken(c)
 			if err != nil {
 				c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 				return
@@ -227,7 +226,7 @@ func (api *ChatAPI) GetConversation(c *gin.Context) {
 			}
 		} else {
 			// Fallback to old validation method
-			userToken, _, err := api.validateToken(c)
+			userToken, err := api.validateToken(c)
 			if err != nil {
 				c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 				return
@@ -293,7 +292,7 @@ func (api *ChatAPI) GetConversationMessages(c *gin.Context) {
 			}
 		} else {
 			// Fallback to old validation method
-			userToken, _, err := api.validateToken(c)
+			userToken, err := api.validateToken(c)
 			if err != nil {
 				c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 				return
@@ -326,7 +325,7 @@ func (api *ChatAPI) GetConversationMessages(c *gin.Context) {
 // ListUserConversations lists conversations for a user
 func (api *ChatAPI) ListUserConversations(c *gin.Context) {
 	// Validate user token
-	userToken, _, err := api.validateToken(c)
+	userToken, err := api.validateToken(c)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
@@ -383,7 +382,7 @@ func (api *ChatAPI) SendConversationMessage(c *gin.Context) {
 			}
 		} else {
 			// Fallback to old validation method
-			userToken, _, err := api.validateToken(c)
+			userToken, err := api.validateToken(c)
 			if err != nil {
 				c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 				return

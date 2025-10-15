@@ -32,7 +32,7 @@ func NewFADEAPI(basePath, hyPhyPath string, scheduler SchedulerInterface, datase
 }
 
 // formatFADEJobResults formats the raw JSON results for FADE jobs
-func (api *FADEAPI) formatFADEJobResults(jobId string, rawResults json.RawMessage) (map[string]interface{}, error) {
+func (api *FADEAPI) formatFADEJobResults(jobId string, rawResults json.RawMessage) map[string]interface{} {
 	// Log the raw results for debugging
 	log.Printf("Raw results: %s", string(rawResults))
 
@@ -73,7 +73,7 @@ func (api *FADEAPI) formatFADEJobResults(jobId string, rawResults json.RawMessag
 		"result": fadeResult.Result,
 	}
 
-	return resultMap, nil
+	return resultMap
 }
 
 // GetFadeResults retrieves the status and results of a FADE job
@@ -110,11 +110,7 @@ func (api *FADEAPI) GetFadeResults(c *gin.Context) {
 	rawResults := resultMap["results"].(json.RawMessage)
 
 	// Format the results using the shared utility function
-	formattedResult, err := api.formatFADEJobResults(jobId, rawResults)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
+	formattedResult := api.formatFADEJobResults(jobId, rawResults)
 
 	c.JSON(http.StatusOK, formattedResult)
 }
@@ -245,11 +241,7 @@ func (api *FADEAPI) GetFadeResultsById(c *gin.Context) {
 	}
 
 	// Format the results using the shared utility function
-	formattedResult, err := api.formatFADEJobResults(jobId, rawResults)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
+	formattedResult := api.formatFADEJobResults(jobId, rawResults)
 
 	c.JSON(http.StatusOK, formattedResult)
 }

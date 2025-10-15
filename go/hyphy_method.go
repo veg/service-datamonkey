@@ -49,7 +49,7 @@ func NewHyPhyMethod(request interface{}, basePath, hyPhyPath string, methodType 
 }
 
 // getCommandArg converts a field value to a command line argument
-func getCommandArg(field reflect.StructField, value reflect.Value, argPrefix string) string {
+func getCommandArg(field reflect.StructField, value reflect.Value) string {
 	// Skip alignment and tree fields as they're handled separately
 	if field.Name == "Alignment" || field.Name == "Tree" {
 		return ""
@@ -234,7 +234,7 @@ func (m *HyPhyMethod) GetCommand() string {
 			}
 
 			// Add argument if field has a value
-			if arg := getCommandArg(field, value, string(m.MethodType)); arg != "" {
+			if arg := getCommandArg(field, value); arg != "" {
 				cmd += arg
 			}
 		}
