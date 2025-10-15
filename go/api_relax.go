@@ -71,7 +71,7 @@ func (api *RELAXAPI) formatRELAXJobResults(jobId string, rawResults json.RawMess
 	// The spec expects: {"job_id": "...", "result": {...}}
 	resultMap := map[string]interface{}{
 		"job_id": jobId,
-		
+
 		"result": relaxResult.Result,
 	}
 

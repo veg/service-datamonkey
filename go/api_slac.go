@@ -165,12 +165,12 @@ func (api *SLACAPI) GetSLACJobById(c *gin.Context) {
 				c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized - " + err.Error()})
 				return
 			}
-			
+
 			// For other errors, return forbidden
 			c.JSON(http.StatusForbidden, gin.H{"error": "Forbidden - You don't have access to this job"})
 			return
 		}
-		
+
 		log.Printf("User token validated successfully for job %s", jobId)
 	}
 

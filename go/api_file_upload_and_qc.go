@@ -215,7 +215,7 @@ func (api *FileUploadAndQCAPI) PostDataset(c *gin.Context) {
 // GET /api/v1/datasets/:datasetId
 func (api *FileUploadAndQCAPI) GetDatasetById(c *gin.Context) {
 	datasetId := c.Param("datasetId")
-	
+
 	if datasetId == "" {
 		c.JSON(400, gin.H{"error": "Dataset ID is required"})
 		return
@@ -245,7 +245,7 @@ func (api *FileUploadAndQCAPI) GetDatasetById(c *gin.Context) {
 // DELETE /api/v1/datasets/:datasetId
 func (api *FileUploadAndQCAPI) DeleteDataset(c *gin.Context) {
 	datasetId := c.Param("datasetId")
-	
+
 	if datasetId == "" {
 		c.JSON(400, gin.H{"error": "Dataset ID is required"})
 		return

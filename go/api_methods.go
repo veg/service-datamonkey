@@ -217,36 +217,36 @@ func registerAllMethods(r *MethodRegistry) {
 // extractParameters uses reflection to extract parameter information from a request struct
 func extractParameters(requestType interface{}) []MethodsListMethodsInnerParametersInner {
 	params := []MethodsListMethodsInnerParametersInner{}
-	
+
 	t := reflect.TypeOf(requestType)
 	if t.Kind() == reflect.Ptr {
 		t = t.Elem()
 	}
-	
+
 	for i := 0; i < t.NumField(); i++ {
 		field := t.Field(i)
 		jsonTag := field.Tag.Get("json")
-		
+
 		// Skip if no json tag or if omitempty
 		if jsonTag == "" || jsonTag == "-" {
 			continue
 		}
-		
+
 		// Parse json tag to get field name
 		jsonName := strings.Split(jsonTag, ",")[0]
-		
+
 		// Skip user_token as it's handled separately
 		if jsonName == "user_token" {
 			continue
 		}
-		
+
 		// Get description from comment (if available via struct tag)
 		description := field.Tag.Get("description")
 		if description == "" {
 			// Fallback to field name
 			description = field.Name
 		}
-		
+
 		// Determine type
 		fieldType := field.Type.String()
 		paramType := "string" // default
@@ -259,13 +259,13 @@ func extractParameters(requestType interface{}) []MethodsListMethodsInnerParamet
 		} else if strings.Contains(fieldType, "[]") {
 			paramType = "array"
 		}
-		
+
 		// Check if required (fields without omitempty are typically required)
 		required := !strings.Contains(jsonTag, "omitempty")
-		
+
 		// Get default value from tag if available
 		defaultValue := field.Tag.Get("default")
-		
+
 		params = append(params, MethodsListMethodsInnerParametersInner{
 			Name:        jsonName,
 			Description: description,
@@ -274,7 +274,7 @@ func extractParameters(requestType interface{}) []MethodsListMethodsInnerParamet
 			Default:     defaultValue,
 		})
 	}
-	
+
 	return params
 }
 
@@ -283,11 +283,11 @@ func extractParameters(requestType interface{}) []MethodsListMethodsInnerParamet
 func (api *MethodsAPIService) GetMethodsList(c *gin.Context) {
 	methodDefs := api.registry.GetMethods()
 	methods := make([]MethodsListMethodsInner, 0, len(methodDefs))
-	
+
 	for _, def := range methodDefs {
 		// Extract parameters from the request type using reflection
 		params := extractParameters(def.RequestType)
-		
+
 		methods = append(methods, MethodsListMethodsInner{
 			Id:             def.ID,
 			Name:           def.Name,
@@ -298,10 +298,10 @@ func (api *MethodsAPIService) GetMethodsList(c *gin.Context) {
 			Parameters:     params,
 		})
 	}
-	
+
 	response := MethodsList{
 		Methods: methods,
 	}
-	
+
 	c.JSON(http.StatusOK, response)
 }

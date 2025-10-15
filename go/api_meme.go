@@ -71,7 +71,7 @@ func (api *MEMEAPI) formatMEMEJobResults(jobId string, rawResults json.RawMessag
 	// The spec expects: {"job_id": "...", "result": {...}}
 	resultMap := map[string]interface{}{
 		"job_id": jobId,
-		
+
 		"result": memeResult.Result,
 	}
 

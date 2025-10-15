@@ -71,7 +71,7 @@ func (api *MULTIHITAPI) formatMULTIHITJobResults(jobId string, rawResults json.R
 	// The spec expects: {"job_id": "...", "result": {...}}
 	resultMap := map[string]interface{}{
 		"job_id": jobId,
-		
+
 		"result": multihitResult.Result,
 	}
 

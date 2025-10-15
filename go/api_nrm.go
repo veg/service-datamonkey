@@ -71,7 +71,7 @@ func (api *NRMAPI) formatNRMJobResults(jobId string, rawResults json.RawMessage)
 	// The spec expects: {"job_id": "...", "result": {...}}
 	resultMap := map[string]interface{}{
 		"job_id": jobId,
-		
+
 		"results": rawResults,
 	}
 

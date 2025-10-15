@@ -45,23 +45,23 @@ func (api *JobsAPI) GetJobsList(c *gin.Context) {
 
 	// Build filters from query parameters
 	filters := make(map[string]interface{})
-	
+
 	// Always filter by user ID
 	filters["user_id"] = userID
-	
+
 	// Add optional filters
 	if alignmentID := c.Query("alignment_id"); alignmentID != "" {
 		filters["alignment_id"] = alignmentID
 	}
-	
+
 	if treeID := c.Query("tree_id"); treeID != "" {
 		filters["tree_id"] = treeID
 	}
-	
+
 	if method := c.Query("method"); method != "" {
 		filters["method_type"] = method
 	}
-	
+
 	if status := c.Query("status"); status != "" {
 		filters["status"] = status
 	}
@@ -98,7 +98,7 @@ func (api *JobsAPI) GetJobsList(c *gin.Context) {
 // GET /api/v1/jobs/:jobId
 func (api *JobsAPI) GetJobById(c *gin.Context) {
 	jobID := c.Param("jobId")
-	
+
 	if jobID == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Job ID is required"})
 		return
@@ -154,7 +154,7 @@ func (api *JobsAPI) GetJobById(c *gin.Context) {
 // DELETE /api/v1/jobs/:jobId
 func (api *JobsAPI) DeleteJob(c *gin.Context) {
 	jobID := c.Param("jobId")
-	
+
 	if jobID == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Job ID is required"})
 		return

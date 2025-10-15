@@ -35,7 +35,7 @@ func NewHyPhyBaseAPI(basePath, hyPhyPath string, scheduler SchedulerInterface, d
 	if len(tokenValidator) > 0 {
 		validator = tokenValidator[0]
 	}
-	
+
 	return HyPhyBaseAPI{
 		BasePath:           basePath,
 		HyPhyPath:          hyPhyPath,
@@ -193,7 +193,7 @@ func (api *HyPhyBaseAPI) HandleStartJob(c *gin.Context, request HyPhyRequest, me
 				} else {
 					log.Printf("Associated job %s with user %s", job.GetId(), userID)
 				}
-				
+
 				// Store job metadata (alignment, tree, method type, status)
 				alignmentID := request.GetAlignment()
 				treeID := request.GetTree()
