@@ -5,7 +5,6 @@ import (
 	"log"
 	"os"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -24,7 +23,6 @@ type TokenConfig struct {
 // TokenService provides JWT token generation and validation
 type TokenService struct {
 	Config TokenConfig
-	mu     sync.RWMutex // Mutex to protect token operations
 }
 
 // NewTokenService creates a new TokenService instance

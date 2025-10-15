@@ -422,7 +422,7 @@ func NewSQLiteDatasetTracker(dbPath string, dataDir string) (*SQLiteDatasetTrack
 	// Add user_id column if it doesn't exist (for existing databases)
 	alterTableSQL := `ALTER TABLE datasets ADD COLUMN user_id TEXT`
 	// Ignore error if column already exists
-	db.Exec(alterTableSQL)
+	_, _ = db.Exec(alterTableSQL)
 
 	return &SQLiteDatasetTracker{
 		db:      db,

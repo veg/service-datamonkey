@@ -71,7 +71,7 @@ func (api *BGMAPI) formatBGMJobResults(jobId string, rawResults json.RawMessage)
 	// The spec expects: {"job_id": "...", "result": {...}}
 	resultMap := map[string]interface{}{
 		"job_id": jobId,
-		
+
 		"result": bgmResult.Result,
 	}
 

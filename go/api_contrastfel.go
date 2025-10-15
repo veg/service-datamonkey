@@ -71,7 +71,7 @@ func (api *CONTRASTFELAPI) formatContrastFELJobResults(jobId string, rawResults 
 	// The spec expects: {"job_id": "...", "result": {...}}
 	resultMap := map[string]interface{}{
 		"job_id": jobId,
-		
+
 		"results": contrastFelResult.Result,
 	}
 

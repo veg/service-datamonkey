@@ -162,7 +162,7 @@ func (api *FileUploadAndQCAPI) PostDataset(c *gin.Context) {
 	var content []byte
 	if file.File != nil {
 		log.Printf("Reading file %s", file.Meta.Name)
-		file.File.Seek(0, 0)
+		_, _ = file.File.Seek(0, 0)
 		content, err = io.ReadAll(file.File)
 		if err != nil {
 			c.JSON(500, gin.H{"error": err.Error()})

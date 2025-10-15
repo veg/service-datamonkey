@@ -504,7 +504,7 @@ func (c *GenkitClient) ChatFlow() (any, error) {
 			resp1, err := client.Do(req1)
 			if err == nil && resp1.StatusCode == http.StatusOK {
 				var result1 map[string]interface{}
-				json.NewDecoder(resp1.Body).Decode(&result1)
+				_ = json.NewDecoder(resp1.Body).Decode(&result1)
 				resp1.Body.Close()
 				if jobs, ok := result1["jobs"].([]interface{}); ok {
 					for _, job := range jobs {
@@ -521,7 +521,7 @@ func (c *GenkitClient) ChatFlow() (any, error) {
 			resp2, err := client.Do(req2)
 			if err == nil && resp2.StatusCode == http.StatusOK {
 				var result2 map[string]interface{}
-				json.NewDecoder(resp2.Body).Decode(&result2)
+				_ = json.NewDecoder(resp2.Body).Decode(&result2)
 				resp2.Body.Close()
 				if jobs, ok := result2["jobs"].([]interface{}); ok {
 					for _, job := range jobs {
@@ -585,7 +585,7 @@ func (c *GenkitClient) ChatFlow() (any, error) {
 
 			// Handle error responses
 			var errorResult map[string]interface{}
-			json.NewDecoder(resp.Body).Decode(&errorResult)
+			_ = json.NewDecoder(resp.Body).Decode(&errorResult)
 			errorMsg := getStringFromMap(errorResult, "error")
 			if errorMsg == "" {
 				errorMsg = fmt.Sprintf("unexpected status code: %d", resp.StatusCode)
@@ -634,7 +634,7 @@ func (c *GenkitClient) ChatFlow() (any, error) {
 
 			// Handle error responses
 			var errorResult map[string]interface{}
-			json.NewDecoder(resp.Body).Decode(&errorResult)
+			_ = json.NewDecoder(resp.Body).Decode(&errorResult)
 			errorMsg := getStringFromMap(errorResult, "error")
 			if errorMsg == "" {
 				errorMsg = fmt.Sprintf("unexpected status code: %d", resp.StatusCode)

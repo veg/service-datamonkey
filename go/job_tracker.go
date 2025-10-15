@@ -482,7 +482,7 @@ func NewSQLiteJobTracker(dbPath string) (*SQLiteJobTracker, error) {
 	}
 	for _, stmt := range alterStatements {
 		// Ignore errors if columns already exist
-		db.Exec(stmt)
+		_, _ = db.Exec(stmt)
 	}
 
 	return &SQLiteJobTracker{
