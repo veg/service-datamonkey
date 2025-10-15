@@ -1,0 +1,49 @@
+#!/bin/bash
+# Pre-commit hook to format and check Go files
+# 
+# To install: make install-hooks
+
+# Get list of staged Go files
+STAGED_GO_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep '\.go$')
+
+if [ -z "$STAGED_GO_FILES" ]; then
+    # No Go files staged, exit successfully
+    exit 0
+fi
+
+echo "Running pre-commit checks on Go files..."
+
+# 1. Format with gofmt
+NEEDS_FORMATTING=0
+for FILE in $STAGED_GO_FILES; do
+    # Check if file needs formatting
+    if ! gofmt -l "$FILE" | grep -q .; then
+        continue
+    fi
+    
+    echo "  Formatting: $FILE"
+    gofmt -w "$FILE"
+    git add "$FILE"
+    NEEDS_FORMATTING=1
+done
+
+if [ $NEEDS_FORMATTING -eq 1 ]; then
+    echo "✓ Go files formatted and re-staged"
+fi
+
+# 2. Run go vet on staged files
+echo "Running go vet..."
+VET_OUTPUT=$(go vet ./... 2>&1)
+VET_EXIT_CODE=$?
+
+if [ $VET_EXIT_CODE -ne 0 ]; then
+    echo "✗ go vet found issues:"
+    echo "$VET_OUTPUT"
+    echo ""
+    echo "Please fix the issues above and try again."
+    exit 1
+fi
+echo "✓ go vet passed"
+
+echo "✓ All pre-commit checks passed"
+exit 0

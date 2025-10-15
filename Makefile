@@ -23,6 +23,27 @@ default:
 	@echo "$(C_BLUE)    make update$(C_NONE)"
 	@echo "      pulls down openapi spec and generates code"
 	@echo ""
+	@echo "$(C_BLUE)    make install-hooks$(C_NONE)"
+	@echo "      installs Git pre-commit hook for auto-formatting"
+	@echo ""
+	@echo "$(C_BLUE)    make test$(C_NONE)"
+	@echo "      runs unit tests"
+	@echo ""
+	@echo "$(C_BLUE)    make test-coverage$(C_NONE)"
+	@echo "      runs tests with coverage report"
+	@echo ""
+	@echo "$(C_BLUE)    make fmt$(C_NONE)"
+	@echo "      formats all Go code"
+	@echo ""
+	@echo "$(C_BLUE)    make vet$(C_NONE)"
+	@echo "      runs go vet static analysis"
+	@echo ""
+	@echo "$(C_BLUE)    make lint$(C_NONE)"
+	@echo "      runs go vet + staticcheck"
+	@echo ""
+	@echo "$(C_BLUE)    make check$(C_NONE)"
+	@echo "      runs fmt + vet (quick pre-commit check)"
+	@echo ""
 	@echo "$(C_CYAN)  ####### Build #######$(C_NONE)"
 	@echo ""
 	@echo "$(C_BLUE)    make build$(C_NONE)"
@@ -52,6 +73,11 @@ default:
 .PHONY: install
 install:
 	@$(BIN_DIR)/lib.sh "manageDeps"
+
+.PHONY: install-hooks
+install-hooks:
+	@echo "Installing Git hooks..."
+	@$(BIN_DIR)/install-hooks.sh
 
 
 .PHONY: update
@@ -90,3 +116,46 @@ start-slurm-cli:
 test-slurm-modes:
 	@echo "Testing both REST and CLI modes..."
 	@./bin/test-slurm-modes.sh
+
+# Testing targets
+.PHONY: test
+test:
+	@echo "Running unit tests..."
+	@go test ./go/tests/... -v
+
+.PHONY: test-coverage
+test-coverage:
+	@echo "Running tests with coverage..."
+	@go test -v -race -coverprofile=coverage.out -covermode=atomic -coverpkg=./go ./go/tests/...
+	@echo ""
+	@echo "Coverage report (filtered):"
+	@$(BIN_DIR)/filter-coverage.sh
+
+# Code formatting and linting
+.PHONY: fmt
+fmt:
+	@echo "Formatting Go code..."
+	@gofmt -w main.go go/*.go go/tests/*.go
+	@echo "✓ Done"
+
+.PHONY: vet
+vet:
+	@echo "Running go vet..."
+	@go vet ./...
+	@echo "✓ Done"
+
+.PHONY: lint
+lint:
+	@echo "Running static analysis..."
+	@go vet ./...
+	@echo "✓ go vet passed"
+	@if command -v staticcheck >/dev/null 2>&1; then \
+		staticcheck ./...; \
+		echo "✓ staticcheck passed"; \
+	else \
+		echo "⚠ staticcheck not installed (optional)"; \
+	fi
+
+.PHONY: check
+check: fmt vet
+	@echo "✓ All checks passed"

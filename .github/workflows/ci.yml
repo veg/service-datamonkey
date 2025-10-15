@@ -90,7 +90,7 @@ jobs:
         echo "## Coverage Report (Core Infrastructure Only)" > coverage.txt
         echo "Excluding: api_*.go, chat_flow.go, model_*.go, routers.go" >> coverage.txt
         echo "" >> coverage.txt
-        ./scripts/filter-coverage.sh >> coverage.txt
+        ./bin/filter-coverage.sh >> coverage.txt
         cat coverage.txt
 
     - name: Upload coverage
