@@ -5,6 +5,7 @@ linters-settings:
     enable-all: true
     disable:
       - fieldalignment  # Micro-optimization, not worth the code churn
+      - shadow          # Often a false positive, makes code more verbose
   gocyclo:
     min-complexity: 15
   dupl:
