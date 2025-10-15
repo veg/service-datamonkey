@@ -31,19 +31,39 @@ if [ $NEEDS_FORMATTING -eq 1 ]; then
     echo "✓ Go files formatted and re-staged"
 fi
 
-# 2. Run go vet on staged files
-echo "Running go vet..."
-VET_OUTPUT=$(go vet ./... 2>&1)
-VET_EXIT_CODE=$?
+# 2. Run linters
+echo "Running linters..."
 
-if [ $VET_EXIT_CODE -ne 0 ]; then
-    echo "✗ go vet found issues:"
-    echo "$VET_OUTPUT"
-    echo ""
-    echo "Please fix the issues above and try again."
-    exit 1
+# Try golangci-lint first (most comprehensive)
+if command -v golangci-lint >/dev/null 2>&1; then
+    echo "  Running golangci-lint..."
+    LINT_OUTPUT=$(golangci-lint run --timeout=2m 2>&1)
+    LINT_EXIT_CODE=$?
+    
+    if [ $LINT_EXIT_CODE -ne 0 ]; then
+        echo "✗ golangci-lint found issues:"
+        echo "$LINT_OUTPUT"
+        echo ""
+        echo "Please fix the issues above and try again."
+        echo "Or run: make lint"
+        exit 1
+    fi
+    echo "✓ golangci-lint passed"
+else
+    # Fallback to go vet if golangci-lint not installed
+    echo "  Running go vet (install golangci-lint for more checks)..."
+    VET_OUTPUT=$(go vet ./... 2>&1)
+    VET_EXIT_CODE=$?
+    
+    if [ $VET_EXIT_CODE -ne 0 ]; then
+        echo "✗ go vet found issues:"
+        echo "$VET_OUTPUT"
+        echo ""
+        echo "Please fix the issues above and try again."
+        exit 1
+    fi
+    echo "✓ go vet passed"
 fi
-echo "✓ go vet passed"
 
 echo "✓ All pre-commit checks passed"
 exit 0

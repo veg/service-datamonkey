@@ -16,7 +16,7 @@ make install-hooks
 
 This installs a pre-commit hook that automatically:
 - Formats Go code with `gofmt`
-- Runs `go vet` for static analysis
+- Runs `golangci-lint` (or `go vet` if not installed)
 
 ## Code Formatting
 
