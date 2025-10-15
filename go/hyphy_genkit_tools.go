@@ -412,8 +412,8 @@ func NewHyPhyGenkitTools(genkitClient *genkit.Genkit) *HyPhyGenkitTools {
 	tools.MultihitTool = genkit.DefineTool[MultihitRequest, MultihitResult](genkitClient, "runMultihitAnalysis",
 		"Start a MULTI-HIT analysis job on the Datamonkey API or check the status of an existing job",
 		func(ctx *ai.ToolContext, input MultihitRequest) (MultihitResult, error) {
-			if input.AlignmentFile == "" {
-				return MultihitResult{}, fmt.Errorf("alignment_file is required")
+			if input.Alignment == "" {
+				return MultihitResult{}, fmt.Errorf("alignment is required")
 			}
 
 			client := &http.Client{}
