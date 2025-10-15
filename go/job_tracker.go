@@ -50,6 +50,9 @@ type JobTracker interface {
 	
 	// ListJobsWithFilters returns job IDs matching the given filters
 	ListJobsWithFilters(filters map[string]interface{}) ([]string, error)
+	
+	// GetJobMetadata retrieves metadata for a specific job
+	GetJobMetadata(jobID string) (alignmentID string, treeID string, methodType string, status string, err error)
 }
 
 // FileJobTracker implements JobTracker using a file-based storage
@@ -202,6 +205,11 @@ func (t *FileJobTracker) ListJobsWithFilters(filters map[string]interface{}) ([]
 	return nil, fmt.Errorf("filtering not supported for file-based job tracker")
 }
 
+// GetJobMetadata retrieves metadata (not supported for file tracker)
+func (t *FileJobTracker) GetJobMetadata(jobID string) (string, string, string, string, error) {
+	return "", "", "", "", fmt.Errorf("metadata not supported for file-based job tracker")
+}
+
 // InMemoryJobTracker implements JobTracker using in-memory storage
 type InMemoryJobTracker struct {
 	mappings map[string]string
@@ -292,6 +300,11 @@ func (t *InMemoryJobTracker) UpdateJobStatusByUser(jobID string, userID string, 
 // ListJobsWithFilters returns jobs (not supported for in-memory tracker)
 func (t *InMemoryJobTracker) ListJobsWithFilters(filters map[string]interface{}) ([]string, error) {
 	return nil, fmt.Errorf("filtering not supported for in-memory job tracker")
+}
+
+// GetJobMetadata retrieves metadata (not supported for in-memory tracker)
+func (t *InMemoryJobTracker) GetJobMetadata(jobID string) (string, string, string, string, error) {
+	return "", "", "", "", fmt.Errorf("metadata not supported for in-memory job tracker")
 }
 
 // RedisJobTracker implements JobTracker using Redis
@@ -406,6 +419,11 @@ func (t *RedisJobTracker) UpdateJobStatusByUser(jobID string, userID string, sta
 // ListJobsWithFilters returns jobs (not supported for Redis tracker)
 func (t *RedisJobTracker) ListJobsWithFilters(filters map[string]interface{}) ([]string, error) {
 	return nil, fmt.Errorf("filtering not supported for Redis job tracker")
+}
+
+// GetJobMetadata retrieves metadata (not supported for Redis tracker)
+func (t *RedisJobTracker) GetJobMetadata(jobID string) (string, string, string, string, error) {
+	return "", "", "", "", fmt.Errorf("metadata not supported for Redis job tracker")
 }
 
 // SQLiteJobTracker implements JobTracker using SQLite database
@@ -758,6 +776,43 @@ func (t *SQLiteJobTracker) ListJobsWithFilters(filters map[string]interface{}) (
 	}
 	
 	return jobIDs, nil
+}
+
+// GetJobMetadata retrieves metadata for a specific job
+func (t *SQLiteJobTracker) GetJobMetadata(jobID string) (string, string, string, string, error) {
+	query := `SELECT alignment_id, tree_id, method_type, status FROM job_mappings WHERE job_id = ?`
+	
+	var alignmentID, treeID, methodType, status sql.NullString
+	err := t.db.QueryRow(query, jobID).Scan(&alignmentID, &treeID, &methodType, &status)
+	if err == sql.ErrNoRows {
+		return "", "", "", "", fmt.Errorf("job ID not found in tracker")
+	}
+	if err != nil {
+		return "", "", "", "", fmt.Errorf("failed to get job metadata: %v", err)
+	}
+	
+	// Convert sql.NullString to regular strings
+	alignmentIDStr := ""
+	if alignmentID.Valid {
+		alignmentIDStr = alignmentID.String
+	}
+	
+	treeIDStr := ""
+	if treeID.Valid {
+		treeIDStr = treeID.String
+	}
+	
+	methodTypeStr := ""
+	if methodType.Valid {
+		methodTypeStr = methodType.String
+	}
+	
+	statusStr := ""
+	if status.Valid {
+		statusStr = status.String
+	}
+	
+	return alignmentIDStr, treeIDStr, methodTypeStr, statusStr, nil
 }
 
 // Close closes the database connection

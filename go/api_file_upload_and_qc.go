@@ -210,3 +210,84 @@ func (api *FileUploadAndQCAPI) PostDataset(c *gin.Context) {
 
 	c.JSON(200, gin.H{"status": "File uploaded successfully", "file": dataset.GetId()})
 }
+
+// GetDatasetById retrieves a specific dataset by ID
+// GET /api/v1/datasets/:datasetId
+func (api *FileUploadAndQCAPI) GetDatasetById(c *gin.Context) {
+	datasetId := c.Param("datasetId")
+	
+	if datasetId == "" {
+		c.JSON(400, gin.H{"error": "Dataset ID is required"})
+		return
+	}
+
+	// Get dataset from tracker
+	dataset, err := api.datasetTracker.Get(datasetId)
+	if err != nil {
+		log.Printf("Dataset %s not found: %v", datasetId, err)
+		c.JSON(404, gin.H{"error": "Dataset not found"})
+		return
+	}
+
+	// Return dataset metadata
+	metadata := dataset.GetMetadata()
+	c.JSON(200, gin.H{
+		"id":          dataset.GetId(),
+		"name":        metadata.Name,
+		"type":        metadata.Type,
+		"description": metadata.Description,
+		"created":     metadata.Created,
+		"updated":     metadata.Updated,
+	})
+}
+
+// DeleteDataset deletes a dataset by ID
+// DELETE /api/v1/datasets/:datasetId
+func (api *FileUploadAndQCAPI) DeleteDataset(c *gin.Context) {
+	datasetId := c.Param("datasetId")
+	
+	if datasetId == "" {
+		c.JSON(400, gin.H{"error": "Dataset ID is required"})
+		return
+	}
+
+	// Get user_token from header for authentication
+	userToken := c.GetHeader("user_token")
+	if userToken == "" {
+		c.JSON(401, gin.H{"error": "Unauthorized - user_token header is required"})
+		return
+	}
+
+	// Check if dataset exists and get owner
+	owner, err := api.datasetTracker.GetOwner(datasetId)
+	if err != nil {
+		log.Printf("Dataset %s not found: %v", datasetId, err)
+		c.JSON(404, gin.H{"error": "Dataset not found"})
+		return
+	}
+
+	// Verify user owns the dataset
+	if owner != "" && owner != userToken {
+		log.Printf("User %s attempted to delete dataset %s owned by %s", userToken, datasetId, owner)
+		c.JSON(403, gin.H{"error": "Forbidden - you do not own this dataset"})
+		return
+	}
+
+	// Delete dataset file from disk
+	datasetPath := fmt.Sprintf("%s/%s", api.datasetTracker.GetDatasetDir(), datasetId)
+	if err := os.Remove(datasetPath); err != nil && !os.IsNotExist(err) {
+		log.Printf("Failed to delete dataset file %s: %v", datasetPath, err)
+		c.JSON(500, gin.H{"error": "Failed to delete dataset file"})
+		return
+	}
+
+	// Remove from tracker
+	if err := api.datasetTracker.DeleteByUser(datasetId, userToken); err != nil {
+		log.Printf("Failed to delete dataset %s from tracker: %v", datasetId, err)
+		c.JSON(500, gin.H{"error": "Failed to delete dataset from tracker"})
+		return
+	}
+
+	log.Printf("Dataset %s deleted successfully by user %s", datasetId, userToken)
+	c.Status(204) // No Content
+}

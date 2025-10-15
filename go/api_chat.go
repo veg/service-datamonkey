@@ -253,7 +253,17 @@ func (api *ChatAPI) GetConversation(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, conversation)
+	// SECURITY: Never expose user_token in responses
+	// Create a sanitized response without the user token
+	sanitizedConversation := gin.H{
+		"id":       conversation.Id,
+		"title":    conversation.Title,
+		"created":  conversation.Created,
+		"updated":  conversation.Updated,
+		"messages": conversation.Messages,
+	}
+
+	c.JSON(http.StatusOK, sanitizedConversation)
 }
 
 // GetConversationMessages gets messages from a conversation
@@ -330,7 +340,20 @@ func (api *ChatAPI) ListUserConversations(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"conversations": conversations})
+	// SECURITY: Never expose user_token in responses
+	// Create sanitized conversation list without user tokens
+	sanitizedConversations := make([]gin.H, 0, len(conversations))
+	for _, conv := range conversations {
+		sanitizedConversations = append(sanitizedConversations, gin.H{
+			"id":      conv.Id,
+			"title":   conv.Title,
+			"created": conv.Created,
+			"updated": conv.Updated,
+			// Note: We don't include messages in the list view for performance
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{"conversations": sanitizedConversations})
 }
 
 // SendConversationMessage sends a message to a conversation

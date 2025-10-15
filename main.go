@@ -261,7 +261,7 @@ func initAPIHandlers(scheduler sw.SchedulerInterface, datasetTracker sw.DatasetT
 	}
 
 	// Create JobsAPI
-	jobsAPI := sw.NewJobsAPI(jobTracker, tokenValidator)
+	jobsAPI := sw.NewJobsAPI(jobTracker, tokenValidator, scheduler)
 
 	// Create MethodsAPI
 	methodsAPI := sw.NewMethodsAPIService()
