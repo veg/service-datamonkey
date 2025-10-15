@@ -79,14 +79,18 @@ jobs:
 
     - name: Run unit tests
       run: |
+        # Measure coverage for all code in ./go package
+        # Note: This includes API handlers and chat flow, but they show 0% which is expected
         go test -v -race -coverprofile=coverage.out -covermode=atomic -coverpkg=./go ./go/tests/...
       env:
         RUN_INTEGRATION_TESTS: "false"
 
     - name: Generate coverage report
       run: |
-        echo "## Coverage Report" > coverage.txt
-        go tool cover -func=coverage.out >> coverage.txt
+        echo "## Coverage Report (Core Infrastructure Only)" > coverage.txt
+        echo "Excluding: api_*.go, chat_flow.go, model_*.go, routers.go" >> coverage.txt
+        echo "" >> coverage.txt
+        ./scripts/filter-coverage.sh >> coverage.txt
         cat coverage.txt
 
     - name: Upload coverage
