@@ -154,9 +154,7 @@ func (t *FileDatasetTracker) List() ([]DatasetInterface, error) {
 	}
 
 	result := make([]DatasetInterface, len(datasets))
-	for i, ds := range datasets {
-		result[i] = ds
-	}
+	copy(result, datasets)
 	return result, nil
 }
 

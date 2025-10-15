@@ -427,11 +427,7 @@ func (api *ChatAPI) SendConversationMessage(c *gin.Context) {
 	// Convert messages to chat flow format
 	var history []Message
 	for _, msg := range messages {
-		history = append(history, Message{
-			Role:      msg.Role,
-			Content:   msg.Content,
-			Timestamp: msg.Timestamp,
-		})
+		history = append(history, Message(msg))
 	}
 
 	// Call the Genkit chat flow with the new message and history

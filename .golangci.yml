@@ -3,6 +3,8 @@
 linters-settings:
   govet:
     enable-all: true
+    disable:
+      - fieldalignment  # Micro-optimization, not worth the code churn
   gocyclo:
     min-complexity: 15
   dupl:

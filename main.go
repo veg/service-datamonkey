@@ -216,7 +216,7 @@ func initAPIHandlers(scheduler sw.SchedulerInterface, datasetTracker sw.DatasetT
 	if err != nil {
 		log.Fatalf("Failed to initialize Genkit client: %v", err)
 	}
-	
+
 	// Create a user token validator if token service is available
 	var tokenValidator *sw.UserTokenValidator
 	if tokenService != nil {
@@ -241,7 +241,7 @@ func initAPIHandlers(scheduler sw.SchedulerInterface, datasetTracker sw.DatasetT
 	nrmAPI := sw.NewNRMAPI(basePath, hyPhyPath, scheduler, datasetTracker, jobTracker)
 	fadeAPI := sw.NewFADEAPI(basePath, hyPhyPath, scheduler, datasetTracker, jobTracker)
 	slatkinAPI := sw.NewSLATKINAPI(basePath, hyPhyPath, scheduler, datasetTracker, jobTracker)
-	
+
 	// Set the UserTokenValidator for each API
 	if tokenValidator != nil {
 		absrelAPI.HyPhyBaseAPI.UserTokenValidator = tokenValidator
