@@ -1,6 +1,18 @@
 # service-datamonkey
 
-This is a REST service intended to drive Datamonkey3 server-side. It is designed to conform to the OpenAPI specification defined at [api-datamonkey](https://github.com/d-callan/api-datamonkey) using the [go-gin-server](https://openapi-generator.tech/docs/generators/go-gin-server) generator from OpenAPI Generator. 
+This is a REST service intended to drive Datamonkey3 server-side. It is designed to conform to the OpenAPI specification defined at [api-datamonkey](https://github.com/d-callan/api-datamonkey) using the [go-gin-server](https://openapi-generator.tech/docs/generators/go-gin-server) generator from OpenAPI Generator.
+
+## Features
+
+- **14 HyPhy Analysis Methods** - Full support for all HyPhy phylogenetic analysis methods (ABSREL, BGM, BUSTED, CONTRAST-FEL, FADE, FEL, FUBAR, GARD, MEME, MULTI-HIT, NRM, RELAX, SLAC, SLATKIN)
+- **RESTful API** - Complete REST API for job submission, monitoring, and results retrieval
+- **Dataset Management** - Upload, list, retrieve, and delete datasets with user authentication
+- **Job Management** - Submit, monitor, list, and delete analysis jobs with filtering capabilities
+- **AI Integration** - 24 Genkit tools for AI-powered interaction with the Datamonkey API
+- **Flexible Storage** - Support for file-based, SQLite, Redis, and in-memory trackers
+- **Slurm Integration** - Both REST API and CLI modes for job scheduling
+- **User Authentication** - Token-based authentication with ownership verification
+- **Chat Interface** - AI chat flow with tool access for natural language interaction
 
 ## Development
 
@@ -62,50 +74,24 @@ make start-slurm-rest
 # make start-slurm-cli   # for CLI mode
 ```
 
-## Environment Variables
+## Configuration
 
-To get started, if you haven't already, copy the `.env.example` file to a `.env` file in the root directory of the project:
+The service uses environment variables for configuration. To get started:
 
 ```bash
 cp .env.example .env
 # Edit .env with your desired values
 ```
 
-The following environment variables are available:
+The `.env.example` file contains all available configuration options with descriptions and sensible defaults, including:
+- **Dataset & Job Trackers** - Storage backends for datasets and jobs (File, SQLite, Redis, InMemory)
+- **Conversation Tracker** - Storage for AI chat conversations
+- **Scheduler** - Slurm integration (REST or CLI mode)
+- **JWT Authentication** - User token authentication and Slurm tokens
+- **AI Configuration** - Model provider, name, temperature, and API keys
+- **Service Settings** - Port, HyPhy paths, and other service options
 
-- `DATASET_TRACKER_TYPE`: Specifies the type of dataset tracker to use. Default is `FileDatasetTracker`.
-- `DATASET_LOCATION`: Specifies the directory where the dataset tracker will store its files. Default is `/data/uploads`.
-- `JOB_TRACKER_TYPE`: Specifies the type of job tracker to use. Default is `FileJobTracker`.
-- `JOB_TRACKER_LOCATION`: Specifies the directory where the job tracker will store its files. Default is `/data/uploads`.
-- `SCHEDULER_TYPE`: Specifies the type of scheduler to use. Default is `SlurmRestScheduler`.
-- `SLURM_REST_URL`: Base URL for the Slurm REST API (required).
-- `SLURM_REST_API_PATH`: API path for job status (required).
-- `SLURM_REST_SUBMIT_API_PATH`: API path for job submission. Defaults to the value of `SLURM_REST_API_PATH` if not set.
-- `SLURM_QUEUE_NAME`: Name of the Slurm queue to use (required).
-- `SLURM_JWT_KEY_PATH`: Path to the JWT key file for generating Slurm tokens (required).
-- `SLURM_JWT_USERNAME`: Username for JWT token generation (required).
-- `SLURM_JWT_EXPIRATION_SECS`: Expiration time in seconds for JWT tokens. Defaults to 86400 (24 hours).
-- `SERVICE_DATAMONKEY_PORT`: Specifies the port to use for the service. Default is `9300`.
-
-### Example
-
-Sensible defaults are set in the docker-compose.yml file.
-To run the application with alternative desired environment variables, you can set them as follows:
-```bash
-export DATASET_TRACKER_TYPE=FileDatasetTracker
-export DATASET_LOCATION=/data/uploads
-export JOB_TRACKER_TYPE=FileJobTracker
-export JOB_TRACKER_LOCATION=/data/uploads
-export SLURM_REST_URL=http://c2:9200
-export SLURM_REST_API_PATH=/slurmdb/v0.0.37
-export SLURM_REST_SUBMIT_API_PATH=/slurm/v0.0.37
-export SLURM_QUEUE_NAME=normal
-export SLURM_JWT_KEY_PATH=/var/spool/slurm/statesave/jwt.key
-export SLURM_JWT_USERNAME=your_username
-export SLURM_JWT_EXPIRATION_SECS=86400
-export SCHEDULER_TYPE=SlurmRestScheduler
-export SERVICE_DATAMONKEY_PORT=9300
-```
+See [.env.example](.env.example) for complete documentation of all environment variables.
 
 ## Adding New HyPhy Methods and Parameters
 
@@ -327,6 +313,17 @@ You can also use the `bin/switch-slurm-mode.sh` script directly:
 ./bin/switch-slurm-mode.sh cli
 ```
 
+## API Documentation
+
+For complete API documentation, see the [OpenAPI specification](https://veg.github.io/api-datamonkey/).
+
+The service implements all endpoints defined in the api-datamonkey specification, including:
+- Dataset management (upload, list, retrieve, delete)
+- Job management (submit, monitor, list, retrieve, delete)
+- All 14 HyPhy analysis methods
+- Chat interface for AI interactions
+- Health check endpoint
+
 ## Testing
 
 ### Make sure things are healthy
@@ -384,3 +381,12 @@ In the root directory of the project, where the service was started, do: `docker
 To see logs for service-datamonkey: `docker logs service-datamonkey`
 To see logs for the Slurm head node: `docker logs c2`
 To see logs for the Slurm db: `docker logs slurmdbd`
+
+## Security
+
+The service implements comprehensive security measures:
+
+- **Token-based Authentication** - All DELETE operations require a `user_token` header
+- **Ownership Verification** - Users can only delete their own datasets and jobs
+- **Input Validation** - All requests are validated before processing
+- **Error Handling** - Proper HTTP status codes (401 Unauthorized, 403 Forbidden, 404 Not Found)
