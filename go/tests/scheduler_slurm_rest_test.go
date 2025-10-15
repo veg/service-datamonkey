@@ -10,21 +10,6 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-// MockJobTracker is a simple mock implementation of JobTracker for testing
-type MockJobTracker struct{}
-
-func (m *MockJobTracker) StoreJobMapping(jobID, schedulerJobID string) error {
-	return nil
-}
-
-func (m *MockJobTracker) GetSchedulerJobID(jobID string) (string, error) {
-	return "mock-scheduler-job-id", nil
-}
-
-func (m *MockJobTracker) DeleteJobMapping(jobID string) error {
-	return nil
-}
-
 // TestJWTTokenGeneration tests the JWT token generation functionality
 func TestJWTTokenGeneration(t *testing.T) {
 	// Skip this test if we're not in a proper environment to run it

@@ -109,8 +109,8 @@ func TestSlurmSchedulerWithDefaults(t *testing.T) {
 		t.Errorf("Expected default cores per node 1, got %d", jobConfig.CoresPerNode)
 	}
 
-	if jobConfig.MemoryPerNode != "1G" {
-		t.Errorf("Expected default memory per node '1G', got '%s'", jobConfig.MemoryPerNode)
+	if jobConfig.MemoryPerNode != "900M" {
+		t.Errorf("Expected default memory per node '900M', got '%s'", jobConfig.MemoryPerNode)
 	}
 
 	if jobConfig.MaxTime != "01:00:00" {
@@ -146,8 +146,8 @@ func TestSlurmSchedulerValidation(t *testing.T) {
 		t.Errorf("Expected default cores per node 1, got %d", jobConfig.CoresPerNode)
 	}
 
-	if jobConfig.MemoryPerNode != "1G" {
-		t.Errorf("Expected default memory per node '1G', got '%s'", jobConfig.MemoryPerNode)
+	if jobConfig.MemoryPerNode != "900M" {
+		t.Errorf("Expected default memory per node '900M', got '%s'", jobConfig.MemoryPerNode)
 	}
 
 	if jobConfig.MaxTime != "01:00:00" {
@@ -215,6 +215,55 @@ func (m *MockJobTrackerWithInspection) GetSchedulerJobID(jobID string) (string, 
 func (m *MockJobTrackerWithInspection) DeleteJobMapping(jobID string) error {
 	delete(m.mappings, jobID)
 	return nil
+}
+
+func (m *MockJobTrackerWithInspection) StoreJobWithUser(jobID string, schedulerJobID string, userID string) error {
+	m.mappings[jobID] = schedulerJobID
+	return nil
+}
+
+func (m *MockJobTrackerWithInspection) GetJobOwner(jobID string) (string, error) {
+	return "mock-user-id", nil
+}
+
+func (m *MockJobTrackerWithInspection) GetSchedulerJobIDByUser(jobID string, userID string) (string, error) {
+	return m.GetSchedulerJobID(jobID)
+}
+
+func (m *MockJobTrackerWithInspection) DeleteJobMappingByUser(jobID string, userID string) error {
+	return m.DeleteJobMapping(jobID)
+}
+
+func (m *MockJobTrackerWithInspection) ListJobsByUser(userID string) ([]string, error) {
+	jobs := make([]string, 0, len(m.mappings))
+	for jobID := range m.mappings {
+		jobs = append(jobs, jobID)
+	}
+	return jobs, nil
+}
+
+func (m *MockJobTrackerWithInspection) StoreJobMetadata(jobID string, alignmentID string, treeID string, methodType string, status string) error {
+	return nil
+}
+
+func (m *MockJobTrackerWithInspection) UpdateJobStatus(jobID string, status string) error {
+	return nil
+}
+
+func (m *MockJobTrackerWithInspection) UpdateJobStatusByUser(jobID string, userID string, status string) error {
+	return nil
+}
+
+func (m *MockJobTrackerWithInspection) ListJobsWithFilters(filters map[string]interface{}) ([]string, error) {
+	jobs := make([]string, 0, len(m.mappings))
+	for jobID := range m.mappings {
+		jobs = append(jobs, jobID)
+	}
+	return jobs, nil
+}
+
+func (m *MockJobTrackerWithInspection) GetJobMetadata(jobID string) (string, string, string, string, error) {
+	return "alignment-id", "tree-id", "fel", "completed", nil
 }
 
 // MockMethod is a mock implementation for testing
