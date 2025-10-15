@@ -268,6 +268,12 @@ func getRoutes(handleFunctions ApiHandleFunctions) []Route {
 			handleFunctions.FUBARAPI.StartFUBARJob,
 		},
 		{
+			"DeleteDataset",
+			http.MethodDelete,
+			"/api/v1/datasets/:datasetId",
+			handleFunctions.FileUploadAndQCAPI.DeleteDataset,
+		},
+		{
 			"GetDatasetById",
 			http.MethodGet,
 			"/api/v1/datasets/:datasetId",
@@ -308,6 +314,18 @@ func getRoutes(handleFunctions ApiHandleFunctions) []Route {
 			http.MethodGet,
 			"/api/v1/health",
 			handleFunctions.HealthAPI.GetHealth,
+		},
+		{
+			"DeleteJob",
+			http.MethodDelete,
+			"/api/v1/jobs/:jobId",
+			handleFunctions.JobsAPI.DeleteJob,
+		},
+		{
+			"GetJobById",
+			http.MethodGet,
+			"/api/v1/jobs/:jobId",
+			handleFunctions.JobsAPI.GetJobById,
 		},
 		{
 			"GetJobsList",
