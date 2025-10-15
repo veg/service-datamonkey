@@ -17,40 +17,40 @@ import (
 type JobTracker interface {
 	// StoreJobMapping stores a mapping between our job ID and the scheduler's job ID
 	StoreJobMapping(jobID string, schedulerJobID string) error
-	
+
 	// GetSchedulerJobID retrieves the scheduler's job ID for our job ID
 	GetSchedulerJobID(jobID string) (string, error)
-	
+
 	// DeleteJobMapping removes a job mapping
 	DeleteJobMapping(jobID string) error
-	
+
 	// StoreJobWithUser stores a job mapping with user ID
 	StoreJobWithUser(jobID string, schedulerJobID string, userID string) error
-	
+
 	// GetJobOwner retrieves the user ID for a job
 	GetJobOwner(jobID string) (string, error)
-	
+
 	// GetSchedulerJobIDByUser retrieves the scheduler's job ID and verifies user ownership
 	GetSchedulerJobIDByUser(jobID string, userID string) (string, error)
-	
+
 	// DeleteJobMappingByUser removes a job mapping only if owned by the user
 	DeleteJobMappingByUser(jobID string, userID string) error
-	
+
 	// ListJobsByUser returns all job IDs owned by a specific user
 	ListJobsByUser(userID string) ([]string, error)
-	
+
 	// StoreJobMetadata stores additional metadata about a job
 	StoreJobMetadata(jobID string, alignmentID string, treeID string, methodType string, status string) error
-	
+
 	// UpdateJobStatus updates the status of a job
 	UpdateJobStatus(jobID string, status string) error
-	
+
 	// UpdateJobStatusByUser updates the status of a job only if owned by the user
 	UpdateJobStatusByUser(jobID string, userID string, status string) error
-	
+
 	// ListJobsWithFilters returns job IDs matching the given filters
 	ListJobsWithFilters(filters map[string]interface{}) ([]string, error)
-	
+
 	// GetJobMetadata retrieves metadata for a specific job
 	GetJobMetadata(jobID string) (alignmentID string, treeID string, methodType string, status string, err error)
 }
@@ -227,7 +227,7 @@ func NewInMemoryJobTracker() *InMemoryJobTracker {
 func (t *InMemoryJobTracker) StoreJobMapping(jobID string, schedulerJobID string) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	
+
 	t.mappings[jobID] = schedulerJobID
 	return nil
 }
@@ -236,12 +236,12 @@ func (t *InMemoryJobTracker) StoreJobMapping(jobID string, schedulerJobID string
 func (t *InMemoryJobTracker) GetSchedulerJobID(jobID string) (string, error) {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
-	
+
 	schedulerJobID, ok := t.mappings[jobID]
 	if !ok {
 		return "", fmt.Errorf("job ID not found in tracker")
 	}
-	
+
 	return schedulerJobID, nil
 }
 
@@ -249,7 +249,7 @@ func (t *InMemoryJobTracker) GetSchedulerJobID(jobID string) (string, error) {
 func (t *InMemoryJobTracker) DeleteJobMapping(jobID string) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	
+
 	delete(t.mappings, jobID)
 	return nil
 }
@@ -319,15 +319,15 @@ func NewRedisJobTracker(redisURL string) (*RedisJobTracker, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse Redis URL: %v", err)
 	}
-	
+
 	client := redis.NewClient(opts)
-	
+
 	// Test the connection
 	ctx := context.Background()
 	if err := client.Ping(ctx).Err(); err != nil {
 		return nil, fmt.Errorf("failed to connect to Redis: %v", err)
 	}
-	
+
 	return &RedisJobTracker{
 		client: client,
 		prefix: "job_mapping:",
@@ -338,11 +338,11 @@ func NewRedisJobTracker(redisURL string) (*RedisJobTracker, error) {
 func (t *RedisJobTracker) StoreJobMapping(jobID string, schedulerJobID string) error {
 	ctx := context.Background()
 	key := t.prefix + jobID
-	
+
 	if err := t.client.Set(ctx, key, schedulerJobID, 0).Err(); err != nil {
 		return fmt.Errorf("failed to store job mapping in Redis: %v", err)
 	}
-	
+
 	return nil
 }
 
@@ -350,14 +350,14 @@ func (t *RedisJobTracker) StoreJobMapping(jobID string, schedulerJobID string) e
 func (t *RedisJobTracker) GetSchedulerJobID(jobID string) (string, error) {
 	ctx := context.Background()
 	key := t.prefix + jobID
-	
+
 	schedulerJobID, err := t.client.Get(ctx, key).Result()
 	if err == redis.Nil {
 		return "", fmt.Errorf("job ID not found in tracker")
 	} else if err != nil {
 		return "", fmt.Errorf("failed to get job mapping from Redis: %v", err)
 	}
-	
+
 	return schedulerJobID, nil
 }
 
@@ -365,11 +365,11 @@ func (t *RedisJobTracker) GetSchedulerJobID(jobID string) (string, error) {
 func (t *RedisJobTracker) DeleteJobMapping(jobID string) error {
 	ctx := context.Background()
 	key := t.prefix + jobID
-	
+
 	if err := t.client.Del(ctx, key).Err(); err != nil {
 		return fmt.Errorf("failed to delete job mapping from Redis: %v", err)
 	}
-	
+
 	return nil
 }
 
@@ -622,7 +622,7 @@ func (t *SQLiteJobTracker) DeleteJobMappingByUser(jobID string, userID string) e
 	query := `SELECT user_id FROM job_mappings WHERE job_id = ?`
 	var ownerID sql.NullString
 	err := t.db.QueryRow(query, jobID).Scan(&ownerID)
-	
+
 	if err == sql.ErrNoRows {
 		return fmt.Errorf("job ID not found in tracker")
 	}
@@ -664,11 +664,11 @@ func (t *SQLiteJobTracker) ListJobsByUser(userID string) ([]string, error) {
 // StoreJobMetadata stores additional metadata about a job
 func (t *SQLiteJobTracker) StoreJobMetadata(jobID string, alignmentID string, treeID string, methodType string, status string) error {
 	query := `UPDATE job_mappings SET alignment_id = ?, tree_id = ?, method_type = ?, status = ?, updated_at = CURRENT_TIMESTAMP WHERE job_id = ?`
-	_, err := t.db.Exec(query, 
-		sql.NullString{String: alignmentID, Valid: alignmentID != ""}, 
-		sql.NullString{String: treeID, Valid: treeID != ""}, 
-		sql.NullString{String: methodType, Valid: methodType != ""}, 
-		sql.NullString{String: status, Valid: status != ""}, 
+	_, err := t.db.Exec(query,
+		sql.NullString{String: alignmentID, Valid: alignmentID != ""},
+		sql.NullString{String: treeID, Valid: treeID != ""},
+		sql.NullString{String: methodType, Valid: methodType != ""},
+		sql.NullString{String: status, Valid: status != ""},
 		jobID)
 	if err != nil {
 		return fmt.Errorf("failed to store job metadata: %v", err)
@@ -683,16 +683,16 @@ func (t *SQLiteJobTracker) UpdateJobStatus(jobID string, status string) error {
 	if err != nil {
 		return fmt.Errorf("failed to update job status: %v", err)
 	}
-	
+
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
 		return fmt.Errorf("failed to get rows affected: %v", err)
 	}
-	
+
 	if rowsAffected == 0 {
 		return fmt.Errorf("job ID not found in tracker")
 	}
-	
+
 	return nil
 }
 
@@ -702,7 +702,7 @@ func (t *SQLiteJobTracker) UpdateJobStatusByUser(jobID string, userID string, st
 	query := `SELECT user_id FROM job_mappings WHERE job_id = ?`
 	var ownerID sql.NullString
 	err := t.db.QueryRow(query, jobID).Scan(&ownerID)
-	
+
 	if err == sql.ErrNoRows {
 		return fmt.Errorf("job ID not found in tracker")
 	}
@@ -724,48 +724,48 @@ func (t *SQLiteJobTracker) UpdateJobStatusByUser(jobID string, userID string, st
 func (t *SQLiteJobTracker) ListJobsWithFilters(filters map[string]interface{}) ([]string, error) {
 	query := `SELECT job_id FROM job_mappings WHERE 1=1`
 	args := []interface{}{}
-	
+
 	// Build dynamic query based on filters
 	if userID, ok := filters["user_id"].(string); ok && userID != "" {
 		query += ` AND user_id = ?`
 		args = append(args, userID)
 	}
-	
+
 	if alignmentID, ok := filters["alignment_id"].(string); ok && alignmentID != "" {
 		query += ` AND alignment_id = ?`
 		args = append(args, alignmentID)
 	}
-	
+
 	if treeID, ok := filters["tree_id"].(string); ok && treeID != "" {
 		query += ` AND tree_id = ?`
 		args = append(args, treeID)
 	}
-	
+
 	if methodType, ok := filters["method_type"].(string); ok && methodType != "" {
 		query += ` AND method_type = ?`
 		args = append(args, methodType)
 	}
-	
+
 	if status, ok := filters["status"].(string); ok && status != "" {
 		query += ` AND status = ?`
 		args = append(args, status)
 	}
-	
+
 	// Add ordering
 	query += ` ORDER BY created_at DESC`
-	
+
 	// Add limit if specified
 	if limit, ok := filters["limit"].(int); ok && limit > 0 {
 		query += ` LIMIT ?`
 		args = append(args, limit)
 	}
-	
+
 	rows, err := t.db.Query(query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query jobs: %v", err)
 	}
 	defer rows.Close()
-	
+
 	var jobIDs []string
 	for rows.Next() {
 		var jobID string
@@ -774,14 +774,14 @@ func (t *SQLiteJobTracker) ListJobsWithFilters(filters map[string]interface{}) (
 		}
 		jobIDs = append(jobIDs, jobID)
 	}
-	
+
 	return jobIDs, nil
 }
 
 // GetJobMetadata retrieves metadata for a specific job
 func (t *SQLiteJobTracker) GetJobMetadata(jobID string) (string, string, string, string, error) {
 	query := `SELECT alignment_id, tree_id, method_type, status FROM job_mappings WHERE job_id = ?`
-	
+
 	var alignmentID, treeID, methodType, status sql.NullString
 	err := t.db.QueryRow(query, jobID).Scan(&alignmentID, &treeID, &methodType, &status)
 	if err == sql.ErrNoRows {
@@ -790,28 +790,28 @@ func (t *SQLiteJobTracker) GetJobMetadata(jobID string) (string, string, string,
 	if err != nil {
 		return "", "", "", "", fmt.Errorf("failed to get job metadata: %v", err)
 	}
-	
+
 	// Convert sql.NullString to regular strings
 	alignmentIDStr := ""
 	if alignmentID.Valid {
 		alignmentIDStr = alignmentID.String
 	}
-	
+
 	treeIDStr := ""
 	if treeID.Valid {
 		treeIDStr = treeID.String
 	}
-	
+
 	methodTypeStr := ""
 	if methodType.Valid {
 		methodTypeStr = methodType.String
 	}
-	
+
 	statusStr := ""
 	if status.Valid {
 		statusStr = status.String
 	}
-	
+
 	return alignmentIDStr, treeIDStr, methodTypeStr, statusStr, nil
 }
 

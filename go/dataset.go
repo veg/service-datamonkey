@@ -27,9 +27,9 @@ type DatasetInterface interface {
 // BaseDataset provides common dataset implementation
 type BaseDataset struct {
 	Metadata    DatasetMetadata `json:"metadata"`
-	Id          string         `json:"id"`
-	ContentHash string         `json:"content_hash"`
-	Content     []byte         `json:"-"` // Raw content not serialized
+	Id          string          `json:"id"`
+	ContentHash string          `json:"content_hash"`
+	Content     []byte          `json:"-"` // Raw content not serialized
 }
 
 // NewBaseDataset creates a new BaseDataset with given metadata and content
@@ -45,7 +45,7 @@ func NewBaseDataset(metadata DatasetMetadata, content []byte) *BaseDataset {
 		Metadata:    metadata,
 		Content:     content,
 		ContentHash: hex.EncodeToString(contentHash[:]),
-		Id:         hex.EncodeToString(contentHash[:]), // Using content hash as ID
+		Id:          hex.EncodeToString(contentHash[:]), // Using content hash as ID
 	}
 }
 

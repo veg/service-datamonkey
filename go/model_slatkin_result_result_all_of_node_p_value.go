@@ -1,7 +1,7 @@
 /*
  * Datamonkey API
  *
- * Datamonkey is a free public server for comparative analysis of sequence alignments using state-of-the-art statistical models. <br> This is the OpenAPI definition for the Datamonkey API. 
+ * Datamonkey is a free public server for comparative analysis of sequence alignments using state-of-the-art statistical models. <br> This is the OpenAPI definition for the Datamonkey API.
  *
  * API version: 1.2.0
  * Contact: spond@temple.edu
@@ -12,7 +12,6 @@ package datamonkey
 
 // SlatkinResultResultAllOfNodePValue - P-values for each node
 type SlatkinResultResultAllOfNodePValue struct {
-
 	Panmictic map[string]float32 `json:"panmictic,omitempty"`
 
 	Structured map[string]float32 `json:"structured,omitempty"`

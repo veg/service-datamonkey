@@ -71,7 +71,7 @@ func (api *SLATKINAPI) formatSLATKINJobResults(jobId string, rawResults json.Raw
 	// The spec expects: {"job_id": "...", "result": {...}}
 	resultMap := map[string]interface{}{
 		"job_id": jobId,
-		
+
 		"results": rawResults,
 	}
 

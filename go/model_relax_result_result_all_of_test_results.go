@@ -1,7 +1,7 @@
 /*
  * Datamonkey API
  *
- * Datamonkey is a free public server for comparative analysis of sequence alignments using state-of-the-art statistical models. <br> This is the OpenAPI definition for the Datamonkey API. 
+ * Datamonkey is a free public server for comparative analysis of sequence alignments using state-of-the-art statistical models. <br> This is the OpenAPI definition for the Datamonkey API.
  *
  * API version: 1.2.0
  * Contact: spond@temple.edu
@@ -11,7 +11,6 @@
 package datamonkey
 
 type RelaxResultResultAllOfTestResults struct {
-
 	PValue float32 `json:"p-value,omitempty"`
 
 	RelaxationOrIntensificationParameter float32 `json:"relaxation or intensification parameter,omitempty"`

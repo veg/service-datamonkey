@@ -631,7 +631,7 @@ func (t *SQLiteDatasetTracker) GetByUser(id string, userID string) (DatasetInter
 	query := `SELECT user_id FROM datasets WHERE id = ?`
 	var ownerID sql.NullString
 	err := t.db.QueryRow(query, id).Scan(&ownerID)
-	
+
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("dataset not found")
 	}
@@ -700,7 +700,7 @@ func (t *SQLiteDatasetTracker) DeleteByUser(id string, userID string) error {
 	query := `SELECT user_id FROM datasets WHERE id = ?`
 	var ownerID sql.NullString
 	err := t.db.QueryRow(query, id).Scan(&ownerID)
-	
+
 	if err == sql.ErrNoRows {
 		return fmt.Errorf("dataset not found")
 	}
@@ -723,7 +723,7 @@ func (t *SQLiteDatasetTracker) UpdateByUser(id string, userID string, updates ma
 	query := `SELECT user_id FROM datasets WHERE id = ?`
 	var ownerID sql.NullString
 	err := t.db.QueryRow(query, id).Scan(&ownerID)
-	
+
 	if err == sql.ErrNoRows {
 		return fmt.Errorf("dataset not found")
 	}
@@ -745,7 +745,7 @@ func (t *SQLiteDatasetTracker) GetOwner(id string) (string, error) {
 	query := `SELECT user_id FROM datasets WHERE id = ?`
 	var ownerID sql.NullString
 	err := t.db.QueryRow(query, id).Scan(&ownerID)
-	
+
 	if err == sql.ErrNoRows {
 		return "", fmt.Errorf("dataset not found")
 	}

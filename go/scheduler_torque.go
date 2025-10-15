@@ -157,14 +157,14 @@ func (s *TorqueScheduler) CheckHealth() (bool, string, error) {
 	cmd := exec.Command("pbsnodes", "-a")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return false, "Torque command-line tools unavailable", 
+		return false, "Torque command-line tools unavailable",
 			fmt.Errorf("failed to execute pbsnodes: %v, output: %s", err, string(output))
 	}
 
 	// Check if there are any available nodes
 	outputStr := string(output)
 	if len(outputStr) == 0 || !strings.Contains(outputStr, "state =") {
-		return false, "No compute nodes available", 
+		return false, "No compute nodes available",
 			fmt.Errorf("no compute nodes found in pbsnodes output")
 	}
 
@@ -173,14 +173,14 @@ func (s *TorqueScheduler) CheckHealth() (bool, string, error) {
 		cmd = exec.Command("qstat", "-Q", s.Config.Queue)
 		output, err = cmd.CombinedOutput()
 		if err != nil {
-			return false, fmt.Sprintf("Queue %s check failed", s.Config.Queue), 
+			return false, fmt.Sprintf("Queue %s check failed", s.Config.Queue),
 				fmt.Errorf("failed to check queue: %v, output: %s", err, string(output))
 		}
 
 		// Check if the queue is enabled
 		outputStr = string(output)
 		if !strings.Contains(outputStr, s.Config.Queue) {
-			return false, fmt.Sprintf("Queue %s not found", s.Config.Queue), 
+			return false, fmt.Sprintf("Queue %s not found", s.Config.Queue),
 				fmt.Errorf("queue %s not found in qstat output", s.Config.Queue)
 		}
 	}

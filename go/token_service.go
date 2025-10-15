@@ -14,9 +14,9 @@ import (
 // TokenConfig holds configuration for JWT token generation
 type TokenConfig struct {
 	// JWT token generation parameters
-	KeyPath        string        // Path to the JWT key file
-	Username       string        // Username for JWT token
-	ExpirationSecs int64         // Expiration time in seconds for JWT token
+	KeyPath         string        // Path to the JWT key file
+	Username        string        // Username for JWT token
+	ExpirationSecs  int64         // Expiration time in seconds for JWT token
 	RefreshInterval time.Duration // How often to refresh the token
 }
 
@@ -81,10 +81,10 @@ func (s *TokenService) GenerateToken(claims map[string]interface{}) (string, err
 // GenerateUserToken generates a token for a user
 func (s *TokenService) GenerateUserToken(userId string) (string, error) {
 	claims := map[string]interface{}{
-		"sub": userId,
+		"sub":  userId,
 		"type": "user",
 	}
-	
+
 	return s.GenerateToken(claims)
 }
 
@@ -150,35 +150,35 @@ func (v *UserTokenValidator) ValidateUserToken(c *gin.Context) (string, error) {
 
 	// Try to get token from query parameter first
 	userToken := c.Query("user_token")
-	
+
 	// If not in query, try header
 	if userToken == "" {
 		userToken = c.GetHeader("user_token")
 	}
-	
+
 	// Check if token is provided
 	if userToken == "" {
 		log.Println("Missing user token")
 		return "", fmt.Errorf("missing user token")
 	}
-	
+
 	// Validate the token
 	// Trim any whitespace from the token
 	userToken = strings.TrimSpace(userToken)
-	
+
 	claims, err := v.TokenService.ValidateToken(userToken)
 	if err != nil {
 		log.Printf("Invalid user token: %v", err)
 		return "", fmt.Errorf("invalid user token: %v", err)
 	}
-	
+
 	// Extract user ID from claims
 	userID, ok := claims["sub"].(string)
 	if !ok {
 		log.Println("Invalid token claims: missing user ID")
 		return "", fmt.Errorf("invalid token claims: missing user ID")
 	}
-	
+
 	return userID, nil
 }
 
@@ -189,13 +189,13 @@ func (v *UserTokenValidator) CheckJobAccess(c *gin.Context, jobID string, jobTra
 	if err != nil {
 		return "", err
 	}
-	
+
 	// If no job tracker is provided, we can't verify ownership
 	if jobTracker == nil {
 		log.Println("Warning: Job tracker not provided, skipping ownership check")
 		return userID, nil
 	}
-	
+
 	// Get the job owner from the tracker
 	ownerID, err := jobTracker.GetJobOwner(jobID)
 	if err != nil {
@@ -209,12 +209,12 @@ func (v *UserTokenValidator) CheckJobAccess(c *gin.Context, jobID string, jobTra
 		}
 		return "", fmt.Errorf("failed to check job ownership: %v", err)
 	}
-	
+
 	// Check if the user owns the job
 	if ownerID != userID {
 		return "", fmt.Errorf("user does not have access to this job")
 	}
-	
+
 	return userID, nil
 }
 
@@ -225,13 +225,13 @@ func (v *UserTokenValidator) CheckDatasetAccess(c *gin.Context, datasetID string
 	if err != nil {
 		return "", err
 	}
-	
+
 	// If no dataset tracker is provided, we can't verify ownership
 	if datasetTracker == nil {
 		log.Println("Warning: Dataset tracker not provided, skipping ownership check")
 		return userID, nil
 	}
-	
+
 	// Get the dataset owner using the exposed interface method
 	ownerID, err := datasetTracker.GetOwner(datasetID)
 	if err != nil {
@@ -250,12 +250,12 @@ func (v *UserTokenValidator) CheckDatasetAccess(c *gin.Context, datasetID string
 		}
 		return "", fmt.Errorf("failed to check dataset ownership: %v", err)
 	}
-	
+
 	// Check if the user owns the dataset
 	if ownerID != userID {
 		return "", fmt.Errorf("user does not have access to this dataset")
 	}
-	
+
 	return userID, nil
 }
 
@@ -266,13 +266,13 @@ func (v *UserTokenValidator) CheckConversationAccess(c *gin.Context, conversatio
 	if err != nil {
 		return "", err
 	}
-	
+
 	// If no conversation tracker is provided, we can't verify ownership
 	if conversationTracker == nil {
 		log.Println("Warning: Conversation tracker not provided, skipping ownership check")
 		return userID, nil
 	}
-	
+
 	// Get the conversation using the exposed interface method
 	conversation, err := conversationTracker.GetConversation(conversationID)
 	if err != nil {
@@ -281,23 +281,23 @@ func (v *UserTokenValidator) CheckConversationAccess(c *gin.Context, conversatio
 		}
 		return "", fmt.Errorf("failed to get conversation: %v", err)
 	}
-	
+
 	// Validate the user token from the conversation
 	conversationClaims, err := v.TokenService.ValidateToken(conversation.UserToken)
 	if err != nil {
 		return "", fmt.Errorf("invalid conversation token: %v", err)
 	}
-	
+
 	// Extract user ID from claims
 	conversationUserID, ok := conversationClaims["sub"].(string)
 	if !ok {
 		return "", fmt.Errorf("invalid token claims: missing user ID in conversation token")
 	}
-	
+
 	// Check if the user owns the conversation
 	if conversationUserID != userID {
 		return "", fmt.Errorf("user does not have access to this conversation")
 	}
-	
+
 	return userID, nil
 }

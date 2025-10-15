@@ -40,13 +40,13 @@ func TestSlurmSchedulerCreation(t *testing.T) {
 
 	// Create a test job with job-specific configuration in metadata
 	job := &sw.BaseJob{
-		Id:       "test-job-id",
-		LogPath:  "/tmp/test-job.log",
+		Id:      "test-job-id",
+		LogPath: "/tmp/test-job.log",
 		Metadata: map[string]interface{}{
-			"slurm_node_count":     2,
+			"slurm_node_count":      2,
 			"slurm_cores_per_node":  4,
 			"slurm_memory_per_node": "8G",
-			"slurm_max_time":       "02:00:00",
+			"slurm_max_time":        "02:00:00",
 		},
 	}
 

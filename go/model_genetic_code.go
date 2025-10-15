@@ -1,7 +1,7 @@
 /*
  * Datamonkey API
  *
- * Datamonkey is a free public server for comparative analysis of sequence alignments using state-of-the-art statistical models. <br> This is the OpenAPI definition for the Datamonkey API. 
+ * Datamonkey is a free public server for comparative analysis of sequence alignments using state-of-the-art statistical models. <br> This is the OpenAPI definition for the Datamonkey API.
  *
  * API version: 1.2.0
  * Contact: spond@temple.edu
@@ -9,21 +9,22 @@
  */
 
 package datamonkey
-// GeneticCode : Available Genetic Codes 
+
+// GeneticCode : Available Genetic Codes
 type GeneticCode string
 
 // List of GeneticCode
 const (
-	UNIVERSAL GeneticCode = "Universal"
-	VERTEBRATE_MT_DNA GeneticCode = "Vertebrate mtDNA"
-	YEAST_MT_DNA GeneticCode = "Yeast mtDNA"
+	UNIVERSAL             GeneticCode = "Universal"
+	VERTEBRATE_MT_DNA     GeneticCode = "Vertebrate mtDNA"
+	YEAST_MT_DNA          GeneticCode = "Yeast mtDNA"
 	MOLD_PROTOZOAN_MT_DNA GeneticCode = "Mold/Protozoan mtDNA"
-	INVERTEBRATE_MT_DNA GeneticCode = "Invertebrate mtDNA"
-	CILIATE_NUCLEAR GeneticCode = "Ciliate Nuclear"
-	ECHINODERM_MT_DNA GeneticCode = "Echinoderm mtDNA"
-	EUPLTOID_NUCLEAR GeneticCode = "Eupltoid Nuclear"
-	ALT__YEAST_NUCLEAR GeneticCode = "Alt. Yeast Nuclear"
-	ASCIDIAN_MT_DNA GeneticCode = "Ascidian mtDNA"
-	FLATWORM_MT_DNA GeneticCode = "Flatworm mtDNA"
-	BLEPHARISMA_NUCLEAR GeneticCode = "Blepharisma Nuclear"
+	INVERTEBRATE_MT_DNA   GeneticCode = "Invertebrate mtDNA"
+	CILIATE_NUCLEAR       GeneticCode = "Ciliate Nuclear"
+	ECHINODERM_MT_DNA     GeneticCode = "Echinoderm mtDNA"
+	EUPLTOID_NUCLEAR      GeneticCode = "Eupltoid Nuclear"
+	ALT__YEAST_NUCLEAR    GeneticCode = "Alt. Yeast Nuclear"
+	ASCIDIAN_MT_DNA       GeneticCode = "Ascidian mtDNA"
+	FLATWORM_MT_DNA       GeneticCode = "Flatworm mtDNA"
+	BLEPHARISMA_NUCLEAR   GeneticCode = "Blepharisma Nuclear"
 )

@@ -1,7 +1,7 @@
 /*
  * Datamonkey API
  *
- * Datamonkey is a free public server for comparative analysis of sequence alignments using state-of-the-art statistical models. <br> This is the OpenAPI definition for the Datamonkey API. 
+ * Datamonkey is a free public server for comparative analysis of sequence alignments using state-of-the-art statistical models. <br> This is the OpenAPI definition for the Datamonkey API.
  *
  * API version: 1.0.0
  * Contact: spond@temple.edu
@@ -12,7 +12,6 @@ package datamonkey
 
 // MultihitResultFits - Model fitting information
 type MultihitResultFits struct {
-
 	MG94WithDoubleAndTripleInstantaneousSubstitutions MultihitResultFitsMg94WithDoubleAndTripleInstantaneousSubstitutions `json:"MG94_with_double_and_triple_instantaneous_substitutions,omitempty"`
 
 	MG94WithDoubleAndTripleInstantaneousSubstitutionsOnlySynonymousIslands MultihitResultFitsMg94WithDoubleAndTripleInstantaneousSubstitutions `json:"MG94_with_double_and_triple_instantaneous_substitutions_only_synonymous_islands,omitempty"`
