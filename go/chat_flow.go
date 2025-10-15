@@ -435,7 +435,7 @@ func (c *GenkitClient) ChatFlow() (any, error) {
 		func(ctx *ai.ToolContext, input ListJobsInput) (ListJobsOutput, error) {
 			client := &http.Client{}
 			baseURL := "http://localhost:8080/api/v1/jobs"
-			
+
 			// Build query parameters
 			params := make([]string, 0)
 			if input.AlignmentID != "" {
@@ -450,12 +450,12 @@ func (c *GenkitClient) ChatFlow() (any, error) {
 			if input.Status != "" {
 				params = append(params, fmt.Sprintf("status=%s", input.Status))
 			}
-			
+
 			url := baseURL
 			if len(params) > 0 {
 				url = fmt.Sprintf("%s?%s", baseURL, strings.Join(params, "&"))
 			}
-			
+
 			req, err := http.NewRequest("GET", url, nil)
 			if err != nil {
 				return ListJobsOutput{Error: fmt.Sprintf("failed to create request: %v", err)}, nil
@@ -669,19 +669,19 @@ func (c *GenkitClient) ChatFlow() (any, error) {
 		prompt += "9. deleteDataset - Delete a dataset (requires authentication)\n"
 		prompt += "10. deleteJob - Delete a job (requires authentication)\n"
 		prompt += "11. runAbsrelAnalysis - Start ABSREL analysis for detecting branch-specific selection\n"
-		prompt += "7. runBgmAnalysis - Start BGM analysis for detecting recombination\n"
-		prompt += "8. runBustedAnalysis - Start BUSTED analysis for detecting gene-wide selection\n"
-		prompt += "9. runContrastFelAnalysis - Start CONTRAST-FEL analysis for detecting selection differences between groups\n"
-		prompt += "10. runFadeAnalysis - Start FADE analysis for detecting directional selection\n"
-		prompt += "11. runFelAnalysis - Start FEL analysis for site-by-site selection analysis\n"
-		prompt += "12. runFubarAnalysis - Start FUBAR analysis for detecting pervasive selection\n"
-		prompt += "13. runGardAnalysis - Start GARD analysis for detecting recombination breakpoints\n"
-		prompt += "14. runMemeAnalysis - Start MEME analysis for detecting episodic selection\n"
-		prompt += "15. runMultihitAnalysis - Start MULTI-HIT analysis for multiple nucleotide substitutions\n"
-		prompt += "16. runNrmAnalysis - Start NRM analysis for detecting directional evolution\n"
-		prompt += "17. runRelaxAnalysis - Start RELAX analysis for detecting relaxed or intensified selection\n"
-		prompt += "18. runSlacAnalysis - Start SLAC analysis for detecting selection\n"
-		prompt += "19. runSlatkinAnalysis - Start SLATKIN analysis for detecting compartmentalization\n"
+		prompt += "12. runBgmAnalysis - Start BGM analysis for detecting recombination\n"
+		prompt += "13. runBustedAnalysis - Start BUSTED analysis for detecting gene-wide selection\n"
+		prompt += "14. runContrastFelAnalysis - Start CONTRAST-FEL analysis for detecting selection differences between groups\n"
+		prompt += "15. runFadeAnalysis - Start FADE analysis for detecting directional selection\n"
+		prompt += "16. runFelAnalysis - Start FEL analysis for site-by-site selection analysis\n"
+		prompt += "17. runFubarAnalysis - Start FUBAR analysis for detecting pervasive selection\n"
+		prompt += "18. runGardAnalysis - Start GARD analysis for detecting recombination breakpoints\n"
+		prompt += "19. runMemeAnalysis - Start MEME analysis for detecting episodic selection\n"
+		prompt += "20. runMultihitAnalysis - Start MULTI-HIT analysis for multiple nucleotide substitutions\n"
+		prompt += "21. runNrmAnalysis - Start NRM analysis for detecting directional evolution\n"
+		prompt += "22. runRelaxAnalysis - Start RELAX analysis for detecting relaxed or intensified selection\n"
+		prompt += "23. runSlacAnalysis - Start SLAC analysis for detecting selection\n"
+		prompt += "24. runSlatkinAnalysis - Start SLATKIN analysis for detecting compartmentalization\n"
 
 		// Generate structured response using the same schema
 		response, _, err := genkit.GenerateData[ChatResponse](ctx, c.Genkit,
