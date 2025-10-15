@@ -122,6 +122,99 @@ go test ./go/tests/... -run TestSQLiteJobTracker -v
 RUN_INTEGRATION_TESTS=true go test ./go/tests/... -v
 ```
 
+## Integration Testing
+
+This section covers testing the running service with Docker.
+
+### Health Check
+
+Verify the service is running:
+
+```bash
+curl -k -vvvv -H X-SLURM-USER-TOKEN:${SLURM_JWT} -X GET 'http://localhost:9300/api/v1/health'
+```
+
+### Upload Datasets
+
+Upload a test file:
+
+```bash
+curl -X POST -H "Content-type: multipart/form-data" \
+  -F meta='{"name":"TEST","type":"TEST TYPE","description":"TEST DESC"}' \
+  -F file=@test.txt \
+  http://localhost:9300/api/v1/datasets
+```
+
+List datasets:
+```bash
+curl http://localhost:9300/api/v1/datasets
+```
+
+### Submit Jobs
+
+Use a tool like Postman or curl to submit jobs. Example for FEL method:
+
+**Endpoint:** `POST http://localhost:9300/api/v1/methods/fel-start`
+
+**Headers:** `X-SLURM-USER-TOKEN: ${SLURM_JWT}`
+
+**Body:**
+```json
+{
+  "alignment": "2ddaaa7f2d54e25f81062ab8cda13b38",
+  "tree": "31fa9ce04076f0f9dc403278c7c1717c",
+  "ci": false,
+  "srv": true,
+  "resample": 0,
+  "multiple_hits": "None",
+  "site_multihit": "Estimate",
+  "genetic_code": {
+    "value": "Universal",
+    "display_name": "Universal code"
+  },
+  "branches": []
+}
+```
+
+Get results:
+```bash
+curl -H "X-SLURM-USER-TOKEN: ${SLURM_JWT}" \
+  http://localhost:9300/api/v1/methods/fel-result
+```
+
+### Cleanup
+
+**Clear datasets:**
+```bash
+docker volume rm service-datamonkey_uploaded_data
+```
+⚠️ **Note:** This will also remove job results and logs.
+
+**Remove specific files:**
+```bash
+docker compose exec c2 rm /data/uploads/[filename]
+```
+
+**Clear job tracker:**
+```bash
+docker compose exec c2 rm /data/uploads/job_tracker.tab
+```
+This is important when restarting Slurm, as job IDs restart from 0.
+
+### Debugging
+
+**View logs:**
+```bash
+# Service logs
+docker logs service-datamonkey
+
+# Slurm head node
+docker logs c2
+
+# Slurm database
+docker logs slurmdbd
+```
+
 ## Building
 
 ### Build Binary
@@ -222,6 +315,104 @@ go test -coverprofile=coverage.out -coverpkg=./go ./go/tests/...
 # Not this (measures test package only)
 go test -coverprofile=coverage.out ./go/tests/...
 ```
+
+## Extending the Service
+
+### Adding New HyPhy Methods
+
+To add a new HyPhy method after it has been added to api-datamonkey and `make update` run in this repository:
+
+1. **Define the method type constant** in `hyphy_method.go`:
+   ```go
+   const (
+       MethodFEL    HyPhyMethodType = "fel"
+       MethodBUSTED HyPhyMethodType = "busted"
+       MethodNEW    HyPhyMethodType = "new-method" // Add your new method
+   )
+   ```
+
+2. **Update the ParseResult method** to handle your new method:
+   ```go
+   case MethodNewMethod:
+       var result NewMethodResult
+       err := json.Unmarshal([]byte(output), &result)
+       if err != nil {
+           return nil, fmt.Errorf("failed to parse new method result: %v", err)
+       }
+       return result, nil
+   ```
+
+3. **Create an API implementation file** (e.g., `api_new_method.go`) following the pattern of existing methods. Copy an existing method and modify it, or use an LLM with existing methods as examples.
+
+4. **Add a handler for the new route** in `main.go`:
+   ```go
+   NEWMETHODAPI: *sw.NewNEWMETHODAPI(basePath, hyPhyPath, scheduler, datasetTracker),
+   ```
+
+### Adding New Parameters to Existing Methods
+
+To add support for new parameters to existing HyPhy methods:
+
+1. **Update the HyPhy request interface** in `hyphy_request_adapter.go`:
+   ```go
+   type HyPhyRequest interface {
+       // Existing methods...
+       
+       // Add new parameter methods
+       GetNewParameter() string
+       IsNewParameterSet() bool
+   }
+   ```
+
+2. **Update the requestAdapter struct**:
+   ```go
+   type requestAdapter struct {
+       // Existing fields...
+       
+       newParameter     string
+       newParameterSet  bool
+   }
+   ```
+
+3. **Add accessor methods**:
+   ```go
+   func (r *requestAdapter) GetNewParameter() string {
+       return r.newParameter
+   }
+
+   func (r *requestAdapter) IsNewParameterSet() bool {
+       return r.newParameterSet
+   }
+   ```
+
+4. **Update the AdaptRequest function**:
+   ```go
+   func AdaptRequest(req interface{}) (HyPhyRequest, error) {
+       // Existing code...
+       
+       // Check for the new parameter
+       newParamField := reqValue.FieldByName("NewParameter")
+       if newParamField.IsValid() {
+           adapter.newParameter = newParamField.String()
+           adapter.newParameterSet = true
+       }
+       
+       // Rest of the function...
+   }
+   ```
+
+5. **Update command generation** in `hyphy_method.go`:
+   ```go
+   // In the GetCommand method of HyPhyMethod
+   
+   // Add new parameter only if it was explicitly set
+   if hyPhyReq.IsNewParameterSet() {
+       newParam := hyPhyReq.GetNewParameter()
+       cmd += fmt.Sprintf(" --new-parameter %s", newParam)
+   }
+   ```
+
+6. **Add validation** in the `ValidateInput` method of `HyPhyMethod` for the new parameter.
 
 ## Resources
 
