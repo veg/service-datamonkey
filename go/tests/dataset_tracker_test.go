@@ -30,12 +30,14 @@ func TestSQLiteDatasetTracker(t *testing.T) {
 
 	content := []byte(">seq1\nACGT\n>seq2\nTGCA\n")
 	dataset := sw.NewBaseDataset(metadata, content)
-	datasetID := dataset.GetId()
 
 	err = tracker.StoreWithUser(dataset, "user-123")
 	if err != nil {
 		t.Errorf("Failed to store dataset: %v", err)
 	}
+
+	// After StoreWithUser, the dataset's ID is updated to user-specific ID
+	datasetID := dataset.GetId()
 
 	// Test 2: Retrieve the dataset
 	retrievedDataset, err := tracker.Get(datasetID)

@@ -2,7 +2,9 @@ package datamonkey
 
 import (
 	"bufio"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -604,16 +606,65 @@ func (t *SQLiteDatasetTracker) Update(id string, updates map[string]interface{})
 
 // StoreWithUser stores a dataset with user ownership
 func (t *SQLiteDatasetTracker) StoreWithUser(dataset DatasetInterface, userID string) error {
-	// First store the dataset normally
-	if err := t.Store(dataset); err != nil {
-		return err
+	// Generate a user-specific ID by hashing content + userID
+	// This allows multiple users to have the same content without conflicts
+	contentHash := dataset.GetContentHash()
+
+	// Create user-specific ID
+	combined := contentHash + userID
+	userSpecificHash := sha256.Sum256([]byte(combined))
+	userSpecificID := hex.EncodeToString(userSpecificHash[:])
+
+	// Check if this user already has this dataset
+	existingQuery := `SELECT id FROM datasets WHERE id = ?`
+	var existingID string
+	err := t.db.QueryRow(existingQuery, userSpecificID).Scan(&existingID)
+	if err == nil {
+		// Dataset already exists for this user - idempotent success
+		// Update the dataset's ID to the user-specific one
+		if baseDataset, ok := dataset.(*BaseDataset); ok {
+			baseDataset.Id = userSpecificID
+		}
+		return nil
+	}
+	if err != nil && err != sql.ErrNoRows {
+		return fmt.Errorf("failed to check existing dataset: %v", err)
 	}
 
-	// Then update the user_id
-	query := `UPDATE datasets SET user_id = ? WHERE id = ?`
-	_, err := t.db.Exec(query, sql.NullString{String: userID, Valid: userID != ""}, dataset.GetId())
+	// Update the dataset's ID to the user-specific one before storing
+	if baseDataset, ok := dataset.(*BaseDataset); ok {
+		baseDataset.Id = userSpecificID
+	}
+
+	// Store the dataset with user-specific ID
+	metadata := dataset.GetMetadata()
+
+	// Serialize the dataset to JSON (now with updated ID)
+	dataJSON, err := json.Marshal(dataset)
 	if err != nil {
-		return fmt.Errorf("failed to set dataset owner: %v", err)
+		return fmt.Errorf("failed to marshal dataset: %v", err)
+	}
+
+	query := `
+	INSERT INTO datasets (id, metadata_name, metadata_description, metadata_type, 
+	                      metadata_created, metadata_updated, content_hash, data_json, user_id)
+	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`
+
+	_, err = t.db.Exec(query,
+		userSpecificID,
+		metadata.Name,
+		metadata.Description,
+		metadata.Type,
+		metadata.Created,
+		metadata.Updated,
+		contentHash, // Store original content hash
+		string(dataJSON),
+		sql.NullString{String: userID, Valid: userID != ""},
+	)
+
+	if err != nil {
+		return fmt.Errorf("failed to store dataset: %v", err)
 	}
 
 	return nil
