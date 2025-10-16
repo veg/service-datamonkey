@@ -493,6 +493,14 @@ func NewSQLiteJobTracker(dbPath string) (*SQLiteJobTracker, error) {
 // StoreJobMapping stores a mapping between our job ID and the scheduler's job ID
 // Deprecated: Use StoreJobWithUser instead to associate jobs with users
 func (t *SQLiteJobTracker) StoreJobMapping(jobID string, schedulerJobID string) error {
+	// Validate inputs
+	if jobID == "" {
+		return fmt.Errorf("job ID cannot be empty")
+	}
+	if schedulerJobID == "" {
+		return fmt.Errorf("scheduler job ID cannot be empty")
+	}
+
 	// Call StoreJobWithUser with empty user ID for backward compatibility
 	return t.StoreJobWithUser(jobID, schedulerJobID, "")
 }
@@ -536,6 +544,14 @@ func (t *SQLiteJobTracker) DeleteJobMapping(jobID string) error {
 
 // StoreJobWithUser stores a job mapping with user ID
 func (t *SQLiteJobTracker) StoreJobWithUser(jobID string, schedulerJobID string, userID string) error {
+	// Validate inputs
+	if jobID == "" {
+		return fmt.Errorf("job ID cannot be empty")
+	}
+	if schedulerJobID == "" {
+		return fmt.Errorf("scheduler job ID cannot be empty")
+	}
+
 	// First check if the mapping already exists
 	existingID, err := t.GetSchedulerJobID(jobID)
 	if err == nil {
