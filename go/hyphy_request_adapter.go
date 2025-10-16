@@ -268,7 +268,7 @@ func AdaptRequest(req interface{}) (HyPhyRequest, error) {
 		adapter.branchesSet = len(branches) > 0
 	}
 
-	if field := v.FieldByName("CI"); field.IsValid() {
+	if field := v.FieldByName("Ci"); field.IsValid() {
 		if field.Kind() == reflect.Bool {
 			if field.Bool() {
 				adapter.ci = "Yes"
