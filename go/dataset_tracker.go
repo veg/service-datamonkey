@@ -627,7 +627,8 @@ func (t *SQLiteDatasetTracker) StoreWithUser(dataset DatasetInterface, userID st
 		}
 		return nil
 	}
-	if err != nil && err != sql.ErrNoRows {
+	if err != sql.ErrNoRows {
+		// Real error (not just "no rows found")
 		return fmt.Errorf("failed to check existing dataset: %v", err)
 	}
 

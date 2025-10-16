@@ -526,11 +526,9 @@ func TestSQLiteDatasetTrackerUpdateByUser(t *testing.T) {
 				}
 			}
 
-			// If update succeeded, just verify no error
+			// If update succeeded, that's what we're testing
 			// Note: Update method updates DB but doesn't reload the in-memory object
-			if !tt.wantErr {
-				// Update succeeded, that's what we're testing
-			}
+			// so we can't verify the actual change without re-fetching
 		})
 	}
 }
