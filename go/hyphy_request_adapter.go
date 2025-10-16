@@ -239,13 +239,9 @@ func AdaptRequest(req interface{}) (HyPhyRequest, error) {
 	// Get the value of req
 	v := reflect.ValueOf(req).Elem()
 
-	// Extract alignment
+	// Extract alignment (if present - Slatkin doesn't have alignment)
 	if field := v.FieldByName("Alignment"); field.IsValid() {
 		adapter.alignment = field.String()
-	} else if field := v.FieldByName("DatasetId"); field.IsValid() {
-		adapter.alignment = field.String()
-	} else {
-		return nil, fmt.Errorf("request does not have an Alignment or DatasetId field")
 	}
 
 	if field := v.FieldByName("Tree"); field.IsValid() {

@@ -113,30 +113,27 @@ func getCommandArg(field reflect.StructField, value reflect.Value) string {
 
 // GetCommand returns the command to run the HyPhy analysis
 func (m *HyPhyMethod) GetCommand() string {
-	// Get the dataset ID from the request
-	var datasetId string
+	// Start with the base command
+	cmd := fmt.Sprintf("%s %s", m.HyPhyPath, m.MethodType)
+
+	// Get the alignment from the request (if it exists)
+	var alignment string
 	if hyPhyReq, ok := m.Request.(HyPhyRequest); ok {
-		datasetId = hyPhyReq.GetAlignment()
+		alignment = hyPhyReq.GetAlignment()
 	} else {
-		// Extract dataset ID from request using reflection
+		// Extract alignment from request using reflection
 		reqValue := reflect.ValueOf(m.Request).Elem()
-		datasetIdField := reqValue.FieldByName("DatasetId")
-		if datasetIdField.IsValid() {
-			datasetId = datasetIdField.String()
-		} else {
-			// Fallback to using the alignment field
-			alignmentField := reqValue.FieldByName("Alignment")
-			if alignmentField.IsValid() {
-				datasetId = alignmentField.String()
-			}
+		alignmentField := reqValue.FieldByName("Alignment")
+		if alignmentField.IsValid() {
+			alignment = alignmentField.String()
 		}
 	}
 
-	// Construct the dataset path
-	datasetPath := filepath.Join(m.DataDir, datasetId)
-
-	// Start with the base command
-	cmd := fmt.Sprintf("%s %s --alignment %s", m.HyPhyPath, m.MethodType, datasetPath)
+	// Add alignment parameter if we have one (Slatkin doesn't use alignment)
+	if alignment != "" {
+		alignmentPath := filepath.Join(m.DataDir, alignment)
+		cmd += fmt.Sprintf(" --alignment %s", alignmentPath)
+	}
 
 	// Check if the request implements HyPhyRequest
 	if hyPhyReq, ok := m.Request.(HyPhyRequest); ok {
@@ -224,12 +221,19 @@ func (m *HyPhyMethod) GetCommand() string {
 		reqValue := reflect.ValueOf(m.Request).Elem()
 		reqType := reqValue.Type()
 
+		// Handle tree field separately (like alignment)
+		treeField := reqValue.FieldByName("Tree")
+		if treeField.IsValid() && treeField.String() != "" {
+			cmd += fmt.Sprintf(" --tree %s", filepath.Join(m.DataDir, treeField.String()))
+		}
+
 		for i := 0; i < reqType.NumField(); i++ {
 			field := reqType.Field(i)
 			value := reqValue.Field(i)
 
-			// Skip alignment and dataset ID fields as they're handled separately
-			if field.Name == "Alignment" || field.Name == "DatasetId" {
+			// Skip alignment field as it's handled separately
+			// (Tree is also skipped in getCommandArg and handled above)
+			if field.Name == "Alignment" {
 				continue
 			}
 

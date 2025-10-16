@@ -13,30 +13,28 @@ type HyPhyJob struct {
 
 // NewHyPhyJob creates a new HyPhy job instance
 func NewHyPhyJob(request interface{}, method *HyPhyMethod, scheduler SchedulerInterface) *HyPhyJob {
-	var datasetId string
+	var alignmentId, treeId string
 
 	// Check if the request is a HyPhyRequest interface
 	if hyPhyReq, ok := request.(HyPhyRequest); ok {
-		// For HyPhyRequest, we don't have a direct way to get the datasetId
-		// We'll use the alignment as the datasetId for now
-		datasetId = hyPhyReq.GetAlignment()
+		// Extract alignment and tree
+		alignmentId = hyPhyReq.GetAlignment()
+		if hyPhyReq.IsTreeSet() {
+			treeId = hyPhyReq.GetTree()
+		}
 	} else {
-		// Extract dataset ID from request using reflection
+		// Extract alignment and tree from request using reflection
 		reqValue := reflect.ValueOf(request).Elem()
-		datasetIdField := reqValue.FieldByName("DatasetId")
-		if datasetIdField.IsValid() {
-			datasetId = datasetIdField.String()
-		} else {
-			// Fallback to using the alignment field
-			alignmentField := reqValue.FieldByName("Alignment")
-			if alignmentField.IsValid() {
-				datasetId = alignmentField.String()
-			}
+		if alignmentField := reqValue.FieldByName("Alignment"); alignmentField.IsValid() {
+			alignmentId = alignmentField.String()
+		}
+		if treeField := reqValue.FieldByName("Tree"); treeField.IsValid() {
+			treeId = treeField.String()
 		}
 	}
 
-	// Create base job
-	baseJob := NewBaseJob(datasetId, scheduler, method)
+	// Create base job with both alignment and tree IDs
+	baseJob := NewBaseJob(alignmentId, treeId, scheduler, method)
 
 	// Set output and log paths
 	baseJob.OutputPath = method.GetOutputPath(baseJob.GetId())

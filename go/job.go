@@ -46,15 +46,16 @@ type ComputeMethodInterface interface {
 
 // BaseJob provides common job implementation
 type BaseJob struct {
-	Id         string                 `json:"id"`
-	DatasetId  string                 `json:"dataset_id"`
-	Scheduler  SchedulerInterface     `json:"-"`
-	Method     ComputeMethodInterface `json:"-"`
-	OutputPath string                 `json:"output_path"`
-	LogPath    string                 `json:"log_path"`
-	CreatedAt  time.Time              `json:"created_at"`
-	UpdatedAt  time.Time              `json:"updated_at"`
-	Metadata   map[string]interface{} `json:"metadata,omitempty"`
+	Id          string                 `json:"id"`
+	AlignmentId string                 `json:"alignment_id,omitempty"`
+	TreeId      string                 `json:"tree_id,omitempty"`
+	Scheduler   SchedulerInterface     `json:"-"`
+	Method      ComputeMethodInterface `json:"-"`
+	OutputPath  string                 `json:"output_path"`
+	LogPath     string                 `json:"log_path"`
+	CreatedAt   time.Time              `json:"created_at"`
+	UpdatedAt   time.Time              `json:"updated_at"`
+	Metadata    map[string]interface{} `json:"metadata,omitempty"`
 }
 
 // Validate performs common validation checks on a job
@@ -69,9 +70,9 @@ func (j *BaseJob) Validate() error {
 		return fmt.Errorf("job ID cannot be empty")
 	}
 
-	// Check for empty dataset ID
-	if j.DatasetId == "" {
-		return fmt.Errorf("dataset ID is required")
+	// Check for empty dataset IDs (at least one must be set)
+	if j.AlignmentId == "" && j.TreeId == "" {
+		return fmt.Errorf("at least one of alignment_id or tree_id is required")
 	}
 
 	// Check for empty log path
@@ -99,18 +100,19 @@ func (j *BaseJob) Validate() error {
 }
 
 // NewBaseJob creates a new BaseJob instance
-func NewBaseJob(datasetId string, scheduler SchedulerInterface, method ComputeMethodInterface) *BaseJob {
+func NewBaseJob(alignmentId string, treeId string, scheduler SchedulerInterface, method ComputeMethodInterface) *BaseJob {
 	now := time.Now()
 	cmd := method.GetCommand()
 	cmdHash := sha256.Sum256([]byte(cmd))
 
 	return &BaseJob{
-		Id:        hex.EncodeToString(cmdHash[:]),
-		DatasetId: datasetId,
-		Scheduler: scheduler,
-		Method:    method,
-		CreatedAt: now,
-		UpdatedAt: now,
+		Id:          hex.EncodeToString(cmdHash[:]),
+		AlignmentId: alignmentId,
+		TreeId:      treeId,
+		Scheduler:   scheduler,
+		Method:      method,
+		CreatedAt:   now,
+		UpdatedAt:   now,
 	}
 }
 
@@ -129,9 +131,23 @@ func (j *BaseJob) GetStatus() (JobStatusValue, error) {
 	return status, nil
 }
 
-// GetDatasetId returns the associated dataset ID
+// GetDatasetId returns the associated dataset ID (alignment or tree)
+// Deprecated: Use GetAlignmentId() or GetTreeId() instead
 func (j *BaseJob) GetDatasetId() string {
-	return j.DatasetId
+	if j.AlignmentId != "" {
+		return j.AlignmentId
+	}
+	return j.TreeId
+}
+
+// GetAlignmentId returns the alignment dataset ID
+func (j *BaseJob) GetAlignmentId() string {
+	return j.AlignmentId
+}
+
+// GetTreeId returns the tree dataset ID
+func (j *BaseJob) GetTreeId() string {
+	return j.TreeId
 }
 
 // GetOutputPath returns the path to the job output file
