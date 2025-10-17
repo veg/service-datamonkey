@@ -191,11 +191,11 @@ func TestConversationTrackerEdgeCases(t *testing.T) {
 		}
 		tracker.CreateConversation(conv)
 
+		originalTime := conv.Updated
 		time.Sleep(10 * time.Millisecond)
-		newTime := time.Now().UnixMilli()
+
 		updates := map[string]interface{}{
-			"title":   "Updated Title",
-			"updated": newTime,
+			"title": "Updated Title",
 		}
 
 		err := tracker.UpdateConversation("conv-update-multi", updates)
@@ -207,8 +207,9 @@ func TestConversationTrackerEdgeCases(t *testing.T) {
 		if retrieved.Title != "Updated Title" {
 			t.Errorf("Title not updated: got %q", retrieved.Title)
 		}
-		if retrieved.Updated != newTime {
-			t.Error("Updated timestamp not changed")
+		// Updated timestamp should be automatically set to current time (greater than original)
+		if retrieved.Updated <= originalTime {
+			t.Errorf("Updated timestamp not changed: got %d, want > %d", retrieved.Updated, originalTime)
 		}
 	})
 
