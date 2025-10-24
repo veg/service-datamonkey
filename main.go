@@ -165,12 +165,12 @@ func initConversationTracker() sw.ConversationTracker {
 	}
 }
 
-// initTokenService initializes the token service for user authentication
-func initTokenService() *sw.TokenService {
-	// Check if token service is enabled
+// initSessionService initializes the session service for user authentication and session management
+func initSessionService() *sw.SessionService {
+	// Check if session service is enabled
 	enabled := getEnvWithDefault("USER_TOKEN_ENABLED", "true") == "true"
 	if !enabled {
-		log.Println("User token service is disabled")
+		log.Println("Session service is disabled")
 		return nil
 	}
 
@@ -191,7 +191,14 @@ func initTokenService() *sw.TokenService {
 	// Get token expiration from environment or use default
 	expirationSecs := int64(86400) // Default to 24 hours
 
-	// Create token service config
+	// Initialize session tracker
+	sessionDBPath := getEnvWithDefault("SESSION_DB_PATH", "./data/sessions.db")
+	sessionTracker, err := sw.NewSQLiteSessionTracker(sessionDBPath)
+	if err != nil {
+		log.Fatalf("Failed to initialize session tracker: %v", err)
+	}
+
+	// Create token config
 	config := sw.TokenConfig{
 		KeyPath:         jwtKeyPath,
 		Username:        "datamonkey",
@@ -199,12 +206,20 @@ func initTokenService() *sw.TokenService {
 		RefreshInterval: 12 * time.Hour,
 	}
 
-	log.Printf("Initializing token service with key path: %s", jwtKeyPath)
-	return sw.NewTokenService(config)
+	// Create session service
+	sessionService := sw.NewSessionService(config, sessionTracker)
+
+	// Start session cleanup task (runs every hour, removes sessions older than 30 days)
+	cleanupInterval := 1 * time.Hour
+	sessionMaxAge := 30 * 24 * time.Hour
+	sessionService.StartSessionCleanup(cleanupInterval, sessionMaxAge)
+
+	log.Printf("Initialized session service with key path: %s", jwtKeyPath)
+	return sessionService
 }
 
 // initAPIHandlers initializes the API handlers with the given components
-func initAPIHandlers(scheduler sw.SchedulerInterface, datasetTracker sw.DatasetTracker, jobTracker sw.JobTracker, conversationTracker sw.ConversationTracker, tokenService *sw.TokenService) sw.ApiHandleFunctions {
+func initAPIHandlers(scheduler sw.SchedulerInterface, datasetTracker sw.DatasetTracker, jobTracker sw.JobTracker, conversationTracker sw.ConversationTracker, sessionService *sw.SessionService) sw.ApiHandleFunctions {
 	// Get HyPhy executable path from environment or use default
 	hyPhyPath := getEnvWithDefault("HYPHY_PATH", "hyphy")
 	// TODO: change this default so that upload files and log/ results are stored in a different directory
@@ -215,15 +230,6 @@ func initAPIHandlers(scheduler sw.SchedulerInterface, datasetTracker sw.DatasetT
 	genkitClient, err := sw.NewGenkitClient(context.Background(), modelConfig)
 	if err != nil {
 		log.Fatalf("Failed to initialize Genkit client: %v", err)
-	}
-
-	// Create a user token validator if token service is available
-	var tokenValidator *sw.UserTokenValidator
-	if tokenService != nil {
-		tokenValidator = sw.NewUserTokenValidator(tokenService)
-		log.Println("User token validator initialized")
-	} else {
-		log.Println("Token service not available, user token validation will be disabled")
 	}
 
 	// Create API handlers
@@ -242,26 +248,26 @@ func initAPIHandlers(scheduler sw.SchedulerInterface, datasetTracker sw.DatasetT
 	fadeAPI := sw.NewFADEAPI(basePath, hyPhyPath, scheduler, datasetTracker, jobTracker)
 	slatkinAPI := sw.NewSLATKINAPI(basePath, hyPhyPath, scheduler, datasetTracker, jobTracker)
 
-	// Set the UserTokenValidator for each API
-	if tokenValidator != nil {
-		absrelAPI.HyPhyBaseAPI.UserTokenValidator = tokenValidator
-		felAPI.HyPhyBaseAPI.UserTokenValidator = tokenValidator
-		bustedAPI.HyPhyBaseAPI.UserTokenValidator = tokenValidator
-		slacAPI.HyPhyBaseAPI.UserTokenValidator = tokenValidator
-		multihitAPI.HyPhyBaseAPI.UserTokenValidator = tokenValidator
-		gardAPI.HyPhyBaseAPI.UserTokenValidator = tokenValidator
-		memeAPI.HyPhyBaseAPI.UserTokenValidator = tokenValidator
-		fubarAPI.HyPhyBaseAPI.UserTokenValidator = tokenValidator
-		contrastfelAPI.HyPhyBaseAPI.UserTokenValidator = tokenValidator
-		relaxAPI.HyPhyBaseAPI.UserTokenValidator = tokenValidator
-		bgmAPI.HyPhyBaseAPI.UserTokenValidator = tokenValidator
-		nrmAPI.HyPhyBaseAPI.UserTokenValidator = tokenValidator
-		fadeAPI.HyPhyBaseAPI.UserTokenValidator = tokenValidator
-		slatkinAPI.HyPhyBaseAPI.UserTokenValidator = tokenValidator
+	// Set the SessionService for each API
+	if sessionService != nil {
+		absrelAPI.HyPhyBaseAPI.SessionService = sessionService
+		felAPI.HyPhyBaseAPI.SessionService = sessionService
+		bustedAPI.HyPhyBaseAPI.SessionService = sessionService
+		slacAPI.HyPhyBaseAPI.SessionService = sessionService
+		multihitAPI.HyPhyBaseAPI.SessionService = sessionService
+		gardAPI.HyPhyBaseAPI.SessionService = sessionService
+		memeAPI.HyPhyBaseAPI.SessionService = sessionService
+		fubarAPI.HyPhyBaseAPI.SessionService = sessionService
+		contrastfelAPI.HyPhyBaseAPI.SessionService = sessionService
+		relaxAPI.HyPhyBaseAPI.SessionService = sessionService
+		bgmAPI.HyPhyBaseAPI.SessionService = sessionService
+		nrmAPI.HyPhyBaseAPI.SessionService = sessionService
+		fadeAPI.HyPhyBaseAPI.SessionService = sessionService
+		slatkinAPI.HyPhyBaseAPI.SessionService = sessionService
 	}
 
 	// Create JobsAPI
-	jobsAPI := sw.NewJobsAPI(jobTracker, tokenValidator, scheduler)
+	jobsAPI := sw.NewJobsAPI(jobTracker, sessionService, scheduler)
 
 	// Create MethodsAPI
 	methodsAPI := sw.NewMethodsAPIService()
@@ -281,11 +287,11 @@ func initAPIHandlers(scheduler sw.SchedulerInterface, datasetTracker sw.DatasetT
 		NRMAPI:             *nrmAPI,
 		FADEAPI:            *fadeAPI,
 		SLATKINAPI:         *slatkinAPI,
-		FileUploadAndQCAPI: *sw.NewFileUploadAndQCAPI(datasetTracker),
+		FileUploadAndQCAPI: *sw.NewFileUploadAndQCAPI(datasetTracker, sessionService),
 		HealthAPI:          sw.HealthAPI{Scheduler: scheduler},
 		JobsAPI:            *jobsAPI,
 		MethodsAPI:         methodsAPI,
-		ChatAPI:            *sw.NewChatAPI(genkitClient, conversationTracker, tokenService),
+		ChatAPI:            *sw.NewChatAPI(genkitClient, conversationTracker, sessionService),
 	}
 }
 
@@ -297,7 +303,7 @@ func main() {
 	jobTracker := initJobTracker()
 	conversationTracker := initConversationTracker()
 	scheduler := initScheduler(jobTracker)
-	tokenService := initTokenService()
+	sessionService := initSessionService()
 
 	// Ensure proper shutdown of components
 	if slurmScheduler, ok := scheduler.(*sw.SlurmRestScheduler); ok {
@@ -307,7 +313,7 @@ func main() {
 	}
 
 	// Initialize API handlers
-	routes := initAPIHandlers(scheduler, datasetTracker, jobTracker, conversationTracker, tokenService)
+	routes := initAPIHandlers(scheduler, datasetTracker, jobTracker, conversationTracker, sessionService)
 
 	// Start server
 	port := getEnvWithDefault("SERVICE_DATAMONKEY_PORT", "9300")

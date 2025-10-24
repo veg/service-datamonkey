@@ -3308,15 +3308,11 @@ components:
           content: content
           timestamp: 1
         id: id
-        user_token: user_token
         title: title
         updated: 6
       properties:
         id:
           description: Unique identifier for the conversation
-          type: string
-        user_token:
-          description: Token identifying the user who owns this conversation
           type: string
         title:
           description: Optional title for the conversation
@@ -3340,7 +3336,6 @@ components:
       - created
       - id
       - updated
-      - user_token
       type: object
     UnauthorizedError:
       example:
@@ -3405,7 +3400,6 @@ components:
         method: method
         tree_id: tree_id
         job_id: job_id
-        user_token: user_token
         alignment_id: alignment_id
         status: queued
       properties:
@@ -3417,9 +3411,6 @@ components:
           type: string
         tree_id:
           pattern: "^[a-zA-Z0-9]+$"
-          type: string
-        user_token:
-          description: Token identifying the user who owns this job
           type: string
         status:
           enum:
@@ -5442,7 +5433,6 @@ components:
             content: content
             timestamp: 1
           id: id
-          user_token: user_token
           title: title
           updated: 6
         - created: 0
@@ -5454,7 +5444,6 @@ components:
             content: content
             timestamp: 1
           id: id
-          user_token: user_token
           title: title
           updated: 6
       properties:
@@ -5509,14 +5498,12 @@ components:
           method: method
           tree_id: tree_id
           job_id: job_id
-          user_token: user_token
           alignment_id: alignment_id
           status: queued
         - error_message: error_message
           method: method
           tree_id: tree_id
           job_id: job_id
-          user_token: user_token
           alignment_id: alignment_id
           status: queued
       properties:

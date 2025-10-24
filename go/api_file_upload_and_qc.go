@@ -24,11 +24,13 @@ import (
 
 type FileUploadAndQCAPI struct {
 	datasetTracker DatasetTracker
+	sessionService *SessionService
 }
 
-func NewFileUploadAndQCAPI(datasetTracker DatasetTracker) *FileUploadAndQCAPI {
+func NewFileUploadAndQCAPI(datasetTracker DatasetTracker, sessionService *SessionService) *FileUploadAndQCAPI {
 	return &FileUploadAndQCAPI{
 		datasetTracker: datasetTracker,
+		sessionService: sessionService,
 	}
 }
 

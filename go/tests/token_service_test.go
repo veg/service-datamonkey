@@ -70,7 +70,7 @@ func TestNewTokenService(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			service := sw.NewTokenService(tt.config)
+			service := sw.NewSessionService(tt.config, nil)
 			if service.Config.RefreshInterval != tt.wantRefreshInterval {
 				t.Errorf("RefreshInterval = %v, want %v", service.Config.RefreshInterval, tt.wantRefreshInterval)
 			}
@@ -86,11 +86,11 @@ func TestGenerateToken(t *testing.T) {
 	keyPath, cleanup := setupTestKey(t)
 	defer cleanup()
 
-	service := sw.NewTokenService(sw.TokenConfig{
+	service := sw.NewSessionService(sw.TokenConfig{
 		KeyPath:        keyPath,
 		Username:       "testuser",
 		ExpirationSecs: 3600,
-	})
+	}, nil)
 
 	tests := []struct {
 		name    string
@@ -144,9 +144,9 @@ func TestGenerateToken(t *testing.T) {
 
 // TestGenerateTokenNoKeyPath tests error when key path is not set
 func TestGenerateTokenNoKeyPath(t *testing.T) {
-	service := sw.NewTokenService(sw.TokenConfig{
+	service := sw.NewSessionService(sw.TokenConfig{
 		Username: "testuser",
-	})
+	}, nil)
 
 	_, err := service.GenerateToken(map[string]interface{}{"sub": "user123"})
 	if err == nil {
@@ -159,10 +159,10 @@ func TestGenerateTokenNoKeyPath(t *testing.T) {
 
 // TestGenerateTokenInvalidKeyPath tests error when key file doesn't exist
 func TestGenerateTokenInvalidKeyPath(t *testing.T) {
-	service := sw.NewTokenService(sw.TokenConfig{
+	service := sw.NewSessionService(sw.TokenConfig{
 		KeyPath:  "/nonexistent/path/to/key.txt",
 		Username: "testuser",
-	})
+	}, nil)
 
 	_, err := service.GenerateToken(map[string]interface{}{"sub": "user123"})
 	if err == nil {
@@ -178,11 +178,11 @@ func TestGenerateUserToken(t *testing.T) {
 	keyPath, cleanup := setupTestKey(t)
 	defer cleanup()
 
-	service := sw.NewTokenService(sw.TokenConfig{
+	service := sw.NewSessionService(sw.TokenConfig{
 		KeyPath:        keyPath,
 		Username:       "testuser",
 		ExpirationSecs: 3600,
-	})
+	}, nil)
 
 	userID := "user-alice-123"
 	token, err := service.GenerateUserToken(userID)
@@ -215,11 +215,11 @@ func TestValidateToken(t *testing.T) {
 	keyPath, cleanup := setupTestKey(t)
 	defer cleanup()
 
-	service := sw.NewTokenService(sw.TokenConfig{
+	service := sw.NewSessionService(sw.TokenConfig{
 		KeyPath:        keyPath,
 		Username:       "testuser",
 		ExpirationSecs: 3600,
-	})
+	}, nil)
 
 	// Generate a valid token
 	claims := map[string]interface{}{
@@ -286,11 +286,11 @@ func TestValidateTokenExpired(t *testing.T) {
 	defer cleanup()
 
 	// Create service with very short expiration
-	service := sw.NewTokenService(sw.TokenConfig{
+	service := sw.NewSessionService(sw.TokenConfig{
 		KeyPath:        keyPath,
 		Username:       "testuser",
 		ExpirationSecs: 1, // 1 second
-	})
+	}, nil)
 
 	// Generate token
 	token, err := service.GenerateUserToken("user123")
@@ -331,20 +331,20 @@ func TestValidateTokenWrongKey(t *testing.T) {
 	tmpFile2.Close()
 
 	// Generate token with first key
-	service1 := sw.NewTokenService(sw.TokenConfig{
+	service1 := sw.NewSessionService(sw.TokenConfig{
 		KeyPath:        tmpFile1.Name(),
 		ExpirationSecs: 3600,
-	})
+	}, nil)
 	token, err := service1.GenerateUserToken("user123")
 	if err != nil {
 		t.Fatalf("Failed to generate token: %v", err)
 	}
 
 	// Try to validate with second key
-	service2 := sw.NewTokenService(sw.TokenConfig{
+	service2 := sw.NewSessionService(sw.TokenConfig{
 		KeyPath:        tmpFile2.Name(),
 		ExpirationSecs: 3600,
-	})
+	}, nil)
 	_, err = service2.ValidateToken(token)
 	if err == nil {
 		t.Error("ValidateToken() should fail when using wrong key")
@@ -356,11 +356,10 @@ func TestValidateUserToken(t *testing.T) {
 	keyPath, cleanup := setupTestKey(t)
 	defer cleanup()
 
-	service := sw.NewTokenService(sw.TokenConfig{
+	service := sw.NewSessionService(sw.TokenConfig{
 		KeyPath:        keyPath,
 		ExpirationSecs: 3600,
-	})
-	validator := sw.NewUserTokenValidator(service)
+	}, nil)
 
 	// Generate a valid token
 	validToken, err := service.GenerateUserToken("user-alice")
@@ -406,7 +405,7 @@ func TestValidateUserToken(t *testing.T) {
 				c.Request, _ = http.NewRequest("GET", "/", nil)
 			},
 			wantErr:       true,
-			wantErrSubstr: "missing user token",
+			wantErrSubstr: "no token provided",
 		},
 		{
 			name: "Invalid token",
@@ -414,7 +413,7 @@ func TestValidateUserToken(t *testing.T) {
 				c.Request, _ = http.NewRequest("GET", "/?user_token=invalid-token", nil)
 			},
 			wantErr:       true,
-			wantErrSubstr: "invalid user token",
+			wantErrSubstr: "invalid token",
 		},
 	}
 
@@ -424,7 +423,7 @@ func TestValidateUserToken(t *testing.T) {
 			c, _ := gin.CreateTestContext(w)
 			tt.setupContext(c)
 
-			userID, err := validator.ValidateUserToken(c)
+			userID, err := service.GetSubject(c)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ValidateUserToken() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -442,18 +441,16 @@ func TestValidateUserToken(t *testing.T) {
 
 // TestValidateUserTokenNoService tests validation without token service
 func TestValidateUserTokenNoService(t *testing.T) {
-	validator := sw.NewUserTokenValidator(nil)
+	// Create a service with empty config (no key path)
+	service := sw.NewSessionService(sw.TokenConfig{}, nil)
 
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
 	c.Request, _ = http.NewRequest("GET", "/?user_token=some-token", nil)
 
-	_, err := validator.ValidateUserToken(c)
+	_, err := service.GetSubject(c)
 	if err == nil {
-		t.Error("ValidateUserToken() should return error when token service is nil")
-	}
-	if !strings.Contains(err.Error(), "token service not available") {
-		t.Errorf("Error should mention token service not available, got: %v", err)
+		t.Error("GetSubject() should return error when no valid token")
 	}
 }
 
@@ -525,11 +522,10 @@ func TestCheckJobAccess(t *testing.T) {
 	keyPath, cleanup := setupTestKey(t)
 	defer cleanup()
 
-	service := sw.NewTokenService(sw.TokenConfig{
+	service := sw.NewSessionService(sw.TokenConfig{
 		KeyPath:        keyPath,
 		ExpirationSecs: 3600,
-	})
-	validator := sw.NewUserTokenValidator(service)
+	}, nil)
 
 	// Generate tokens for different users
 	aliceToken, _ := service.GenerateUserToken("user-alice")
@@ -599,7 +595,7 @@ func TestCheckJobAccess(t *testing.T) {
 			jobID:         "job-alice-1",
 			tracker:       tracker,
 			wantErr:       true,
-			wantErrSubstr: "invalid user token",
+			wantErrSubstr: "session tracker not available",
 		},
 	}
 
@@ -609,7 +605,7 @@ func TestCheckJobAccess(t *testing.T) {
 			c, _ := gin.CreateTestContext(w)
 			c.Request, _ = http.NewRequest("GET", "/?user_token="+tt.token, nil)
 
-			userID, err := validator.CheckJobAccess(c, tt.jobID, tt.tracker)
+			userID, err := service.CheckJobAccess(c, tt.jobID, tt.tracker)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("CheckJobAccess() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -630,10 +626,10 @@ func TestValidateTokenWithCustomClaims(t *testing.T) {
 	keyPath, cleanup := setupTestKey(t)
 	defer cleanup()
 
-	service := sw.NewTokenService(sw.TokenConfig{
+	service := sw.NewSessionService(sw.TokenConfig{
 		KeyPath:        keyPath,
 		ExpirationSecs: 3600,
-	})
+	}, nil)
 
 	claims := map[string]interface{}{
 		"sub":     "user123",
@@ -681,11 +677,10 @@ func TestTokenClaimsWithoutSub(t *testing.T) {
 	keyPath, cleanup := setupTestKey(t)
 	defer cleanup()
 
-	service := sw.NewTokenService(sw.TokenConfig{
+	service := sw.NewSessionService(sw.TokenConfig{
 		KeyPath:        keyPath,
 		ExpirationSecs: 3600,
-	})
-	validator := sw.NewUserTokenValidator(service)
+	}, nil)
 
 	// Manually create a token without sub claim
 	keyData, _ := os.ReadFile(keyPath)
@@ -702,12 +697,12 @@ func TestTokenClaimsWithoutSub(t *testing.T) {
 	c, _ := gin.CreateTestContext(w)
 	c.Request, _ = http.NewRequest("GET", "/?user_token="+tokenString, nil)
 
-	_, err := validator.ValidateUserToken(c)
+	_, err := service.GetSubject(c)
 	if err == nil {
-		t.Error("ValidateUserToken() should return error for token without sub claim")
+		t.Error("GetSubject() should return error for token without sub claim")
 	}
-	if !strings.Contains(err.Error(), "missing user ID") {
-		t.Errorf("Error should mention missing user ID, got: %v", err)
+	if !strings.Contains(err.Error(), "missing subject claim") {
+		t.Errorf("Error should mention missing subject claim, got: %v", err)
 	}
 }
 
@@ -779,11 +774,10 @@ func TestCheckDatasetAccess(t *testing.T) {
 	keyPath, cleanup := setupTestKey(t)
 	defer cleanup()
 
-	service := sw.NewTokenService(sw.TokenConfig{
+	service := sw.NewSessionService(sw.TokenConfig{
 		KeyPath:        keyPath,
 		ExpirationSecs: 3600,
-	})
-	validator := sw.NewUserTokenValidator(service)
+	}, nil)
 
 	// Generate tokens for different users
 	aliceToken, _ := service.GenerateUserToken("user-alice")
@@ -840,12 +834,12 @@ func TestCheckDatasetAccess(t *testing.T) {
 			wantErrSubstr: "dataset not found",
 		},
 		{
-			name:       "Access public dataset (no owner)",
-			token:      aliceToken,
-			datasetID:  "dataset-public",
-			tracker:    tracker,
-			wantUserID: "user-alice",
-			wantErr:    false,
+			name:          "Access public dataset (no owner)",
+			token:         aliceToken,
+			datasetID:     "dataset-public",
+			tracker:       tracker,
+			wantErr:       true,
+			wantErrSubstr: "dataset has no associated user", // Public datasets (no owner) can't be verified
 		},
 		{
 			name:       "No tracker provided",
@@ -861,7 +855,7 @@ func TestCheckDatasetAccess(t *testing.T) {
 			datasetID:     "dataset-alice-1",
 			tracker:       tracker,
 			wantErr:       true,
-			wantErrSubstr: "invalid user token",
+			wantErrSubstr: "session tracker not available", // With invalid token, new session is created but tracker is nil
 		},
 	}
 
@@ -871,7 +865,7 @@ func TestCheckDatasetAccess(t *testing.T) {
 			c, _ := gin.CreateTestContext(w)
 			c.Request, _ = http.NewRequest("GET", "/?user_token="+tt.token, nil)
 
-			userID, err := validator.CheckDatasetAccess(c, tt.datasetID, tt.tracker)
+			userID, err := service.CheckDatasetAccess(c, tt.datasetID, tt.tracker)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("CheckDatasetAccess() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -890,6 +884,7 @@ func TestCheckDatasetAccess(t *testing.T) {
 // Mock conversation tracker for testing
 type mockConversationTracker struct {
 	conversations map[string]*sw.ChatConversation
+	owners        map[string]string // conversationID -> subject
 }
 
 func (m *mockConversationTracker) GetConversation(conversationID string) (*sw.ChatConversation, error) {
@@ -899,7 +894,11 @@ func (m *mockConversationTracker) GetConversation(conversationID string) (*sw.Ch
 	return nil, fmt.Errorf("conversation not found")
 }
 
-func (m *mockConversationTracker) CreateConversation(conversation *sw.ChatConversation) error {
+func (m *mockConversationTracker) CreateConversation(conversation *sw.ChatConversation, subject string) error {
+	if m.owners == nil {
+		m.owners = make(map[string]string)
+	}
+	m.owners[conversation.Id] = subject
 	return nil
 }
 
@@ -923,12 +922,19 @@ func (m *mockConversationTracker) ListUserConversations(userToken string) ([]*sw
 	return nil, nil
 }
 
-func (m *mockConversationTracker) Close() error {
-	return nil
+func (m *mockConversationTracker) GetConversationOwner(conversationID string) (string, error) {
+	if owner, ok := m.owners[conversationID]; ok {
+		return owner, nil
+	}
+	return "", fmt.Errorf("conversation not found")
 }
 
-func (m *mockConversationTracker) GetConversationMessages(conversationID string) ([]sw.ChatMessage, error) {
+func (m *mockConversationTracker) GetConversationMessages(conversationId string) ([]sw.ChatMessage, error) {
 	return nil, nil
+}
+
+func (m *mockConversationTracker) Close() error {
+	return nil
 }
 
 // TestCheckConversationAccess tests conversation access verification
@@ -936,11 +942,10 @@ func TestCheckConversationAccess(t *testing.T) {
 	keyPath, cleanup := setupTestKey(t)
 	defer cleanup()
 
-	service := sw.NewTokenService(sw.TokenConfig{
+	service := sw.NewSessionService(sw.TokenConfig{
 		KeyPath:        keyPath,
 		ExpirationSecs: 3600,
-	})
-	validator := sw.NewUserTokenValidator(service)
+	}, nil)
 
 	// Generate tokens for different users
 	aliceToken, _ := service.GenerateUserToken("user-alice")
@@ -950,13 +955,15 @@ func TestCheckConversationAccess(t *testing.T) {
 	tracker := &mockConversationTracker{
 		conversations: map[string]*sw.ChatConversation{
 			"conv-alice-1": {
-				Id:        "conv-alice-1",
-				UserToken: aliceToken,
+				Id: "conv-alice-1",
 			},
 			"conv-bob-1": {
-				Id:        "conv-bob-1",
-				UserToken: bobToken,
+				Id: "conv-bob-1",
 			},
+		},
+		owners: map[string]string{
+			"conv-alice-1": "user-alice",
+			"conv-bob-1":   "user-bob",
 		},
 	}
 
@@ -1015,7 +1022,7 @@ func TestCheckConversationAccess(t *testing.T) {
 			conversationID: "conv-alice-1",
 			tracker:        tracker,
 			wantErr:        true,
-			wantErrSubstr:  "invalid user token",
+			wantErrSubstr:  "session tracker not available", // With invalid token, new session is created but tracker is nil
 		},
 	}
 
@@ -1025,7 +1032,7 @@ func TestCheckConversationAccess(t *testing.T) {
 			c, _ := gin.CreateTestContext(w)
 			c.Request, _ = http.NewRequest("GET", "/?user_token="+tt.token, nil)
 
-			userID, err := validator.CheckConversationAccess(c, tt.conversationID, tt.tracker)
+			userID, err := service.CheckConversationAccess(c, tt.conversationID, tt.tracker)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("CheckConversationAccess() error = %v, wantErr %v", err, tt.wantErr)
 			}

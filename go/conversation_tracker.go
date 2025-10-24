@@ -11,17 +11,20 @@ import (
 
 // ConversationTracker defines the interface for tracking chat conversations
 type ConversationTracker interface {
-	// CreateConversation creates a new conversation
-	CreateConversation(conversation *ChatConversation) error
+	// CreateConversation creates a new conversation with an owner
+	CreateConversation(conversation *ChatConversation, subject string) error
 
 	// GetConversation retrieves a conversation by ID
 	GetConversation(id string) (*ChatConversation, error)
+
+	// GetConversationOwner retrieves the owner (subject) of a conversation
+	GetConversationOwner(id string) (string, error)
 
 	// GetConversationMessages retrieves messages from a conversation
 	GetConversationMessages(conversationId string) ([]ChatMessage, error)
 
 	// ListUserConversations lists all conversations for a user
-	ListUserConversations(userToken string) ([]*ChatConversation, error)
+	ListUserConversations(subject string) ([]*ChatConversation, error)
 
 	// AddMessage adds a message to a conversation
 	AddMessage(conversationId string, message *ChatMessage) error
@@ -58,12 +61,12 @@ func NewSQLiteConversationTracker(dbPath string) (*SQLiteConversationTracker, er
 	createConversationsTableSQL := `
 	CREATE TABLE IF NOT EXISTS conversations (
 		id TEXT PRIMARY KEY,
-		user_token TEXT NOT NULL,
+		subject TEXT NOT NULL,
 		title TEXT,
 		created INTEGER NOT NULL,
 		updated INTEGER NOT NULL
 	);
-	CREATE INDEX IF NOT EXISTS idx_conversations_user_token ON conversations(user_token);
+	CREATE INDEX IF NOT EXISTS idx_conversations_subject ON conversations(subject);
 	CREATE INDEX IF NOT EXISTS idx_conversations_created ON conversations(created);
 	`
 
@@ -102,18 +105,18 @@ func NewSQLiteConversationTracker(dbPath string) (*SQLiteConversationTracker, er
 	}, nil
 }
 
-// CreateConversation creates a new conversation
-func (s *SQLiteConversationTracker) CreateConversation(conversation *ChatConversation) error {
+// CreateConversation creates a new conversation with an owner
+func (s *SQLiteConversationTracker) CreateConversation(conversation *ChatConversation, subject string) error {
 	// Insert the conversation
 	query := `
 	INSERT INTO conversations (
-		id, user_token, title, created, updated
+		id, subject, title, created, updated
 	) VALUES (?, ?, ?, ?, ?)
 	`
 
 	_, err := s.db.Exec(query,
 		conversation.Id,
-		conversation.UserToken,
+		subject,
 		conversation.Title,
 		conversation.Created,
 		conversation.Updated,
@@ -137,13 +140,12 @@ func (s *SQLiteConversationTracker) CreateConversation(conversation *ChatConvers
 
 // GetConversation retrieves a conversation by ID
 func (s *SQLiteConversationTracker) GetConversation(id string) (*ChatConversation, error) {
-	// Query the conversation
-	query := `SELECT id, user_token, title, created, updated FROM conversations WHERE id = ?`
+	// Query the conversation (subject is stored in DB but not returned in the model)
+	query := `SELECT id, title, created, updated FROM conversations WHERE id = ?`
 
 	var conversation ChatConversation
 	err := s.db.QueryRow(query, id).Scan(
 		&conversation.Id,
-		&conversation.UserToken,
 		&conversation.Title,
 		&conversation.Created,
 		&conversation.Updated,
@@ -164,6 +166,20 @@ func (s *SQLiteConversationTracker) GetConversation(id string) (*ChatConversatio
 
 	conversation.Messages = messages
 	return &conversation, nil
+}
+
+// GetConversationOwner retrieves the owner (subject) of a conversation
+func (s *SQLiteConversationTracker) GetConversationOwner(id string) (string, error) {
+	query := `SELECT subject FROM conversations WHERE id = ?`
+	var subject string
+	err := s.db.QueryRow(query, id).Scan(&subject)
+	if err == sql.ErrNoRows {
+		return "", fmt.Errorf("conversation not found: %s", id)
+	}
+	if err != nil {
+		return "", fmt.Errorf("failed to get conversation owner: %v", err)
+	}
+	return subject, nil
 }
 
 // GetConversationMessages retrieves messages from a conversation
@@ -194,11 +210,11 @@ func (s *SQLiteConversationTracker) GetConversationMessages(conversationId strin
 }
 
 // ListUserConversations lists all conversations for a user
-func (s *SQLiteConversationTracker) ListUserConversations(userToken string) ([]*ChatConversation, error) {
-	// Query the conversations
-	query := `SELECT id, user_token, title, created, updated FROM conversations WHERE user_token = ? ORDER BY updated DESC`
+func (s *SQLiteConversationTracker) ListUserConversations(subject string) ([]*ChatConversation, error) {
+	// Query the conversations (subject is in WHERE clause but not returned in model)
+	query := `SELECT id, title, created, updated FROM conversations WHERE subject = ? ORDER BY updated DESC`
 
-	rows, err := s.db.Query(query, userToken)
+	rows, err := s.db.Query(query, subject)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query conversations: %v", err)
 	}
@@ -209,7 +225,6 @@ func (s *SQLiteConversationTracker) ListUserConversations(userToken string) ([]*
 		var conversation ChatConversation
 		if err := rows.Scan(
 			&conversation.Id,
-			&conversation.UserToken,
 			&conversation.Title,
 			&conversation.Created,
 			&conversation.Updated,

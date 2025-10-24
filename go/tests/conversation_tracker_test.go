@@ -27,14 +27,13 @@ func TestSQLiteConversationTracker(t *testing.T) {
 	now := time.Now().UnixMilli()
 
 	conversation := &sw.ChatConversation{
-		Id:        conversationID,
-		UserToken: userToken,
-		Title:     "Test Conversation",
-		Created:   now,
-		Updated:   now,
+		Id:      conversationID,
+		Title:   "Test Conversation",
+		Created: now,
+		Updated: now,
 	}
 
-	err = tracker.CreateConversation(conversation)
+	err = tracker.CreateConversation(conversation, userToken)
 	if err != nil {
 		t.Errorf("Failed to create conversation: %v", err)
 	}
@@ -48,8 +47,14 @@ func TestSQLiteConversationTracker(t *testing.T) {
 	if conv.Id != conversationID {
 		t.Errorf("Expected conversation ID %s, got %s", conversationID, conv.Id)
 	}
-	if conv.UserToken != userToken {
-		t.Errorf("Expected user token %s, got %s", userToken, conv.UserToken)
+
+	// Check ownership using GetConversationOwner
+	owner, err := tracker.GetConversationOwner(conversationID)
+	if err != nil {
+		t.Fatalf("Failed to get conversation owner: %v", err)
+	}
+	if owner != userToken {
+		t.Errorf("Expected owner %s, got %s", userToken, owner)
 	}
 
 	// Test 3: Add messages to conversation
@@ -100,22 +105,20 @@ func TestSQLiteConversationTracker(t *testing.T) {
 	// Create another conversation for the same user
 	conversationID2 := "conv-789"
 	conv2 := &sw.ChatConversation{
-		Id:        conversationID2,
-		UserToken: userToken,
-		Created:   time.Now().UnixMilli(),
-		Updated:   time.Now().UnixMilli(),
+		Id:      conversationID2,
+		Created: time.Now().UnixMilli(),
+		Updated: time.Now().UnixMilli(),
 	}
-	tracker.CreateConversation(conv2)
+	tracker.CreateConversation(conv2, userToken)
 
 	// Create a conversation for a different user
 	conversationID3 := "conv-999"
 	conv3 := &sw.ChatConversation{
-		Id:        conversationID3,
-		UserToken: "other-user",
-		Created:   time.Now().UnixMilli(),
-		Updated:   time.Now().UnixMilli(),
+		Id:      conversationID3,
+		Created: time.Now().UnixMilli(),
+		Updated: time.Now().UnixMilli(),
 	}
-	tracker.CreateConversation(conv3)
+	tracker.CreateConversation(conv3, "other-user")
 
 	conversations, err := tracker.ListUserConversations(userToken)
 	if err != nil {
@@ -127,16 +130,16 @@ func TestSQLiteConversationTracker(t *testing.T) {
 	}
 
 	// Test 6: Update conversation
+	originalUpdated := conv.Updated
 	time.Sleep(100 * time.Millisecond)
-	newUpdated := time.Now().UnixMilli()
-	updates := map[string]interface{}{"updated": newUpdated}
+	updates := map[string]interface{}{"title": "Updated Title"}
 	err = tracker.UpdateConversation(conversationID, updates)
 	if err != nil {
 		t.Errorf("Failed to update conversation: %v", err)
 	}
 
 	updatedConv, _ := tracker.GetConversation(conversationID)
-	if updatedConv.Updated <= conv.Updated {
+	if updatedConv.Updated <= originalUpdated {
 		t.Error("Conversation timestamp should have been updated")
 	}
 
@@ -159,13 +162,12 @@ func TestSQLiteConversationTracker(t *testing.T) {
 	}
 
 	// Test 8: Verify conversation ownership
-	conv2Retrieved, err := tracker.GetConversation(conversationID2)
+	owner2, err := tracker.GetConversationOwner(conversationID2)
 	if err != nil {
-		t.Errorf("Failed to get conversation: %v", err)
+		t.Fatalf("Failed to get conversation owner: %v", err)
 	}
-
-	if conv2Retrieved.UserToken != userToken {
-		t.Errorf("Expected owner %s, got %s", userToken, conv2Retrieved.UserToken)
+	if owner2 != userToken {
+		t.Errorf("Expected owner %s, got %s", userToken, owner2)
 	}
 
 	// Test 9: Error cases
@@ -206,12 +208,11 @@ func TestConversationMessageOrdering(t *testing.T) {
 
 	conversationID := "conv-order-test"
 	conv := &sw.ChatConversation{
-		Id:        conversationID,
-		UserToken: "user-123",
-		Created:   time.Now().UnixMilli(),
-		Updated:   time.Now().UnixMilli(),
+		Id:      conversationID,
+		Created: time.Now().UnixMilli(),
+		Updated: time.Now().UnixMilli(),
 	}
-	tracker.CreateConversation(conv)
+	tracker.CreateConversation(conv, "user-123")
 
 	// Add messages with small delays to ensure different timestamps
 	messages := []string{
@@ -258,12 +259,11 @@ func TestConversationConcurrency(t *testing.T) {
 
 	conversationID := "conv-concurrent"
 	conv := &sw.ChatConversation{
-		Id:        conversationID,
-		UserToken: "user-123",
-		Created:   time.Now().UnixMilli(),
-		Updated:   time.Now().UnixMilli(),
+		Id:      conversationID,
+		Created: time.Now().UnixMilli(),
+		Updated: time.Now().UnixMilli(),
 	}
-	tracker.CreateConversation(conv)
+	tracker.CreateConversation(conv, "user-123")
 
 	// Add messages concurrently
 	done := make(chan bool)

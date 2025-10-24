@@ -10,17 +10,17 @@ import (
 
 // JobsAPI handles job listing and filtering endpoints
 type JobsAPI struct {
-	JobTracker         JobTracker
-	UserTokenValidator *UserTokenValidator
-	Scheduler          SchedulerInterface
+	JobTracker     JobTracker
+	SessionService *SessionService
+	Scheduler      SchedulerInterface
 }
 
 // NewJobsAPI creates a new JobsAPI instance
-func NewJobsAPI(jobTracker JobTracker, userTokenValidator *UserTokenValidator, scheduler SchedulerInterface) *JobsAPI {
+func NewJobsAPI(jobTracker JobTracker, sessionService *SessionService, scheduler SchedulerInterface) *JobsAPI {
 	return &JobsAPI{
-		JobTracker:         jobTracker,
-		UserTokenValidator: userTokenValidator,
-		Scheduler:          scheduler,
+		JobTracker:     jobTracker,
+		SessionService: sessionService,
+		Scheduler:      scheduler,
 	}
 }
 
@@ -28,12 +28,12 @@ func NewJobsAPI(jobTracker JobTracker, userTokenValidator *UserTokenValidator, s
 // GET /jobs?user_token=xxx&alignment_id=xxx&tree_id=xxx&method=xxx&status=xxx
 func (api *JobsAPI) GetJobsList(c *gin.Context) {
 	// Validate user token
-	if api.UserTokenValidator == nil {
+	if api.SessionService == nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "User token validator not available"})
 		return
 	}
 
-	userID, err := api.UserTokenValidator.ValidateUserToken(c)
+	subject, err := api.SessionService.GetOrCreateSubject(c)
 	if err != nil {
 		if strings.Contains(err.Error(), "missing user token") || strings.Contains(err.Error(), "invalid user token") {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized - " + err.Error()})
@@ -47,7 +47,7 @@ func (api *JobsAPI) GetJobsList(c *gin.Context) {
 	filters := make(map[string]interface{})
 
 	// Always filter by user ID
-	filters["user_id"] = userID
+	filters["user_id"] = subject
 
 	// Add optional filters
 	if alignmentID := c.Query("alignment_id"); alignmentID != "" {
@@ -168,12 +168,12 @@ func (api *JobsAPI) DeleteJob(c *gin.Context) {
 	}
 
 	// Validate user token
-	if api.UserTokenValidator == nil {
+	if api.SessionService == nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "User token validator not available"})
 		return
 	}
 
-	userID, err := api.UserTokenValidator.ValidateUserToken(c)
+	subject, err := api.SessionService.GetOrCreateSubject(c)
 	if err != nil {
 		if strings.Contains(err.Error(), "missing user token") || strings.Contains(err.Error(), "invalid user token") {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized - " + err.Error()})
@@ -202,8 +202,8 @@ func (api *JobsAPI) DeleteJob(c *gin.Context) {
 	}
 
 	// Verify user owns the job
-	if owner != "" && owner != userID {
-		log.Printf("User %s attempted to delete job %s owned by %s", userID, jobID, owner)
+	if owner != "" && owner != subject {
+		log.Printf("User %s attempted to delete job %s owned by %s", subject, jobID, owner)
 		c.JSON(http.StatusForbidden, gin.H{"error": "Forbidden - you do not own this job"})
 		return
 	}
@@ -216,12 +216,12 @@ func (api *JobsAPI) DeleteJob(c *gin.Context) {
 	// TODO: Implement proper job cancellation by reconstructing JobInterface from tracker data
 
 	// Remove from tracker
-	if err := api.JobTracker.DeleteJobMappingByUser(jobID, userID); err != nil {
+	if err := api.JobTracker.DeleteJobMappingByUser(jobID, subject); err != nil {
 		log.Printf("Failed to delete job %s from tracker: %v", jobID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete job from tracker"})
 		return
 	}
 
-	log.Printf("Job %s deleted successfully by user %s", jobID, userID)
+	log.Printf("Job %s deleted successfully by user %s", jobID, subject)
 	c.Status(http.StatusNoContent) // 204 No Content
 }

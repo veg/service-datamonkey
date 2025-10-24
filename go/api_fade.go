@@ -118,8 +118,8 @@ func (api *FADEAPI) GetFadeResults(c *gin.Context) {
 // StartFadeJob starts a new FADE analysis job
 func (api *FADEAPI) StartFadeJob(c *gin.Context) {
 	// Validate user token if token validator is available
-	if api.UserTokenValidator != nil {
-		_, err := api.UserTokenValidator.ValidateUserToken(c)
+	if api.SessionService != nil {
+		_, err := api.SessionService.GetOrCreateSubject(c)
 		if err != nil {
 			if err.Error() == "missing user token" || strings.Contains(err.Error(), "invalid user token") {
 				c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized - " + err.Error()})
@@ -137,7 +137,7 @@ func (api *FADEAPI) StartFadeJob(c *gin.Context) {
 	}
 
 	// Extract the user token from the request or from the header/query parameter
-	if request.UserToken == "" && api.UserTokenValidator != nil {
+	if request.UserToken == "" && api.SessionService != nil {
 		userToken := c.Query("user_token")
 		if userToken == "" {
 			userToken = c.GetHeader("user_token")
@@ -148,8 +148,8 @@ func (api *FADEAPI) StartFadeJob(c *gin.Context) {
 	}
 
 	// Check alignment dataset access
-	if request.Alignment != "" && api.UserTokenValidator != nil && api.DatasetTracker != nil {
-		_, err := api.UserTokenValidator.CheckDatasetAccess(c, request.Alignment, api.DatasetTracker)
+	if request.Alignment != "" && api.SessionService != nil && api.DatasetTracker != nil {
+		_, err := api.SessionService.CheckDatasetAccess(c, request.Alignment, api.DatasetTracker)
 		if err != nil {
 			if strings.Contains(err.Error(), "missing user token") || strings.Contains(err.Error(), "invalid user token") {
 				c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized - " + err.Error()})
@@ -165,8 +165,8 @@ func (api *FADEAPI) StartFadeJob(c *gin.Context) {
 	}
 
 	// Check tree dataset access
-	if request.Tree != "" && api.UserTokenValidator != nil && api.DatasetTracker != nil {
-		_, err := api.UserTokenValidator.CheckDatasetAccess(c, request.Tree, api.DatasetTracker)
+	if request.Tree != "" && api.SessionService != nil && api.DatasetTracker != nil {
+		_, err := api.SessionService.CheckDatasetAccess(c, request.Tree, api.DatasetTracker)
 		if err != nil {
 			if strings.Contains(err.Error(), "missing user token") || strings.Contains(err.Error(), "invalid user token") {
 				c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized - " + err.Error()})

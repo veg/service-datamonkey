@@ -20,29 +20,29 @@ import (
 
 // HyPhyBaseAPI provides shared implementation for HyPhy method APIs
 type HyPhyBaseAPI struct {
-	BasePath           string
-	HyPhyPath          string
-	Scheduler          SchedulerInterface
-	DatasetTracker     DatasetTracker
-	JobTracker         JobTracker
-	UserTokenValidator *UserTokenValidator
+	BasePath       string
+	HyPhyPath      string
+	Scheduler      SchedulerInterface
+	DatasetTracker DatasetTracker
+	JobTracker     JobTracker
+	SessionService *SessionService
 }
 
 // TODO: BasePath is where output and log files are stored, may need to split into multiple directories
 // NewHyPhyBaseAPI creates a new HyPhyBaseAPI instance
-func NewHyPhyBaseAPI(basePath, hyPhyPath string, scheduler SchedulerInterface, datasetTracker DatasetTracker, jobTracker JobTracker, tokenValidator ...*UserTokenValidator) HyPhyBaseAPI {
-	var validator *UserTokenValidator
-	if len(tokenValidator) > 0 {
-		validator = tokenValidator[0]
+func NewHyPhyBaseAPI(basePath, hyPhyPath string, scheduler SchedulerInterface, datasetTracker DatasetTracker, jobTracker JobTracker, sessionService ...*SessionService) HyPhyBaseAPI {
+	var service *SessionService
+	if len(sessionService) > 0 {
+		service = sessionService[0]
 	}
 
 	return HyPhyBaseAPI{
-		BasePath:           basePath,
-		HyPhyPath:          hyPhyPath,
-		Scheduler:          scheduler,
-		DatasetTracker:     datasetTracker,
-		JobTracker:         jobTracker,
-		UserTokenValidator: validator,
+		BasePath:       basePath,
+		HyPhyPath:      hyPhyPath,
+		Scheduler:      scheduler,
+		DatasetTracker: datasetTracker,
+		JobTracker:     jobTracker,
+		SessionService: service,
 	}
 }
 
@@ -181,17 +181,17 @@ func (api *HyPhyBaseAPI) HandleStartJob(c *gin.Context, request HyPhyRequest, me
 	}
 
 	// Extract user ID from token if available and update job mapping with metadata
-	if api.UserTokenValidator != nil && api.JobTracker != nil {
-		userID, err := api.UserTokenValidator.ValidateUserToken(c)
-		if err == nil && userID != "" {
+	if api.SessionService != nil && api.JobTracker != nil {
+		subject, err := api.SessionService.GetOrCreateSubject(c)
+		if err == nil && subject != "" {
 			// Get the scheduler job ID that was just stored
 			schedulerJobID, err := api.JobTracker.GetSchedulerJobID(job.GetId())
 			if err == nil {
 				// Update the job mapping with the user ID
-				if err := api.JobTracker.StoreJobWithUser(job.GetId(), schedulerJobID, userID); err != nil {
-					log.Printf("Warning: Failed to associate job %s with user %s: %v", job.GetId(), userID, err)
+				if err := api.JobTracker.StoreJobWithUser(job.GetId(), schedulerJobID, subject); err != nil {
+					log.Printf("Warning: Failed to associate job %s with user %s: %v", job.GetId(), subject, err)
 				} else {
-					log.Printf("Associated job %s with user %s", job.GetId(), userID)
+					log.Printf("Associated job %s with user %s", job.GetId(), subject)
 				}
 
 				// Store job metadata (alignment, tree, method type, status)

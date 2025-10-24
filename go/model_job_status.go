@@ -17,9 +17,6 @@ type JobStatus struct {
 
 	TreeId string `json:"tree_id,omitempty" validate:"regexp=^[a-zA-Z0-9]+$"`
 
-	// Token identifying the user who owns this job
-	UserToken string `json:"user_token,omitempty"`
-
 	Status string `json:"status,omitempty"`
 
 	ErrorMessage string `json:"error_message,omitempty"`

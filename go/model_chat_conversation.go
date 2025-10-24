@@ -16,9 +16,6 @@ type ChatConversation struct {
 	// Unique identifier for the conversation
 	Id string `json:"id"`
 
-	// Token identifying the user who owns this conversation
-	UserToken string `json:"user_token"`
-
 	// Optional title for the conversation
 	Title string `json:"title,omitempty"`
 

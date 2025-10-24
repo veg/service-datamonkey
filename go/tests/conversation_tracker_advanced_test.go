@@ -27,18 +27,17 @@ func TestConversationTrackerEdgeCases(t *testing.T) {
 
 	t.Run("Create conversation with messages", func(t *testing.T) {
 		conv := &sw.ChatConversation{
-			Id:        "conv-with-messages",
-			UserToken: "user-123",
-			Title:     "Test",
-			Created:   time.Now().UnixMilli(),
-			Updated:   time.Now().UnixMilli(),
+			Id:      "conv-with-messages",
+			Title:   "Test",
+			Created: time.Now().UnixMilli(),
+			Updated: time.Now().UnixMilli(),
 			Messages: []sw.ChatMessage{
 				{Role: "user", Content: "Hello", Timestamp: time.Now().UnixMilli()},
 				{Role: "assistant", Content: "Hi", Timestamp: time.Now().UnixMilli()},
 			},
 		}
 
-		err := tracker.CreateConversation(conv)
+		err := tracker.CreateConversation(conv, "user-123")
 		if err != nil {
 			t.Errorf("Failed to create conversation with messages: %v", err)
 		}
@@ -55,19 +54,18 @@ func TestConversationTrackerEdgeCases(t *testing.T) {
 
 	t.Run("Create duplicate conversation ID", func(t *testing.T) {
 		conv := &sw.ChatConversation{
-			Id:        "conv-duplicate",
-			UserToken: "user-123",
-			Created:   time.Now().UnixMilli(),
-			Updated:   time.Now().UnixMilli(),
+			Id:      "conv-duplicate",
+			Created: time.Now().UnixMilli(),
+			Updated: time.Now().UnixMilli(),
 		}
 
-		err := tracker.CreateConversation(conv)
+		err := tracker.CreateConversation(conv, "user-123")
 		if err != nil {
 			t.Fatalf("Failed to create first conversation: %v", err)
 		}
 
 		// Try to create with same ID
-		err = tracker.CreateConversation(conv)
+		err = tracker.CreateConversation(conv, "user-123")
 		if err == nil {
 			t.Error("Should reject duplicate conversation ID")
 		}
@@ -75,13 +73,12 @@ func TestConversationTrackerEdgeCases(t *testing.T) {
 
 	t.Run("Empty conversation ID", func(t *testing.T) {
 		conv := &sw.ChatConversation{
-			Id:        "",
-			UserToken: "user-123",
-			Created:   time.Now().UnixMilli(),
-			Updated:   time.Now().UnixMilli(),
+			Id:      "",
+			Created: time.Now().UnixMilli(),
+			Updated: time.Now().UnixMilli(),
 		}
 
-		err := tracker.CreateConversation(conv)
+		err := tracker.CreateConversation(conv, "user-123")
 		// May succeed or fail depending on implementation
 		if err != nil {
 			t.Logf("Empty ID handled: %v", err)
@@ -90,13 +87,12 @@ func TestConversationTrackerEdgeCases(t *testing.T) {
 
 	t.Run("Empty user token", func(t *testing.T) {
 		conv := &sw.ChatConversation{
-			Id:        "conv-no-user",
-			UserToken: "",
-			Created:   time.Now().UnixMilli(),
-			Updated:   time.Now().UnixMilli(),
+			Id:      "conv-no-user",
+			Created: time.Now().UnixMilli(),
+			Updated: time.Now().UnixMilli(),
 		}
 
-		err := tracker.CreateConversation(conv)
+		err := tracker.CreateConversation(conv, "user-123")
 		// May succeed or fail depending on implementation
 		if err != nil {
 			t.Logf("Empty user token handled: %v", err)
@@ -106,14 +102,13 @@ func TestConversationTrackerEdgeCases(t *testing.T) {
 	t.Run("Very long title", func(t *testing.T) {
 		longTitle := strings.Repeat("a", 10000)
 		conv := &sw.ChatConversation{
-			Id:        "conv-long-title",
-			UserToken: "user-123",
-			Title:     longTitle,
-			Created:   time.Now().UnixMilli(),
-			Updated:   time.Now().UnixMilli(),
+			Id:      "conv-long-title",
+			Title:   longTitle,
+			Created: time.Now().UnixMilli(),
+			Updated: time.Now().UnixMilli(),
 		}
 
-		err := tracker.CreateConversation(conv)
+		err := tracker.CreateConversation(conv, "user-123")
 		if err != nil {
 			t.Logf("Long title handled: %v", err)
 		}
@@ -122,14 +117,13 @@ func TestConversationTrackerEdgeCases(t *testing.T) {
 	t.Run("Unicode in title and content", func(t *testing.T) {
 		unicodeTitle := "对话-会話-🧬"
 		conv := &sw.ChatConversation{
-			Id:        "conv-unicode",
-			UserToken: "user-unicode",
-			Title:     unicodeTitle,
-			Created:   time.Now().UnixMilli(),
-			Updated:   time.Now().UnixMilli(),
+			Id:      "conv-unicode",
+			Title:   unicodeTitle,
+			Created: time.Now().UnixMilli(),
+			Updated: time.Now().UnixMilli(),
 		}
 
-		err := tracker.CreateConversation(conv)
+		err := tracker.CreateConversation(conv, "user-123")
 		if err != nil {
 			t.Errorf("Should handle unicode: %v", err)
 		}
@@ -157,12 +151,11 @@ func TestConversationTrackerEdgeCases(t *testing.T) {
 
 	t.Run("Special characters in content", func(t *testing.T) {
 		conv := &sw.ChatConversation{
-			Id:        "conv-special",
-			UserToken: "user-123",
-			Created:   time.Now().UnixMilli(),
-			Updated:   time.Now().UnixMilli(),
+			Id:      "conv-special",
+			Created: time.Now().UnixMilli(),
+			Updated: time.Now().UnixMilli(),
 		}
-		tracker.CreateConversation(conv)
+		tracker.CreateConversation(conv, "user-123")
 
 		specialContent := "Test with 'quotes', \"double quotes\", and \n newlines \t tabs"
 		msg := &sw.ChatMessage{
@@ -183,13 +176,12 @@ func TestConversationTrackerEdgeCases(t *testing.T) {
 
 	t.Run("Update with multiple fields", func(t *testing.T) {
 		conv := &sw.ChatConversation{
-			Id:        "conv-update-multi",
-			UserToken: "user-123",
-			Title:     "Original",
-			Created:   time.Now().UnixMilli(),
-			Updated:   time.Now().UnixMilli(),
+			Id:      "conv-update-multi",
+			Title:   "Original",
+			Created: time.Now().UnixMilli(),
+			Updated: time.Now().UnixMilli(),
 		}
-		tracker.CreateConversation(conv)
+		tracker.CreateConversation(conv, "user-123")
 
 		originalTime := conv.Updated
 		time.Sleep(10 * time.Millisecond)
@@ -215,12 +207,11 @@ func TestConversationTrackerEdgeCases(t *testing.T) {
 
 	t.Run("Update with empty map", func(t *testing.T) {
 		conv := &sw.ChatConversation{
-			Id:        "conv-update-empty",
-			UserToken: "user-123",
-			Created:   time.Now().UnixMilli(),
-			Updated:   time.Now().UnixMilli(),
+			Id:      "conv-update-empty",
+			Created: time.Now().UnixMilli(),
+			Updated: time.Now().UnixMilli(),
 		}
-		tracker.CreateConversation(conv)
+		tracker.CreateConversation(conv, "user-123")
 
 		err := tracker.UpdateConversation("conv-update-empty", map[string]interface{}{})
 		// Should handle gracefully
@@ -249,14 +240,13 @@ func TestConversationTrackerEdgeCases(t *testing.T) {
 	t.Run("SQL injection in conversation ID", func(t *testing.T) {
 		maliciousID := "conv'; DROP TABLE conversations; --"
 		conv := &sw.ChatConversation{
-			Id:        maliciousID,
-			UserToken: "user-123",
-			Created:   time.Now().UnixMilli(),
-			Updated:   time.Now().UnixMilli(),
+			Id:      maliciousID,
+			Created: time.Now().UnixMilli(),
+			Updated: time.Now().UnixMilli(),
 		}
 
 		// Should not execute SQL injection
-		tracker.CreateConversation(conv)
+		tracker.CreateConversation(conv, "user-123")
 
 		// Verify table still exists
 		_, err := tracker.ListUserConversations("user-123")
@@ -267,12 +257,11 @@ func TestConversationTrackerEdgeCases(t *testing.T) {
 
 	t.Run("Very long message content", func(t *testing.T) {
 		conv := &sw.ChatConversation{
-			Id:        "conv-long-msg",
-			UserToken: "user-123",
-			Created:   time.Now().UnixMilli(),
-			Updated:   time.Now().UnixMilli(),
+			Id:      "conv-long-msg",
+			Created: time.Now().UnixMilli(),
+			Updated: time.Now().UnixMilli(),
 		}
-		tracker.CreateConversation(conv)
+		tracker.CreateConversation(conv, "user-123")
 
 		longContent := strings.Repeat("a", 100000)
 		msg := &sw.ChatMessage{
@@ -311,13 +300,12 @@ func TestConversationTrackerMultiUser(t *testing.T) {
 	for _, userToken := range users {
 		for i := 0; i < convsPerUser; i++ {
 			conv := &sw.ChatConversation{
-				Id:        userToken + "-conv-" + string(rune('A'+i)),
-				UserToken: userToken,
-				Title:     "Conversation " + string(rune('A'+i)),
-				Created:   time.Now().UnixMilli(),
-				Updated:   time.Now().UnixMilli(),
+				Id:      userToken + "-conv-" + string(rune('A'+i)),
+				Title:   "Conversation " + string(rune('A'+i)),
+				Created: time.Now().UnixMilli(),
+				Updated: time.Now().UnixMilli(),
 			}
-			err := tracker.CreateConversation(conv)
+			err := tracker.CreateConversation(conv, userToken)
 			if err != nil {
 				t.Fatalf("Failed to create conversation: %v", err)
 			}
@@ -336,8 +324,12 @@ func TestConversationTrackerMultiUser(t *testing.T) {
 
 		// Verify all conversations belong to this user
 		for _, conv := range convs {
-			if conv.UserToken != userToken {
-				t.Errorf("User %s got conversation belonging to %s", userToken, conv.UserToken)
+			owner, err := tracker.GetConversationOwner(conv.Id)
+			if err != nil {
+				t.Fatalf("Failed to get owner for conversation %s: %v", conv.Id, err)
+			}
+			if owner != userToken {
+				t.Errorf("User %s got conversation belonging to %s", userToken, owner)
 			}
 		}
 	}
@@ -373,12 +365,11 @@ func TestConversationTrackerOrdering(t *testing.T) {
 
 	for _, c := range convs {
 		conv := &sw.ChatConversation{
-			Id:        c.id,
-			UserToken: userToken,
-			Created:   c.updated,
-			Updated:   c.updated,
+			Id:      c.id,
+			Created: c.updated,
+			Updated: c.updated,
 		}
-		tracker.CreateConversation(conv)
+		tracker.CreateConversation(conv, "user-123")
 	}
 
 	// List should return newest first
@@ -418,12 +409,11 @@ func TestConversationTrackerCascadeDelete(t *testing.T) {
 
 	// Create conversation with messages
 	conv := &sw.ChatConversation{
-		Id:        "conv-cascade",
-		UserToken: "user-123",
-		Created:   time.Now().UnixMilli(),
-		Updated:   time.Now().UnixMilli(),
+		Id:      "conv-cascade",
+		Created: time.Now().UnixMilli(),
+		Updated: time.Now().UnixMilli(),
 	}
-	tracker.CreateConversation(conv)
+	tracker.CreateConversation(conv, "user-123")
 
 	// Add multiple messages
 	for i := 0; i < 10; i++ {
@@ -479,12 +469,11 @@ func TestConversationTrackerDatabaseErrors(t *testing.T) {
 
 		// Try to use it
 		conv := &sw.ChatConversation{
-			Id:        "conv-after-close",
-			UserToken: "user-123",
-			Created:   time.Now().UnixMilli(),
-			Updated:   time.Now().UnixMilli(),
+			Id:      "conv-after-close",
+			Created: time.Now().UnixMilli(),
+			Updated: time.Now().UnixMilli(),
 		}
-		err = tracker.CreateConversation(conv)
+		err = tracker.CreateConversation(conv, "user-123")
 		if err == nil {
 			t.Error("Should error when using closed tracker")
 		}

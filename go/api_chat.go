@@ -13,24 +13,24 @@ import (
 
 // ChatAPI implements the chat API endpoints
 type ChatAPI struct {
-	genkitClient *GenkitClient
-	tracker      ConversationTracker
-	tokenService *TokenService
+	genkitClient   *GenkitClient
+	tracker        ConversationTracker
+	sessionService *SessionService
 }
 
 // NewChatAPI creates a new ChatAPI instance
-func NewChatAPI(genkitClient *GenkitClient, tracker ConversationTracker, tokenService *TokenService) *ChatAPI {
+func NewChatAPI(genkitClient *GenkitClient, tracker ConversationTracker, sessionService *SessionService) *ChatAPI {
 	return &ChatAPI{
-		genkitClient: genkitClient,
-		tracker:      tracker,
-		tokenService: tokenService,
+		genkitClient:   genkitClient,
+		tracker:        tracker,
+		sessionService: sessionService,
 	}
 }
 
 // validateToken validates the user token and returns the token string
 func (api *ChatAPI) validateToken(c *gin.Context) (string, error) {
 	// Check if token service is available
-	if api.tokenService == nil {
+	if api.sessionService == nil {
 		// If no token service, just return the user_token header without validation
 		userToken := c.GetHeader("user_token")
 		if userToken == "" {
@@ -58,7 +58,7 @@ func (api *ChatAPI) validateToken(c *gin.Context) (string, error) {
 
 	// Validate the token
 	if userToken != "" {
-		_, err := api.tokenService.ValidateToken(userToken)
+		_, err := api.sessionService.ValidateToken(userToken)
 		if err != nil {
 			return "", fmt.Errorf("invalid token: %v", err)
 		}
@@ -75,12 +75,12 @@ func (api *ChatAPI) CreateConversation(c *gin.Context) {
 	generatedToken := false
 
 	// Generate a token if not provided and token service is available
-	if userToken == "" && api.tokenService != nil {
+	if userToken == "" && api.sessionService != nil {
 		// Generate a random user ID
 		userId := fmt.Sprintf("user-%d-%s", time.Now().UnixMilli(), generateRandomString(8))
 
 		// Generate a token for this user
-		token, err := api.tokenService.GenerateUserToken(userId)
+		token, err := api.sessionService.GenerateUserToken(userId)
 		if err != nil {
 			log.Printf("Error generating user token: %v", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate user token"})
@@ -95,7 +95,7 @@ func (api *ChatAPI) CreateConversation(c *gin.Context) {
 	}
 
 	// If token was provided (not generated), validate it
-	if !generatedToken && api.tokenService != nil {
+	if !generatedToken && api.sessionService != nil {
 		_, err := api.validateToken(c)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
@@ -115,16 +115,15 @@ func (api *ChatAPI) CreateConversation(c *gin.Context) {
 
 	// Create a new conversation
 	conversation := ChatConversation{
-		Id:        fmt.Sprintf("conv-%d-%s", time.Now().UnixMilli(), generateRandomString(8)),
-		UserToken: userToken,
-		Title:     req.Title,
-		Created:   time.Now().UnixMilli(),
-		Updated:   time.Now().UnixMilli(),
-		Messages:  []ChatMessage{},
+		Id:       fmt.Sprintf("conv-%d-%s", time.Now().UnixMilli(), generateRandomString(8)),
+		Title:    req.Title,
+		Created:  time.Now().UnixMilli(),
+		Updated:  time.Now().UnixMilli(),
+		Messages: []ChatMessage{},
 	}
 
-	// Store the conversation
-	if err := api.tracker.CreateConversation(&conversation); err != nil {
+	// Store the conversation with owner
+	if err := api.tracker.CreateConversation(&conversation, userToken); err != nil {
 		log.Printf("Error creating conversation: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create conversation"})
 		return
@@ -152,11 +151,11 @@ func (api *ChatAPI) DeleteConversation(c *gin.Context) {
 	}
 
 	// Check conversation access using the token validator if available
-	if api.tokenService != nil {
-		validator := NewUserTokenValidator(api.tokenService)
+	if api.sessionService != nil {
+		// Use SessionService directly
 		sqliteTracker, ok := api.tracker.(*SQLiteConversationTracker)
 		if ok {
-			_, err := validator.CheckConversationAccess(c, conversationId, sqliteTracker)
+			_, err := api.sessionService.CheckConversationAccess(c, conversationId, sqliteTracker)
 			if err != nil {
 				if strings.Contains(err.Error(), "missing user token") || strings.Contains(err.Error(), "invalid user token") {
 					c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
@@ -175,13 +174,12 @@ func (api *ChatAPI) DeleteConversation(c *gin.Context) {
 				return
 			}
 
-			conversation, err := api.tracker.GetConversation(conversationId)
+			owner, err := api.tracker.GetConversationOwner(conversationId)
 			if err != nil {
-				c.JSON(http.StatusNotFound, gin.H{"error": "Conversation not found"})
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check conversation ownership"})
 				return
 			}
-
-			if conversation.UserToken != userToken {
+			if owner != userToken {
 				c.JSON(http.StatusForbidden, gin.H{"error": "You don't have permission to delete this conversation"})
 				return
 			}
@@ -209,11 +207,11 @@ func (api *ChatAPI) GetConversation(c *gin.Context) {
 	}
 
 	// Check conversation access using the token validator if available
-	if api.tokenService != nil {
-		validator := NewUserTokenValidator(api.tokenService)
+	if api.sessionService != nil {
+		// Use SessionService directly
 		sqliteTracker, ok := api.tracker.(*SQLiteConversationTracker)
 		if ok {
-			_, err := validator.CheckConversationAccess(c, conversationId, sqliteTracker)
+			_, err := api.sessionService.CheckConversationAccess(c, conversationId, sqliteTracker)
 			if err != nil {
 				if strings.Contains(err.Error(), "missing user token") || strings.Contains(err.Error(), "invalid user token") {
 					c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
@@ -232,13 +230,13 @@ func (api *ChatAPI) GetConversation(c *gin.Context) {
 				return
 			}
 
-			conversation, err := api.tracker.GetConversation(conversationId)
+			// Check ownership
+			owner, err := api.tracker.GetConversationOwner(conversationId)
 			if err != nil {
-				c.JSON(http.StatusNotFound, gin.H{"error": "Conversation not found"})
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check conversation ownership"})
 				return
 			}
-
-			if conversation.UserToken != userToken {
+			if owner != userToken {
 				c.JSON(http.StatusForbidden, gin.H{"error": "You don't have permission to access this conversation"})
 				return
 			}
@@ -275,11 +273,11 @@ func (api *ChatAPI) GetConversationMessages(c *gin.Context) {
 	}
 
 	// Check conversation access using the token validator if available
-	if api.tokenService != nil {
-		validator := NewUserTokenValidator(api.tokenService)
+	if api.sessionService != nil {
+		// Use SessionService directly
 		sqliteTracker, ok := api.tracker.(*SQLiteConversationTracker)
 		if ok {
-			_, err := validator.CheckConversationAccess(c, conversationId, sqliteTracker)
+			_, err := api.sessionService.CheckConversationAccess(c, conversationId, sqliteTracker)
 			if err != nil {
 				if strings.Contains(err.Error(), "missing user token") || strings.Contains(err.Error(), "invalid user token") {
 					c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
@@ -298,13 +296,13 @@ func (api *ChatAPI) GetConversationMessages(c *gin.Context) {
 				return
 			}
 
-			conversation, err := api.tracker.GetConversation(conversationId)
+			// Check ownership
+			owner, err := api.tracker.GetConversationOwner(conversationId)
 			if err != nil {
-				c.JSON(http.StatusNotFound, gin.H{"error": "Conversation not found"})
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check conversation ownership"})
 				return
 			}
-
-			if conversation.UserToken != userToken {
+			if owner != userToken {
 				c.JSON(http.StatusForbidden, gin.H{"error": "You don't have permission to access this conversation"})
 				return
 			}
@@ -365,11 +363,11 @@ func (api *ChatAPI) SendConversationMessage(c *gin.Context) {
 	}
 
 	// Check conversation access using the token validator if available
-	if api.tokenService != nil {
-		validator := NewUserTokenValidator(api.tokenService)
+	if api.sessionService != nil {
+		// Use SessionService directly
 		sqliteTracker, ok := api.tracker.(*SQLiteConversationTracker)
 		if ok {
-			_, err := validator.CheckConversationAccess(c, conversationId, sqliteTracker)
+			_, err := api.sessionService.CheckConversationAccess(c, conversationId, sqliteTracker)
 			if err != nil {
 				if strings.Contains(err.Error(), "missing user token") || strings.Contains(err.Error(), "invalid user token") {
 					c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
@@ -388,13 +386,13 @@ func (api *ChatAPI) SendConversationMessage(c *gin.Context) {
 				return
 			}
 
-			conversation, err := api.tracker.GetConversation(conversationId)
+			// Check ownership
+			owner, err := api.tracker.GetConversationOwner(conversationId)
 			if err != nil {
-				c.JSON(http.StatusNotFound, gin.H{"error": "Conversation not found"})
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check conversation ownership"})
 				return
 			}
-
-			if conversation.UserToken != userToken {
+			if owner != userToken {
 				c.JSON(http.StatusForbidden, gin.H{"error": "You don't have permission to access this conversation"})
 				return
 			}

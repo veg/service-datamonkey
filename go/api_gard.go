@@ -174,8 +174,8 @@ func (api *GARDAPI) GetGARDJobById(c *gin.Context) {
 // StartGARDJob starts a new GARD analysis job
 func (api *GARDAPI) StartGARDJob(c *gin.Context) {
 	// Validate user token if token validator is available
-	if api.UserTokenValidator != nil {
-		_, err := api.UserTokenValidator.ValidateUserToken(c)
+	if api.SessionService != nil {
+		_, err := api.SessionService.GetOrCreateSubject(c)
 		if err != nil {
 			if err.Error() == "missing user token" || strings.Contains(err.Error(), "invalid user token") {
 				c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized - " + err.Error()})
@@ -193,7 +193,7 @@ func (api *GARDAPI) StartGARDJob(c *gin.Context) {
 	}
 
 	// Extract the user token from the request or from the header/query parameter
-	if request.UserToken == "" && api.UserTokenValidator != nil {
+	if request.UserToken == "" && api.SessionService != nil {
 		userToken := c.Query("user_token")
 		if userToken == "" {
 			userToken = c.GetHeader("user_token")
@@ -204,8 +204,8 @@ func (api *GARDAPI) StartGARDJob(c *gin.Context) {
 	}
 
 	// Check alignment dataset access (GARD only has alignment, no tree)
-	if request.Alignment != "" && api.UserTokenValidator != nil && api.DatasetTracker != nil {
-		_, err := api.UserTokenValidator.CheckDatasetAccess(c, request.Alignment, api.DatasetTracker)
+	if request.Alignment != "" && api.SessionService != nil && api.DatasetTracker != nil {
+		_, err := api.SessionService.CheckDatasetAccess(c, request.Alignment, api.DatasetTracker)
 		if err != nil {
 			if strings.Contains(err.Error(), "missing user token") || strings.Contains(err.Error(), "invalid user token") {
 				c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized - " + err.Error()})

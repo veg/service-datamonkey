@@ -123,9 +123,9 @@ func (api *FELAPI) GetFELJob(c *gin.Context) {
 // StartFELJob starts a new FEL analysis job
 func (api *FELAPI) StartFELJob(c *gin.Context) {
 	// Validate user token if token validator is available
-	if api.UserTokenValidator != nil {
+	if api.SessionService != nil {
 		// Just validate the token exists and is valid
-		_, err := api.UserTokenValidator.ValidateUserToken(c)
+		_, err := api.SessionService.GetOrCreateSubject(c)
 		if err != nil {
 			if err.Error() == "missing user token" || strings.Contains(err.Error(), "invalid user token") {
 				c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized - " + err.Error()})
@@ -144,7 +144,7 @@ func (api *FELAPI) StartFELJob(c *gin.Context) {
 	}
 
 	// Extract the user token from the request or from the header/query parameter
-	if request.UserToken == "" && api.UserTokenValidator != nil {
+	if request.UserToken == "" && api.SessionService != nil {
 		// Try to get token from query parameter first
 		userToken := c.Query("user_token")
 
@@ -160,8 +160,8 @@ func (api *FELAPI) StartFELJob(c *gin.Context) {
 	}
 
 	// Check alignment dataset access before starting the job
-	if request.Alignment != "" && api.UserTokenValidator != nil && api.DatasetTracker != nil {
-		_, err := api.UserTokenValidator.CheckDatasetAccess(c, request.Alignment, api.DatasetTracker)
+	if request.Alignment != "" && api.SessionService != nil && api.DatasetTracker != nil {
+		_, err := api.SessionService.CheckDatasetAccess(c, request.Alignment, api.DatasetTracker)
 		if err != nil {
 			if strings.Contains(err.Error(), "missing user token") || strings.Contains(err.Error(), "invalid user token") {
 				c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized - " + err.Error()})
@@ -177,8 +177,8 @@ func (api *FELAPI) StartFELJob(c *gin.Context) {
 	}
 
 	// Check tree dataset access before starting the job
-	if request.Tree != "" && api.UserTokenValidator != nil && api.DatasetTracker != nil {
-		_, err := api.UserTokenValidator.CheckDatasetAccess(c, request.Tree, api.DatasetTracker)
+	if request.Tree != "" && api.SessionService != nil && api.DatasetTracker != nil {
+		_, err := api.SessionService.CheckDatasetAccess(c, request.Tree, api.DatasetTracker)
 		if err != nil {
 			if strings.Contains(err.Error(), "missing user token") || strings.Contains(err.Error(), "invalid user token") {
 				c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized - " + err.Error()})
