@@ -1,7 +1,6 @@
 package tests
 
 import (
-	"os"
 	"strings"
 	"testing"
 
@@ -11,13 +10,15 @@ import (
 // TestSQLiteDatasetTrackerStoreWithUser tests storing datasets with user ownership
 func TestSQLiteDatasetTrackerStoreWithUser(t *testing.T) {
 	dbPath := "/tmp/test_dataset_user.db"
-	defer os.Remove(dbPath)
 
-	tracker, err := sw.NewSQLiteDatasetTracker(dbPath, "/tmp/test_datasets")
-	if err != nil {
-		t.Fatalf("Failed to create tracker: %v", err)
-	}
-	defer tracker.Close()
+	db, cleanup := setupTestDB(t, dbPath)
+	defer cleanup()
+
+	tracker := sw.NewSQLiteDatasetTracker(db.GetDB(), "/tmp/test_datasets")
+
+	// Create test sessions for FK constraints
+	userAlice := createTestSession(t, db)
+	userBob := createTestSession(t, db)
 
 	tests := []struct {
 		name    string
@@ -31,7 +32,7 @@ func TestSQLiteDatasetTrackerStoreWithUser(t *testing.T) {
 				sw.DatasetMetadata{Name: "dataset1", Type: "fasta"},
 				[]byte("test content 1"),
 			),
-			userID:  "user-alice",
+			userID:  userAlice,
 			wantErr: false,
 		},
 		{
@@ -40,7 +41,7 @@ func TestSQLiteDatasetTrackerStoreWithUser(t *testing.T) {
 				sw.DatasetMetadata{Name: "dataset2", Type: "fasta"},
 				[]byte("test content 2"),
 			),
-			userID:  "user-bob",
+			userID:  userBob,
 			wantErr: false,
 		},
 		{
@@ -78,13 +79,15 @@ func TestSQLiteDatasetTrackerStoreWithUser(t *testing.T) {
 // TestSQLiteDatasetTrackerGetOwner tests retrieving dataset owner
 func TestSQLiteDatasetTrackerGetOwner(t *testing.T) {
 	dbPath := "/tmp/test_dataset_owner.db"
-	defer os.Remove(dbPath)
 
-	tracker, err := sw.NewSQLiteDatasetTracker(dbPath, "/tmp/test_datasets")
-	if err != nil {
-		t.Fatalf("Failed to create tracker: %v", err)
-	}
-	defer tracker.Close()
+	db, cleanup := setupTestDB(t, dbPath)
+	defer cleanup()
+
+	tracker := sw.NewSQLiteDatasetTracker(db.GetDB(), "/tmp/test_datasets")
+
+	// Create test sessions for FK constraints
+	userAlice := createTestSession(t, db)
+	userBob := createTestSession(t, db)
 
 	// Store datasets with different owners
 	datasets := []struct {
@@ -96,14 +99,14 @@ func TestSQLiteDatasetTrackerGetOwner(t *testing.T) {
 				sw.DatasetMetadata{Name: "alice-dataset", Type: "fasta"},
 				[]byte("alice content"),
 			),
-			userID: "user-alice",
+			userID: userAlice,
 		},
 		{
 			dataset: sw.NewBaseDataset(
 				sw.DatasetMetadata{Name: "bob-dataset", Type: "fasta"},
 				[]byte("bob content"),
 			),
-			userID: "user-bob",
+			userID: userBob,
 		},
 		{
 			dataset: sw.NewBaseDataset(
@@ -130,13 +133,13 @@ func TestSQLiteDatasetTrackerGetOwner(t *testing.T) {
 		{
 			name:       "Get owner for Alice's dataset",
 			datasetID:  datasets[0].dataset.GetId(),
-			wantUserID: "user-alice",
+			wantUserID: userAlice,
 			wantErr:    false,
 		},
 		{
 			name:       "Get owner for Bob's dataset",
 			datasetID:  datasets[1].dataset.GetId(),
-			wantUserID: "user-bob",
+			wantUserID: userBob,
 			wantErr:    false,
 		},
 		{
@@ -169,13 +172,15 @@ func TestSQLiteDatasetTrackerGetOwner(t *testing.T) {
 // TestSQLiteDatasetTrackerGetByUser tests user-verified dataset retrieval
 func TestSQLiteDatasetTrackerGetByUser(t *testing.T) {
 	dbPath := "/tmp/test_dataset_get_by_user.db"
-	defer os.Remove(dbPath)
 
-	tracker, err := sw.NewSQLiteDatasetTracker(dbPath, "/tmp/test_datasets")
-	if err != nil {
-		t.Fatalf("Failed to create tracker: %v", err)
-	}
-	defer tracker.Close()
+	db, cleanup := setupTestDB(t, dbPath)
+	defer cleanup()
+
+	tracker := sw.NewSQLiteDatasetTracker(db.GetDB(), "/tmp/test_datasets")
+
+	// Create test sessions for FK constraints
+	userAlice := createTestSession(t, db)
+	userBob := createTestSession(t, db)
 
 	// Store datasets
 	aliceDataset := sw.NewBaseDataset(
@@ -187,8 +192,8 @@ func TestSQLiteDatasetTrackerGetByUser(t *testing.T) {
 		[]byte("bob content"),
 	)
 
-	tracker.StoreWithUser(aliceDataset, "user-alice")
-	tracker.StoreWithUser(bobDataset, "user-bob")
+	tracker.StoreWithUser(aliceDataset, userAlice)
+	tracker.StoreWithUser(bobDataset, userBob)
 
 	tests := []struct {
 		name          string
@@ -200,33 +205,33 @@ func TestSQLiteDatasetTrackerGetByUser(t *testing.T) {
 		{
 			name:      "Alice accesses her own dataset",
 			datasetID: aliceDataset.GetId(),
-			userID:    "user-alice",
+			userID:    userAlice,
 			wantErr:   false,
 		},
 		{
 			name:      "Bob accesses his own dataset",
 			datasetID: bobDataset.GetId(),
-			userID:    "user-bob",
+			userID:    userBob,
 			wantErr:   false,
 		},
 		{
 			name:          "Alice tries to access Bob's dataset",
 			datasetID:     bobDataset.GetId(),
-			userID:        "user-alice",
+			userID:        userAlice,
 			wantErr:       true,
 			wantErrSubstr: "access",
 		},
 		{
 			name:          "Bob tries to access Alice's dataset",
 			datasetID:     aliceDataset.GetId(),
-			userID:        "user-bob",
+			userID:        userBob,
 			wantErr:       true,
 			wantErrSubstr: "access",
 		},
 		{
 			name:          "Access non-existent dataset",
 			datasetID:     "nonexistent-id",
-			userID:        "user-alice",
+			userID:        userAlice,
 			wantErr:       true,
 			wantErrSubstr: "not found",
 		},
@@ -253,13 +258,16 @@ func TestSQLiteDatasetTrackerGetByUser(t *testing.T) {
 // TestSQLiteDatasetTrackerListByUser tests listing datasets for a specific user
 func TestSQLiteDatasetTrackerListByUser(t *testing.T) {
 	dbPath := "/tmp/test_dataset_list_by_user.db"
-	defer os.Remove(dbPath)
 
-	tracker, err := sw.NewSQLiteDatasetTracker(dbPath, "/tmp/test_datasets")
-	if err != nil {
-		t.Fatalf("Failed to create tracker: %v", err)
-	}
-	defer tracker.Close()
+	db, cleanup := setupTestDB(t, dbPath)
+	defer cleanup()
+
+	tracker := sw.NewSQLiteDatasetTracker(db.GetDB(), "/tmp/test_datasets")
+
+	// Create test sessions for FK constraints
+	userAlice := createTestSession(t, db)
+	userBob := createTestSession(t, db)
+	userCharlie := createTestSession(t, db)
 
 	// Store datasets for multiple users
 	aliceDatasets := []sw.DatasetInterface{
@@ -294,12 +302,12 @@ func TestSQLiteDatasetTrackerListByUser(t *testing.T) {
 	)
 
 	for _, ds := range aliceDatasets {
-		tracker.StoreWithUser(ds, "user-alice")
+		tracker.StoreWithUser(ds, userAlice)
 	}
 	for _, ds := range bobDatasets {
-		tracker.StoreWithUser(ds, "user-bob")
+		tracker.StoreWithUser(ds, userBob)
 	}
-	tracker.StoreWithUser(charlieDataset, "user-charlie")
+	tracker.StoreWithUser(charlieDataset, userCharlie)
 
 	tests := []struct {
 		name      string
@@ -308,17 +316,17 @@ func TestSQLiteDatasetTrackerListByUser(t *testing.T) {
 	}{
 		{
 			name:      "List Alice's datasets",
-			userID:    "user-alice",
+			userID:    userAlice,
 			wantCount: 3,
 		},
 		{
 			name:      "List Bob's datasets",
-			userID:    "user-bob",
+			userID:    userBob,
 			wantCount: 2,
 		},
 		{
 			name:      "List Charlie's datasets",
-			userID:    "user-charlie",
+			userID:    userCharlie,
 			wantCount: 1,
 		},
 		{
@@ -355,13 +363,15 @@ func TestSQLiteDatasetTrackerListByUser(t *testing.T) {
 // TestSQLiteDatasetTrackerDeleteByUser tests user-verified dataset deletion
 func TestSQLiteDatasetTrackerDeleteByUser(t *testing.T) {
 	dbPath := "/tmp/test_dataset_delete_by_user.db"
-	defer os.Remove(dbPath)
 
-	tracker, err := sw.NewSQLiteDatasetTracker(dbPath, "/tmp/test_datasets")
-	if err != nil {
-		t.Fatalf("Failed to create tracker: %v", err)
-	}
-	defer tracker.Close()
+	db, cleanup := setupTestDB(t, dbPath)
+	defer cleanup()
+
+	tracker := sw.NewSQLiteDatasetTracker(db.GetDB(), "/tmp/test_datasets")
+
+	// Create test sessions for FK constraints
+	userAlice := createTestSession(t, db)
+	userBob := createTestSession(t, db)
 
 	tests := []struct {
 		name          string
@@ -374,26 +384,26 @@ func TestSQLiteDatasetTrackerDeleteByUser(t *testing.T) {
 		{
 			name: "User deletes their own dataset",
 			setupDatasets: map[string]string{
-				"dataset-1": "user-alice",
+				"dataset-1": userAlice,
 			},
-			deleteUser: "user-alice",
+			deleteUser: userAlice,
 			wantErr:    false,
 		},
 		{
 			name: "User tries to delete another user's dataset",
 			setupDatasets: map[string]string{
-				"dataset-2": "user-bob",
+				"dataset-2": userBob,
 			},
-			deleteUser:    "user-alice",
+			deleteUser:    userAlice,
 			wantErr:       true,
 			wantErrSubstr: "permission",
 		},
 		{
 			name: "Delete non-existent dataset",
 			setupDatasets: map[string]string{
-				"dataset-3": "user-alice",
+				"dataset-3": userAlice,
 			},
-			deleteUser:    "user-alice",
+			deleteUser:    userAlice,
 			wantErr:       true,
 			wantErrSubstr: "not found",
 		},
@@ -445,13 +455,15 @@ func TestSQLiteDatasetTrackerDeleteByUser(t *testing.T) {
 // TestSQLiteDatasetTrackerUpdateByUser tests user-verified dataset updates
 func TestSQLiteDatasetTrackerUpdateByUser(t *testing.T) {
 	dbPath := "/tmp/test_dataset_update_by_user.db"
-	defer os.Remove(dbPath)
 
-	tracker, err := sw.NewSQLiteDatasetTracker(dbPath, "/tmp/test_datasets")
-	if err != nil {
-		t.Fatalf("Failed to create tracker: %v", err)
-	}
-	defer tracker.Close()
+	db, cleanup := setupTestDB(t, dbPath)
+	defer cleanup()
+
+	tracker := sw.NewSQLiteDatasetTracker(db.GetDB(), "/tmp/test_datasets")
+
+	// Create test sessions for FK constraints
+	userAlice := createTestSession(t, db)
+	userBob := createTestSession(t, db)
 
 	// Store datasets
 	aliceDataset := sw.NewBaseDataset(
@@ -463,8 +475,8 @@ func TestSQLiteDatasetTrackerUpdateByUser(t *testing.T) {
 		[]byte("bob content"),
 	)
 
-	tracker.StoreWithUser(aliceDataset, "user-alice")
-	tracker.StoreWithUser(bobDataset, "user-bob")
+	tracker.StoreWithUser(aliceDataset, userAlice)
+	tracker.StoreWithUser(bobDataset, userBob)
 
 	tests := []struct {
 		name          string
@@ -477,7 +489,7 @@ func TestSQLiteDatasetTrackerUpdateByUser(t *testing.T) {
 		{
 			name:      "Alice updates her own dataset",
 			datasetID: aliceDataset.GetId(),
-			userID:    "user-alice",
+			userID:    userAlice,
 			updates: map[string]interface{}{
 				"metadata_description": "updated by alice",
 			},
@@ -486,7 +498,7 @@ func TestSQLiteDatasetTrackerUpdateByUser(t *testing.T) {
 		{
 			name:      "Bob updates his own dataset",
 			datasetID: bobDataset.GetId(),
-			userID:    "user-bob",
+			userID:    userBob,
 			updates: map[string]interface{}{
 				"metadata_description": "updated by bob",
 			},
@@ -495,7 +507,7 @@ func TestSQLiteDatasetTrackerUpdateByUser(t *testing.T) {
 		{
 			name:      "Alice tries to update Bob's dataset",
 			datasetID: bobDataset.GetId(),
-			userID:    "user-alice",
+			userID:    userAlice,
 			updates: map[string]interface{}{
 				"metadata_description": "alice trying to update",
 			},
@@ -505,7 +517,7 @@ func TestSQLiteDatasetTrackerUpdateByUser(t *testing.T) {
 		{
 			name:      "Update non-existent dataset",
 			datasetID: "nonexistent-id",
-			userID:    "user-alice",
+			userID:    userAlice,
 			updates: map[string]interface{}{
 				"metadata_description": "update",
 			},
@@ -536,16 +548,19 @@ func TestSQLiteDatasetTrackerUpdateByUser(t *testing.T) {
 // TestSQLiteDatasetTrackerMultipleUsers tests complex multi-user scenarios
 func TestSQLiteDatasetTrackerMultipleUsers(t *testing.T) {
 	dbPath := "/tmp/test_dataset_multi_user.db"
-	defer os.Remove(dbPath)
 
-	tracker, err := sw.NewSQLiteDatasetTracker(dbPath, "/tmp/test_datasets")
-	if err != nil {
-		t.Fatalf("Failed to create tracker: %v", err)
-	}
-	defer tracker.Close()
+	db, cleanup := setupTestDB(t, dbPath)
+	defer cleanup()
+
+	tracker := sw.NewSQLiteDatasetTracker(db.GetDB(), "/tmp/test_datasets")
+
+	// Create test sessions for FK constraints
+	userAlice := createTestSession(t, db)
+	userBob := createTestSession(t, db)
+	userCharlie := createTestSession(t, db)
 
 	// Create datasets for 3 users
-	users := []string{"user-alice", "user-bob", "user-charlie"}
+	users := []string{userAlice, userBob, userCharlie}
 	datasetsPerUser := 5
 
 	for _, userID := range users {
@@ -587,18 +602,18 @@ func TestSQLiteDatasetTrackerMultipleUsers(t *testing.T) {
 	}
 
 	// Verify cross-user access is blocked
-	aliceDatasets, _ := tracker.ListByUser("user-alice")
+	aliceDatasets, _ := tracker.ListByUser(userAlice)
 	if len(aliceDatasets) > 0 {
 		aliceDatasetID := aliceDatasets[0].GetId()
 
 		// Bob tries to access Alice's dataset
-		_, err := tracker.GetByUser(aliceDatasetID, "user-bob")
+		_, err := tracker.GetByUser(aliceDatasetID, userBob)
 		if err == nil {
 			t.Error("Bob should not be able to access Alice's dataset")
 		}
 
 		// Charlie tries to delete Alice's dataset
-		err = tracker.DeleteByUser(aliceDatasetID, "user-charlie")
+		err = tracker.DeleteByUser(aliceDatasetID, userCharlie)
 		if err == nil {
 			t.Error("Charlie should not be able to delete Alice's dataset")
 		}

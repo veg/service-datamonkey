@@ -9,7 +9,7 @@ This is a REST service intended to drive Datamonkey3 server-side. It is designed
 - **Dataset Management** - Upload, list, retrieve, and delete datasets with user authentication
 - **Job Management** - Submit, monitor, list, and delete analysis jobs with filtering capabilities
 - **AI Integration** - 24 Genkit tools for AI-powered interaction with the Datamonkey API
-- **Flexible Storage** - Support for file-based, SQLite, Redis, and in-memory trackers
+- **Unified Database** - Single SQLite database with foreign key constraints and automatic cleanup
 - **Slurm Integration** - Both REST API and CLI modes for job scheduling
 - **User Authentication** - Token-based authentication with ownership verification
 - **Chat Interface** - AI chat flow with tool access for natural language interaction
@@ -107,8 +107,7 @@ cp .env.example .env
 ```
 
 The `.env.example` file contains all available configuration options with descriptions and sensible defaults, including:
-- **Dataset & Job Trackers** - Storage backends for datasets and jobs (File, SQLite, Redis, InMemory)
-- **Conversation Tracker** - Storage for AI chat conversations
+- **Unified Database** - Single SQLite database path for all data (datasets, jobs, sessions, conversations)
 - **Scheduler** - Slurm integration (REST or CLI mode)
 - **JWT Authentication** - User token authentication and Slurm tokens
 - **AI Configuration** - Model provider, name, temperature, and API keys

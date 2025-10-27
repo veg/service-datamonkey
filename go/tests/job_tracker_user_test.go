@@ -1,7 +1,6 @@
 package tests
 
 import (
-	"os"
 	"strings"
 	"testing"
 
@@ -11,13 +10,14 @@ import (
 // TestSQLiteJobTrackerStoreJobWithUser tests storing jobs with user association
 func TestSQLiteJobTrackerStoreJobWithUser(t *testing.T) {
 	dbPath := "/tmp/test_user_jobs.db"
-	defer os.Remove(dbPath)
+	db, cleanup := setupTestDB(t, dbPath)
+	defer cleanup()
 
-	tracker, err := sw.NewSQLiteJobTracker(dbPath)
-	if err != nil {
-		t.Fatalf("Failed to create SQLite job tracker: %v", err)
-	}
-	defer tracker.Close()
+	tracker := sw.NewSQLiteJobTracker(db.GetDB())
+
+	// Create test sessions for FK constraints
+	userAlice := createTestSession(t, db)
+	userBob := createTestSession(t, db)
 
 	tests := []struct {
 		name           string
@@ -30,14 +30,14 @@ func TestSQLiteJobTrackerStoreJobWithUser(t *testing.T) {
 			name:           "Store job with user",
 			jobID:          "job-1",
 			schedulerJobID: "slurm-1",
-			userID:         "user-alice",
+			userID:         userAlice,
 			wantErr:        false,
 		},
 		{
 			name:           "Store job with different user",
 			jobID:          "job-2",
 			schedulerJobID: "slurm-2",
-			userID:         "user-bob",
+			userID:         userBob,
 			wantErr:        false,
 		},
 		{
@@ -73,19 +73,21 @@ func TestSQLiteJobTrackerStoreJobWithUser(t *testing.T) {
 // TestSQLiteJobTrackerGetJobOwner tests retrieving job owner
 func TestSQLiteJobTrackerGetJobOwner(t *testing.T) {
 	dbPath := "/tmp/test_job_owner.db"
-	defer os.Remove(dbPath)
 
-	tracker, err := sw.NewSQLiteJobTracker(dbPath)
-	if err != nil {
-		t.Fatalf("Failed to create SQLite job tracker: %v", err)
-	}
-	defer tracker.Close()
+	db, cleanup := setupTestDB(t, dbPath)
+	defer cleanup()
+
+	tracker := sw.NewSQLiteJobTracker(db.GetDB())
+
+	// Create test sessions for FK constraints
+	userAlice := createTestSession(t, db)
+	userBob := createTestSession(t, db)
 
 	// Store jobs with different owners
 	jobs := map[string]string{
-		"job-alice-1": "user-alice",
-		"job-alice-2": "user-alice",
-		"job-bob-1":   "user-bob",
+		"job-alice-1": userAlice,
+		"job-alice-2": userAlice,
+		"job-bob-1":   userBob,
 		"job-none":    "", // No owner
 	}
 
@@ -105,13 +107,13 @@ func TestSQLiteJobTrackerGetJobOwner(t *testing.T) {
 		{
 			name:       "Get owner for Alice's job",
 			jobID:      "job-alice-1",
-			wantUserID: "user-alice",
+			wantUserID: userAlice,
 			wantErr:    false,
 		},
 		{
 			name:       "Get owner for Bob's job",
 			jobID:      "job-bob-1",
-			wantUserID: "user-bob",
+			wantUserID: userBob,
 			wantErr:    false,
 		},
 		{
@@ -144,20 +146,22 @@ func TestSQLiteJobTrackerGetJobOwner(t *testing.T) {
 // TestSQLiteJobTrackerGetSchedulerJobIDByUser tests user-verified job retrieval
 func TestSQLiteJobTrackerGetSchedulerJobIDByUser(t *testing.T) {
 	dbPath := "/tmp/test_job_by_user.db"
-	defer os.Remove(dbPath)
 
-	tracker, err := sw.NewSQLiteJobTracker(dbPath)
-	if err != nil {
-		t.Fatalf("Failed to create SQLite job tracker: %v", err)
-	}
-	defer tracker.Close()
+	db, cleanup := setupTestDB(t, dbPath)
+	defer cleanup()
+
+	tracker := sw.NewSQLiteJobTracker(db.GetDB())
+
+	// Create test sessions for FK constraints
+	userAlice := createTestSession(t, db)
+	userBob := createTestSession(t, db)
 
 	// Store jobs
-	err = tracker.StoreJobWithUser("job-alice", "slurm-alice", "user-alice")
+	err := tracker.StoreJobWithUser("job-alice", "slurm-alice", userAlice)
 	if err != nil {
 		t.Fatalf("Failed to store Alice's job: %v", err)
 	}
-	err = tracker.StoreJobWithUser("job-bob", "slurm-bob", "user-bob")
+	err = tracker.StoreJobWithUser("job-bob", "slurm-bob", userBob)
 	if err != nil {
 		t.Fatalf("Failed to store Bob's job: %v", err)
 	}
@@ -173,35 +177,35 @@ func TestSQLiteJobTrackerGetSchedulerJobIDByUser(t *testing.T) {
 		{
 			name:            "Alice accesses her own job",
 			jobID:           "job-alice",
-			userID:          "user-alice",
+			userID:          userAlice,
 			wantSchedulerID: "slurm-alice",
 			wantErr:         false,
 		},
 		{
 			name:            "Bob accesses his own job",
 			jobID:           "job-bob",
-			userID:          "user-bob",
+			userID:          userBob,
 			wantSchedulerID: "slurm-bob",
 			wantErr:         false,
 		},
 		{
 			name:          "Alice tries to access Bob's job",
 			jobID:         "job-bob",
-			userID:        "user-alice",
+			userID:        userAlice,
 			wantErr:       true,
 			wantErrSubstr: "permission",
 		},
 		{
 			name:          "Bob tries to access Alice's job",
 			jobID:         "job-alice",
-			userID:        "user-bob",
+			userID:        userBob,
 			wantErr:       true,
 			wantErrSubstr: "permission",
 		},
 		{
 			name:          "Access non-existent job",
 			jobID:         "job-nonexistent",
-			userID:        "user-alice",
+			userID:        userAlice,
 			wantErr:       true,
 			wantErrSubstr: "not found",
 		},
@@ -228,13 +232,15 @@ func TestSQLiteJobTrackerGetSchedulerJobIDByUser(t *testing.T) {
 // TestSQLiteJobTrackerDeleteJobMappingByUser tests user-verified job deletion
 func TestSQLiteJobTrackerDeleteJobMappingByUser(t *testing.T) {
 	dbPath := "/tmp/test_delete_by_user.db"
-	defer os.Remove(dbPath)
 
-	tracker, err := sw.NewSQLiteJobTracker(dbPath)
-	if err != nil {
-		t.Fatalf("Failed to create SQLite job tracker: %v", err)
-	}
-	defer tracker.Close()
+	db, cleanup := setupTestDB(t, dbPath)
+	defer cleanup()
+
+	tracker := sw.NewSQLiteJobTracker(db.GetDB())
+
+	// Create test sessions for FK constraints
+	userAlice := createTestSession(t, db)
+	userBob := createTestSession(t, db)
 
 	tests := []struct {
 		name          string
@@ -247,29 +253,29 @@ func TestSQLiteJobTrackerDeleteJobMappingByUser(t *testing.T) {
 		{
 			name: "User deletes their own job",
 			setupJobs: map[string]string{
-				"job-1": "user-alice",
+				"job-1": userAlice,
 			},
 			deleteJobID:  "job-1",
-			deleteUserID: "user-alice",
+			deleteUserID: userAlice,
 			wantErr:      false,
 		},
 		{
 			name: "User tries to delete another user's job",
 			setupJobs: map[string]string{
-				"job-2": "user-bob",
+				"job-2": userBob,
 			},
 			deleteJobID:   "job-2",
-			deleteUserID:  "user-alice",
+			deleteUserID:  userAlice,
 			wantErr:       true,
 			wantErrSubstr: "permission",
 		},
 		{
 			name: "Delete non-existent job",
 			setupJobs: map[string]string{
-				"job-3": "user-alice",
+				"job-3": userAlice,
 			},
 			deleteJobID:   "job-nonexistent",
-			deleteUserID:  "user-alice",
+			deleteUserID:  userAlice,
 			wantErr:       true,
 			wantErrSubstr: "not found",
 		},
@@ -315,13 +321,17 @@ func TestSQLiteJobTrackerDeleteJobMappingByUser(t *testing.T) {
 // TestSQLiteJobTrackerListJobsByUser tests listing jobs for a specific user
 func TestSQLiteJobTrackerListJobsByUser(t *testing.T) {
 	dbPath := "/tmp/test_list_by_user.db"
-	defer os.Remove(dbPath)
 
-	tracker, err := sw.NewSQLiteJobTracker(dbPath)
-	if err != nil {
-		t.Fatalf("Failed to create SQLite job tracker: %v", err)
-	}
-	defer tracker.Close()
+	db, cleanup := setupTestDB(t, dbPath)
+	defer cleanup()
+
+	tracker := sw.NewSQLiteJobTracker(db.GetDB())
+
+	// Create test sessions for FK constraints
+	userAlice := createTestSession(t, db)
+	userBob := createTestSession(t, db)
+	userCharlie := createTestSession(t, db)
+	userNobody := createTestSession(t, db)
 
 	// Setup jobs for multiple users
 	jobs := []struct {
@@ -329,12 +339,12 @@ func TestSQLiteJobTrackerListJobsByUser(t *testing.T) {
 		schedulerJobID string
 		userID         string
 	}{
-		{"job-alice-1", "slurm-a1", "user-alice"},
-		{"job-alice-2", "slurm-a2", "user-alice"},
-		{"job-alice-3", "slurm-a3", "user-alice"},
-		{"job-bob-1", "slurm-b1", "user-bob"},
-		{"job-bob-2", "slurm-b2", "user-bob"},
-		{"job-charlie-1", "slurm-c1", "user-charlie"},
+		{"job-alice-1", "slurm-a1", userAlice},
+		{"job-alice-2", "slurm-a2", userAlice},
+		{"job-alice-3", "slurm-a3", userAlice},
+		{"job-bob-1", "slurm-b1", userBob},
+		{"job-bob-2", "slurm-b2", userBob},
+		{"job-charlie-1", "slurm-c1", userCharlie},
 		{"job-none", "slurm-none", ""}, // No user
 	}
 
@@ -353,25 +363,25 @@ func TestSQLiteJobTrackerListJobsByUser(t *testing.T) {
 	}{
 		{
 			name:         "List Alice's jobs",
-			userID:       "user-alice",
+			userID:       userAlice,
 			wantJobCount: 3,
 			wantJobIDs:   []string{"job-alice-1", "job-alice-2", "job-alice-3"},
 		},
 		{
 			name:         "List Bob's jobs",
-			userID:       "user-bob",
+			userID:       userBob,
 			wantJobCount: 2,
 			wantJobIDs:   []string{"job-bob-1", "job-bob-2"},
 		},
 		{
 			name:         "List Charlie's jobs",
-			userID:       "user-charlie",
+			userID:       userCharlie,
 			wantJobCount: 1,
 			wantJobIDs:   []string{"job-charlie-1"},
 		},
 		{
 			name:         "List jobs for user with no jobs",
-			userID:       "user-nobody",
+			userID:       userNobody,
 			wantJobCount: 0,
 			wantJobIDs:   []string{},
 		},
@@ -404,20 +414,22 @@ func TestSQLiteJobTrackerListJobsByUser(t *testing.T) {
 // TestSQLiteJobTrackerUpdateJobStatusByUser tests user-verified status updates
 func TestSQLiteJobTrackerUpdateJobStatusByUser(t *testing.T) {
 	dbPath := "/tmp/test_update_status_by_user.db"
-	defer os.Remove(dbPath)
 
-	tracker, err := sw.NewSQLiteJobTracker(dbPath)
-	if err != nil {
-		t.Fatalf("Failed to create SQLite job tracker: %v", err)
-	}
-	defer tracker.Close()
+	db, cleanup := setupTestDB(t, dbPath)
+	defer cleanup()
+
+	tracker := sw.NewSQLiteJobTracker(db.GetDB())
+
+	// Create test sessions for FK constraints
+	userAlice := createTestSession(t, db)
+	userBob := createTestSession(t, db)
 
 	// Setup jobs
-	err = tracker.StoreJobWithUser("job-alice", "slurm-alice", "user-alice")
+	err := tracker.StoreJobWithUser("job-alice", "slurm-alice", userAlice)
 	if err != nil {
 		t.Fatalf("Failed to store Alice's job: %v", err)
 	}
-	err = tracker.StoreJobWithUser("job-bob", "slurm-bob", "user-bob")
+	err = tracker.StoreJobWithUser("job-bob", "slurm-bob", userBob)
 	if err != nil {
 		t.Fatalf("Failed to store Bob's job: %v", err)
 	}
@@ -433,21 +445,21 @@ func TestSQLiteJobTrackerUpdateJobStatusByUser(t *testing.T) {
 		{
 			name:      "Alice updates her own job status",
 			jobID:     "job-alice",
-			userID:    "user-alice",
+			userID:    userAlice,
 			newStatus: "completed",
 			wantErr:   false,
 		},
 		{
 			name:      "Bob updates his own job status",
 			jobID:     "job-bob",
-			userID:    "user-bob",
+			userID:    userBob,
 			newStatus: "failed",
 			wantErr:   false,
 		},
 		{
 			name:          "Alice tries to update Bob's job",
 			jobID:         "job-bob",
-			userID:        "user-alice",
+			userID:        userAlice,
 			newStatus:     "completed",
 			wantErr:       true,
 			wantErrSubstr: "permission",
@@ -455,7 +467,7 @@ func TestSQLiteJobTrackerUpdateJobStatusByUser(t *testing.T) {
 		{
 			name:          "Update non-existent job",
 			jobID:         "job-nonexistent",
-			userID:        "user-alice",
+			userID:        userAlice,
 			newStatus:     "completed",
 			wantErr:       true,
 			wantErrSubstr: "not found",
@@ -491,15 +503,34 @@ func TestSQLiteJobTrackerUpdateJobStatusByUser(t *testing.T) {
 // TestSQLiteJobTrackerListJobsWithFilters tests filtering jobs by various criteria
 func TestSQLiteJobTrackerListJobsWithFilters(t *testing.T) {
 	dbPath := "/tmp/test_filter_jobs.db"
-	defer os.Remove(dbPath)
 
-	tracker, err := sw.NewSQLiteJobTracker(dbPath)
-	if err != nil {
-		t.Fatalf("Failed to create SQLite job tracker: %v", err)
+	db, cleanup := setupTestDB(t, dbPath)
+	defer cleanup()
+
+	tracker := sw.NewSQLiteJobTracker(db.GetDB())
+
+	// Create test sessions for FK constraints
+	userAlice := createTestSession(t, db)
+	userBob := createTestSession(t, db)
+	userCharlie := createTestSession(t, db)
+	userNobody := createTestSession(t, db)
+
+	// Create datasets for FK constraints (jobs reference datasets via alignment_id/tree_id)
+	datasetTracker := sw.NewSQLiteDatasetTracker(db.GetDB(), "/tmp/test_datasets")
+	datasetIDs := make(map[string]string) // name -> actual ID
+	for _, dsName := range []string{"align-1", "align-2", "align-3", "align-4", "tree-1", "tree-2", "tree-3", "tree-4"} {
+		ds := sw.NewBaseDataset(
+			sw.DatasetMetadata{Name: dsName, Type: "fasta"},
+			[]byte(">seq_"+dsName+"\nACGT\n"), // Unique content for each
+		)
+		// Store with first user
+		err := datasetTracker.StoreWithUser(ds, userAlice)
+		if err != nil {
+			t.Fatalf("Failed to create dataset %s: %v", dsName, err)
+		}
+		datasetIDs[dsName] = ds.GetId() // Save the actual generated ID
 	}
-	defer tracker.Close()
 
-	// Setup diverse jobs
 	jobs := []struct {
 		jobID       string
 		userID      string
@@ -508,11 +539,11 @@ func TestSQLiteJobTrackerListJobsWithFilters(t *testing.T) {
 		methodType  string
 		status      string
 	}{
-		{"job-1", "user-alice", "align-1", "tree-1", "fel", "completed"},
-		{"job-2", "user-alice", "align-2", "tree-2", "busted", "running"},
-		{"job-3", "user-bob", "align-1", "tree-3", "fel", "completed"},
-		{"job-4", "user-bob", "align-3", "", "slac", "failed"},
-		{"job-5", "user-charlie", "align-4", "tree-4", "meme", "pending"},
+		{"job-1", userAlice, datasetIDs["align-1"], datasetIDs["tree-1"], "fel", "completed"},
+		{"job-2", userAlice, datasetIDs["align-2"], datasetIDs["tree-2"], "busted", "running"},
+		{"job-3", userBob, datasetIDs["align-1"], datasetIDs["tree-3"], "fel", "completed"},
+		{"job-4", userBob, datasetIDs["align-3"], "", "slac", "failed"},
+		{"job-5", userCharlie, datasetIDs["align-4"], datasetIDs["tree-4"], "meme", "pending"},
 	}
 
 	for _, job := range jobs {
@@ -533,12 +564,12 @@ func TestSQLiteJobTrackerListJobsWithFilters(t *testing.T) {
 	}{
 		{
 			name:       "Filter by user",
-			filters:    map[string]interface{}{"user_id": "user-alice"},
+			filters:    map[string]interface{}{"user_id": userAlice},
 			wantJobIDs: []string{"job-1", "job-2"},
 		},
 		{
 			name:       "Filter by alignment",
-			filters:    map[string]interface{}{"alignment_id": "align-1"},
+			filters:    map[string]interface{}{"alignment_id": datasetIDs["align-1"]},
 			wantJobIDs: []string{"job-1", "job-3"},
 		},
 		{
@@ -554,7 +585,7 @@ func TestSQLiteJobTrackerListJobsWithFilters(t *testing.T) {
 		{
 			name: "Filter by multiple criteria",
 			filters: map[string]interface{}{
-				"user_id": "user-alice",
+				"user_id": userAlice,
 				"status":  "running",
 			},
 			wantJobIDs: []string{"job-2"},
@@ -562,7 +593,7 @@ func TestSQLiteJobTrackerListJobsWithFilters(t *testing.T) {
 		{
 			name: "Filter with no matches",
 			filters: map[string]interface{}{
-				"user_id": "user-nobody",
+				"user_id": userNobody,
 			},
 			wantJobIDs: []string{},
 		},

@@ -34,9 +34,6 @@ type ConversationTracker interface {
 
 	// UpdateConversation updates a conversation's metadata
 	UpdateConversation(id string, updates map[string]interface{}) error
-
-	// Close closes any resources used by the store
-	Close() error
 }
 
 // SQLiteConversationTracker implements ConversationTracker using SQLite
@@ -44,65 +41,11 @@ type SQLiteConversationTracker struct {
 	db *sql.DB
 }
 
-// NewSQLiteConversationTracker creates a new SQLiteConversationTracker
-func NewSQLiteConversationTracker(dbPath string) (*SQLiteConversationTracker, error) {
-	db, err := sql.Open("sqlite3", dbPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open database: %v", err)
-	}
-
-	// Enable WAL mode for better concurrency
-	if _, err := db.Exec("PRAGMA journal_mode=WAL"); err != nil {
-		db.Close()
-		return nil, fmt.Errorf("failed to enable WAL mode: %v", err)
-	}
-
-	// Create conversations table if it doesn't exist
-	createConversationsTableSQL := `
-	CREATE TABLE IF NOT EXISTS conversations (
-		id TEXT PRIMARY KEY,
-		subject TEXT NOT NULL,
-		title TEXT,
-		created INTEGER NOT NULL,
-		updated INTEGER NOT NULL
-	);
-	CREATE INDEX IF NOT EXISTS idx_conversations_subject ON conversations(subject);
-	CREATE INDEX IF NOT EXISTS idx_conversations_created ON conversations(created);
-	`
-
-	if _, err := db.Exec(createConversationsTableSQL); err != nil {
-		db.Close()
-		return nil, fmt.Errorf("failed to create conversations table: %v", err)
-	}
-
-	// Create messages table if it doesn't exist
-	createMessagesTableSQL := `
-	CREATE TABLE IF NOT EXISTS messages (
-		id TEXT PRIMARY KEY,
-		conversation_id TEXT NOT NULL,
-		role TEXT NOT NULL,
-		content TEXT NOT NULL,
-		timestamp INTEGER NOT NULL,
-		FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
-	);
-	CREATE INDEX IF NOT EXISTS idx_messages_conversation_id ON messages(conversation_id);
-	CREATE INDEX IF NOT EXISTS idx_messages_timestamp ON messages(timestamp);
-	`
-
-	if _, err := db.Exec(createMessagesTableSQL); err != nil {
-		db.Close()
-		return nil, fmt.Errorf("failed to create messages table: %v", err)
-	}
-
-	// Enable foreign key support
-	if _, err := db.Exec("PRAGMA foreign_keys = ON"); err != nil {
-		db.Close()
-		return nil, fmt.Errorf("failed to enable foreign key support: %v", err)
-	}
-
+// NewSQLiteConversationTracker creates a new SQLiteConversationTracker using the unified database
+func NewSQLiteConversationTracker(db *sql.DB) *SQLiteConversationTracker {
 	return &SQLiteConversationTracker{
 		db: db,
-	}, nil
+	}
 }
 
 // CreateConversation creates a new conversation with an owner
@@ -332,11 +275,6 @@ func (s *SQLiteConversationTracker) UpdateConversation(id string, updates map[st
 	}
 
 	return nil
-}
-
-// Close closes the database connection
-func (s *SQLiteConversationTracker) Close() error {
-	return s.db.Close()
 }
 
 // Helper function to generate a random string

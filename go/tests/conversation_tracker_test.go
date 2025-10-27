@@ -1,7 +1,6 @@
 package tests
 
 import (
-	"os"
 	"testing"
 	"time"
 
@@ -12,18 +11,18 @@ import (
 func TestSQLiteConversationTracker(t *testing.T) {
 	// Create temporary database
 	dbPath := "/tmp/test_conversations.db"
-	defer os.Remove(dbPath)
 
 	// Create tracker
-	tracker, err := sw.NewSQLiteConversationTracker(dbPath)
-	if err != nil {
-		t.Fatalf("Failed to create conversation tracker: %v", err)
-	}
-	defer tracker.Close()
+	db, cleanup := setupTestDB(t, dbPath)
+	defer cleanup()
+
+	tracker := sw.NewSQLiteConversationTracker(db.GetDB())
+
+	// Create test session for FK constraints
+	userToken := createTestSession(t, db)
 
 	// Test 1: Create a conversation
 	conversationID := "conv-123"
-	userToken := "user-456"
 	now := time.Now().UnixMilli()
 
 	conversation := &sw.ChatConversation{
@@ -33,7 +32,7 @@ func TestSQLiteConversationTracker(t *testing.T) {
 		Updated: now,
 	}
 
-	err = tracker.CreateConversation(conversation, userToken)
+	err := tracker.CreateConversation(conversation, userToken)
 	if err != nil {
 		t.Errorf("Failed to create conversation: %v", err)
 	}
@@ -198,13 +197,14 @@ func TestSQLiteConversationTracker(t *testing.T) {
 // TestConversationMessageOrdering tests that messages are returned in correct order
 func TestConversationMessageOrdering(t *testing.T) {
 	dbPath := "/tmp/test_message_ordering.db"
-	defer os.Remove(dbPath)
 
-	tracker, err := sw.NewSQLiteConversationTracker(dbPath)
-	if err != nil {
-		t.Fatalf("Failed to create conversation tracker: %v", err)
-	}
-	defer tracker.Close()
+	db, cleanup := setupTestDB(t, dbPath)
+	defer cleanup()
+
+	tracker := sw.NewSQLiteConversationTracker(db.GetDB())
+
+	// Create test session for FK constraints
+	userSubject := createTestSession(t, db)
 
 	conversationID := "conv-order-test"
 	conv := &sw.ChatConversation{
@@ -212,7 +212,7 @@ func TestConversationMessageOrdering(t *testing.T) {
 		Created: time.Now().UnixMilli(),
 		Updated: time.Now().UnixMilli(),
 	}
-	tracker.CreateConversation(conv, "user-123")
+	tracker.CreateConversation(conv, userSubject)
 
 	// Add messages with small delays to ensure different timestamps
 	messages := []string{
@@ -249,13 +249,14 @@ func TestConversationMessageOrdering(t *testing.T) {
 // TestConversationConcurrency tests concurrent access to conversations
 func TestConversationConcurrency(t *testing.T) {
 	dbPath := "/tmp/test_conversation_concurrency.db"
-	defer os.Remove(dbPath)
 
-	tracker, err := sw.NewSQLiteConversationTracker(dbPath)
-	if err != nil {
-		t.Fatalf("Failed to create conversation tracker: %v", err)
-	}
-	defer tracker.Close()
+	db, cleanup := setupTestDB(t, dbPath)
+	defer cleanup()
+
+	tracker := sw.NewSQLiteConversationTracker(db.GetDB())
+
+	// Create test session for FK constraints
+	userSubject := createTestSession(t, db)
 
 	conversationID := "conv-concurrent"
 	conv := &sw.ChatConversation{
@@ -263,7 +264,7 @@ func TestConversationConcurrency(t *testing.T) {
 		Created: time.Now().UnixMilli(),
 		Updated: time.Now().UnixMilli(),
 	}
-	tracker.CreateConversation(conv, "user-123")
+	tracker.CreateConversation(conv, userSubject)
 
 	// Add messages concurrently
 	done := make(chan bool)

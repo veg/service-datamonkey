@@ -17,13 +17,14 @@ func TestConversationTrackerEdgeCases(t *testing.T) {
 	}
 	dbPath := tmpFile.Name()
 	tmpFile.Close()
-	defer os.Remove(dbPath)
 
-	tracker, err := sw.NewSQLiteConversationTracker(dbPath)
-	if err != nil {
-		t.Fatalf("Failed to create tracker: %v", err)
-	}
-	defer tracker.Close()
+	db, cleanup := setupTestDB(t, dbPath)
+	defer cleanup()
+
+	tracker := sw.NewSQLiteConversationTracker(db.GetDB())
+
+	// Create test session for FK constraints
+	userSubject := createTestSession(t, db)
 
 	t.Run("Create conversation with messages", func(t *testing.T) {
 		conv := &sw.ChatConversation{
@@ -37,7 +38,7 @@ func TestConversationTrackerEdgeCases(t *testing.T) {
 			},
 		}
 
-		err := tracker.CreateConversation(conv, "user-123")
+		err := tracker.CreateConversation(conv, userSubject)
 		if err != nil {
 			t.Errorf("Failed to create conversation with messages: %v", err)
 		}
@@ -59,13 +60,13 @@ func TestConversationTrackerEdgeCases(t *testing.T) {
 			Updated: time.Now().UnixMilli(),
 		}
 
-		err := tracker.CreateConversation(conv, "user-123")
+		err := tracker.CreateConversation(conv, userSubject)
 		if err != nil {
 			t.Fatalf("Failed to create first conversation: %v", err)
 		}
 
 		// Try to create with same ID
-		err = tracker.CreateConversation(conv, "user-123")
+		err = tracker.CreateConversation(conv, userSubject)
 		if err == nil {
 			t.Error("Should reject duplicate conversation ID")
 		}
@@ -78,7 +79,7 @@ func TestConversationTrackerEdgeCases(t *testing.T) {
 			Updated: time.Now().UnixMilli(),
 		}
 
-		err := tracker.CreateConversation(conv, "user-123")
+		err := tracker.CreateConversation(conv, userSubject)
 		// May succeed or fail depending on implementation
 		if err != nil {
 			t.Logf("Empty ID handled: %v", err)
@@ -92,7 +93,7 @@ func TestConversationTrackerEdgeCases(t *testing.T) {
 			Updated: time.Now().UnixMilli(),
 		}
 
-		err := tracker.CreateConversation(conv, "user-123")
+		err := tracker.CreateConversation(conv, userSubject)
 		// May succeed or fail depending on implementation
 		if err != nil {
 			t.Logf("Empty user token handled: %v", err)
@@ -108,7 +109,7 @@ func TestConversationTrackerEdgeCases(t *testing.T) {
 			Updated: time.Now().UnixMilli(),
 		}
 
-		err := tracker.CreateConversation(conv, "user-123")
+		err := tracker.CreateConversation(conv, userSubject)
 		if err != nil {
 			t.Logf("Long title handled: %v", err)
 		}
@@ -123,7 +124,7 @@ func TestConversationTrackerEdgeCases(t *testing.T) {
 			Updated: time.Now().UnixMilli(),
 		}
 
-		err := tracker.CreateConversation(conv, "user-123")
+		err := tracker.CreateConversation(conv, userSubject)
 		if err != nil {
 			t.Errorf("Should handle unicode: %v", err)
 		}
@@ -155,7 +156,7 @@ func TestConversationTrackerEdgeCases(t *testing.T) {
 			Created: time.Now().UnixMilli(),
 			Updated: time.Now().UnixMilli(),
 		}
-		tracker.CreateConversation(conv, "user-123")
+		tracker.CreateConversation(conv, userSubject)
 
 		specialContent := "Test with 'quotes', \"double quotes\", and \n newlines \t tabs"
 		msg := &sw.ChatMessage{
@@ -181,7 +182,7 @@ func TestConversationTrackerEdgeCases(t *testing.T) {
 			Created: time.Now().UnixMilli(),
 			Updated: time.Now().UnixMilli(),
 		}
-		tracker.CreateConversation(conv, "user-123")
+		tracker.CreateConversation(conv, userSubject)
 
 		originalTime := conv.Updated
 		time.Sleep(10 * time.Millisecond)
@@ -211,7 +212,7 @@ func TestConversationTrackerEdgeCases(t *testing.T) {
 			Created: time.Now().UnixMilli(),
 			Updated: time.Now().UnixMilli(),
 		}
-		tracker.CreateConversation(conv, "user-123")
+		tracker.CreateConversation(conv, userSubject)
 
 		err := tracker.UpdateConversation("conv-update-empty", map[string]interface{}{})
 		// Should handle gracefully
@@ -246,10 +247,10 @@ func TestConversationTrackerEdgeCases(t *testing.T) {
 		}
 
 		// Should not execute SQL injection
-		tracker.CreateConversation(conv, "user-123")
+		tracker.CreateConversation(conv, userSubject)
 
 		// Verify table still exists
-		_, err := tracker.ListUserConversations("user-123")
+		_, err := tracker.ListUserConversations(userSubject)
 		if err != nil {
 			t.Error("Table was affected by SQL injection attempt")
 		}
@@ -261,7 +262,7 @@ func TestConversationTrackerEdgeCases(t *testing.T) {
 			Created: time.Now().UnixMilli(),
 			Updated: time.Now().UnixMilli(),
 		}
-		tracker.CreateConversation(conv, "user-123")
+		tracker.CreateConversation(conv, userSubject)
 
 		longContent := strings.Repeat("a", 100000)
 		msg := &sw.ChatMessage{
@@ -285,16 +286,18 @@ func TestConversationTrackerMultiUser(t *testing.T) {
 	}
 	dbPath := tmpFile.Name()
 	tmpFile.Close()
-	defer os.Remove(dbPath)
 
-	tracker, err := sw.NewSQLiteConversationTracker(dbPath)
-	if err != nil {
-		t.Fatalf("Failed to create tracker: %v", err)
+	db, cleanup := setupTestDB(t, dbPath)
+	defer cleanup()
+
+	tracker := sw.NewSQLiteConversationTracker(db.GetDB())
+
+	// Create sessions for multiple users
+	users := []string{
+		createTestSession(t, db),
+		createTestSession(t, db),
+		createTestSession(t, db),
 	}
-	defer tracker.Close()
-
-	// Create conversations for multiple users
-	users := []string{"user-alice", "user-bob", "user-charlie"}
 	convsPerUser := 5
 
 	for _, userToken := range users {
@@ -343,15 +346,14 @@ func TestConversationTrackerOrdering(t *testing.T) {
 	}
 	dbPath := tmpFile.Name()
 	tmpFile.Close()
-	defer os.Remove(dbPath)
 
-	tracker, err := sw.NewSQLiteConversationTracker(dbPath)
-	if err != nil {
-		t.Fatalf("Failed to create tracker: %v", err)
-	}
-	defer tracker.Close()
+	db, cleanup := setupTestDB(t, dbPath)
+	defer cleanup()
 
-	userToken := "user-123"
+	tracker := sw.NewSQLiteConversationTracker(db.GetDB())
+
+	// Create test session for FK constraints
+	userToken := createTestSession(t, db)
 
 	// Create conversations with different timestamps
 	convs := []struct {
@@ -369,7 +371,7 @@ func TestConversationTrackerOrdering(t *testing.T) {
 			Created: c.updated,
 			Updated: c.updated,
 		}
-		tracker.CreateConversation(conv, "user-123")
+		tracker.CreateConversation(conv, userToken)
 	}
 
 	// List should return newest first
@@ -399,13 +401,14 @@ func TestConversationTrackerCascadeDelete(t *testing.T) {
 	}
 	dbPath := tmpFile.Name()
 	tmpFile.Close()
-	defer os.Remove(dbPath)
 
-	tracker, err := sw.NewSQLiteConversationTracker(dbPath)
-	if err != nil {
-		t.Fatalf("Failed to create tracker: %v", err)
-	}
-	defer tracker.Close()
+	db, cleanup := setupTestDB(t, dbPath)
+	defer cleanup()
+
+	tracker := sw.NewSQLiteConversationTracker(db.GetDB())
+
+	// Create test session for FK constraints
+	userSubject := createTestSession(t, db)
 
 	// Create conversation with messages
 	conv := &sw.ChatConversation{
@@ -413,7 +416,7 @@ func TestConversationTrackerCascadeDelete(t *testing.T) {
 		Created: time.Now().UnixMilli(),
 		Updated: time.Now().UnixMilli(),
 	}
-	tracker.CreateConversation(conv, "user-123")
+	tracker.CreateConversation(conv, userSubject)
 
 	// Add multiple messages
 	for i := 0; i < 10; i++ {
@@ -447,7 +450,7 @@ func TestConversationTrackerCascadeDelete(t *testing.T) {
 // TestConversationTrackerDatabaseErrors tests error handling
 func TestConversationTrackerDatabaseErrors(t *testing.T) {
 	t.Run("Invalid database path", func(t *testing.T) {
-		_, err := sw.NewSQLiteConversationTracker("/invalid/path/that/does/not/exist/db.sqlite")
+		_, err := sw.NewUnifiedDB("/invalid/path/that/does/not/exist/db.sqlite")
 		if err == nil {
 			t.Error("Should error with invalid database path")
 		}
@@ -457,15 +460,17 @@ func TestConversationTrackerDatabaseErrors(t *testing.T) {
 		tmpFile, _ := os.CreateTemp("", "test_conversation_closed_*.db")
 		dbPath := tmpFile.Name()
 		tmpFile.Close()
-		defer os.Remove(dbPath)
 
-		tracker, err := sw.NewSQLiteConversationTracker(dbPath)
-		if err != nil {
-			t.Fatalf("Failed to create tracker: %v", err)
-		}
+		db, cleanup := setupTestDB(t, dbPath)
+		defer cleanup()
 
-		// Close the tracker
-		tracker.Close()
+		tracker := sw.NewSQLiteConversationTracker(db.GetDB())
+
+		// Create session before closing
+		userSubject := createTestSession(t, db)
+
+		// Close the database
+		db.Close()
 
 		// Try to use it
 		conv := &sw.ChatConversation{
@@ -473,7 +478,7 @@ func TestConversationTrackerDatabaseErrors(t *testing.T) {
 			Created: time.Now().UnixMilli(),
 			Updated: time.Now().UnixMilli(),
 		}
-		err = tracker.CreateConversation(conv, "user-123")
+		err := tracker.CreateConversation(conv, userSubject)
 		if err == nil {
 			t.Error("Should error when using closed tracker")
 		}

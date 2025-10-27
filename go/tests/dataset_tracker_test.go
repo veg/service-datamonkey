@@ -13,13 +13,15 @@ func TestSQLiteDatasetTracker(t *testing.T) {
 	dataDir := "/tmp/test_dataset_storage"
 	dbPath := "/tmp/test_dataset_tracker.db"
 	defer os.RemoveAll(dataDir)
-	defer os.Remove(dbPath)
 
 	// Create tracker
-	tracker, err := sw.NewSQLiteDatasetTracker(dbPath, dataDir)
-	if err != nil {
-		t.Fatalf("Failed to create SQLite dataset tracker: %v", err)
-	}
+	db, cleanup := setupTestDB(t, dbPath)
+	defer cleanup()
+
+	tracker := sw.NewSQLiteDatasetTracker(db.GetDB(), dataDir)
+
+	// Create test session for FK constraints
+	userSubject := createTestSession(t, db)
 
 	// Test 1: Store a dataset
 	metadata := sw.DatasetMetadata{
@@ -31,7 +33,7 @@ func TestSQLiteDatasetTracker(t *testing.T) {
 	content := []byte(">seq1\nACGT\n>seq2\nTGCA\n")
 	dataset := sw.NewBaseDataset(metadata, content)
 
-	err = tracker.StoreWithUser(dataset, "user-123")
+	err := tracker.StoreWithUser(dataset, userSubject)
 	if err != nil {
 		t.Errorf("Failed to store dataset: %v", err)
 	}
@@ -75,12 +77,12 @@ func TestSQLiteDatasetTracker(t *testing.T) {
 		t.Errorf("Failed to get dataset owner: %v", err)
 	}
 
-	if owner != "user-123" {
-		t.Errorf("Expected owner 'user-123', got %s", owner)
+	if owner != userSubject {
+		t.Errorf("Expected owner %s, got %s", userSubject, owner)
 	}
 
 	// Test 6: List datasets by user
-	userDatasets, err := tracker.ListByUser("user-123")
+	userDatasets, err := tracker.ListByUser(userSubject)
 	if err != nil {
 		t.Errorf("Failed to list datasets by user: %v", err)
 	}
@@ -90,7 +92,7 @@ func TestSQLiteDatasetTracker(t *testing.T) {
 	}
 
 	// Test 7: Delete the dataset
-	err = tracker.DeleteByUser(datasetID, "user-123")
+	err = tracker.DeleteByUser(datasetID, userSubject)
 	if err != nil {
 		t.Errorf("Failed to delete dataset: %v", err)
 	}
@@ -110,7 +112,7 @@ func TestSQLiteDatasetTracker(t *testing.T) {
 		// Use different content for each dataset to get unique IDs
 		content := []byte(">seq" + string(rune('0'+i)) + "\nACGT" + string(rune('0'+i)) + "\n")
 		ds := sw.NewBaseDataset(meta, content)
-		tracker.StoreWithUser(ds, "user-456")
+		tracker.StoreWithUser(ds, userSubject)
 	}
 
 	datasets, err = tracker.List()
@@ -147,72 +149,5 @@ func TestSQLiteDatasetTracker(t *testing.T) {
 		if err == nil {
 			t.Error("Expected error when deleting dataset with wrong user")
 		}
-	}
-}
-
-// TestFileDatasetTracker tests the FileDatasetTracker implementation
-func TestFileDatasetTracker(t *testing.T) {
-	// Create temporary directory
-	trackerPath := "/tmp/test_file_dataset_tracker.json"
-	dataDir := "/tmp/test_file_dataset_storage"
-	defer os.Remove(trackerPath)
-	defer os.RemoveAll(dataDir)
-
-	// Create tracker
-	tracker := sw.NewFileDatasetTracker(trackerPath, dataDir)
-
-	// Test 1: Store a dataset
-	metadata := sw.DatasetMetadata{
-		Name:        "Test File Dataset",
-		Type:        "tree",
-		Description: "Test file description",
-	}
-
-	content := []byte("((A:0.1,B:0.2):0.3,C:0.4);")
-	dataset := sw.NewBaseDataset(metadata, content)
-	datasetID := dataset.GetId()
-
-	err := tracker.StoreWithUser(dataset, "user-789")
-	if err != nil {
-		t.Errorf("Failed to store dataset: %v", err)
-	}
-
-	// Test 2: Retrieve the dataset
-	retrievedDataset, err := tracker.Get(datasetID)
-	if err != nil {
-		t.Errorf("Failed to retrieve dataset: %v", err)
-	}
-
-	if retrievedDataset.GetId() != datasetID {
-		t.Errorf("Expected ID %s, got %s", datasetID, retrievedDataset.GetId())
-	}
-
-	// Test 3: List datasets
-	datasets, err := tracker.List()
-	if err != nil {
-		t.Errorf("Failed to list datasets: %v", err)
-	}
-
-	if len(datasets) != 1 {
-		t.Errorf("Expected 1 dataset, got %d", len(datasets))
-	}
-
-	// Test 4: Get dataset metadata
-	retrievedMetadata := retrievedDataset.GetMetadata()
-
-	if retrievedMetadata.Name != "Test File Dataset" {
-		t.Errorf("Expected name 'Test File Dataset', got %s", retrievedMetadata.Name)
-	}
-
-	// Test 5: Delete the dataset
-	err = tracker.Delete(datasetID)
-	if err != nil {
-		t.Errorf("Failed to delete dataset: %v", err)
-	}
-
-	// Verify deletion
-	_, err = tracker.Get(datasetID)
-	if err == nil {
-		t.Error("Deleted dataset should not exist")
 	}
 }

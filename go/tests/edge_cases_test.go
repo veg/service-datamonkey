@@ -11,16 +11,18 @@ import (
 // TestJobTrackerEdgeCases tests edge cases for job tracker
 func TestJobTrackerEdgeCases(t *testing.T) {
 	dbPath := "/tmp/test_job_edge_cases.db"
-	defer os.Remove(dbPath)
 
-	tracker, err := sw.NewSQLiteJobTracker(dbPath)
-	if err != nil {
-		t.Fatalf("Failed to create tracker: %v", err)
-	}
-	defer tracker.Close()
+	db, cleanup := setupTestDB(t, dbPath)
+	defer cleanup()
+
+	tracker := sw.NewSQLiteJobTracker(db.GetDB())
+
+	// Create test sessions for FK constraints
+	userAlice := createTestSession(t, db)
+	userBob := createTestSession(t, db)
 
 	t.Run("Empty job ID", func(t *testing.T) {
-		err := tracker.StoreJobWithUser("", "scheduler-123", "user-alice")
+		err := tracker.StoreJobWithUser("", "scheduler-123", userAlice)
 		if err == nil {
 			t.Error("Should reject empty job ID")
 		}
@@ -30,7 +32,7 @@ func TestJobTrackerEdgeCases(t *testing.T) {
 	})
 
 	t.Run("Empty scheduler job ID", func(t *testing.T) {
-		err := tracker.StoreJobWithUser("job-123", "", "user-alice")
+		err := tracker.StoreJobWithUser("job-123", "", userAlice)
 		if err == nil {
 			t.Error("Should reject empty scheduler job ID")
 		}
@@ -41,7 +43,7 @@ func TestJobTrackerEdgeCases(t *testing.T) {
 
 	t.Run("Very long job ID", func(t *testing.T) {
 		longID := strings.Repeat("a", 1000)
-		err := tracker.StoreJobWithUser(longID, "scheduler-123", "user-alice")
+		err := tracker.StoreJobWithUser(longID, "scheduler-123", userAlice)
 		// Should either succeed or fail gracefully
 		if err != nil && !strings.Contains(err.Error(), "too long") {
 			t.Logf("Long ID handled: %v", err)
@@ -50,7 +52,7 @@ func TestJobTrackerEdgeCases(t *testing.T) {
 
 	t.Run("Special characters in job ID", func(t *testing.T) {
 		specialID := "job-!@#$%^&*()_+-=[]{}|;':\",./<>?"
-		err := tracker.StoreJobWithUser(specialID, "scheduler-123", "user-alice")
+		err := tracker.StoreJobWithUser(specialID, "scheduler-123", userAlice)
 		// Should handle special characters
 		if err != nil {
 			t.Logf("Special characters handled: %v", err)
@@ -59,14 +61,14 @@ func TestJobTrackerEdgeCases(t *testing.T) {
 
 	t.Run("SQL injection attempt in job ID", func(t *testing.T) {
 		sqlInjection := "job-123'; DROP TABLE job_mappings; --"
-		err := tracker.StoreJobWithUser(sqlInjection, "scheduler-123", "user-alice")
+		err := tracker.StoreJobWithUser(sqlInjection, "scheduler-123", userAlice)
 		// Should not execute SQL injection
 		if err != nil {
 			t.Logf("SQL injection prevented: %v", err)
 		}
 
 		// Verify table still exists by trying to list jobs
-		_, err = tracker.ListJobsByUser("user-alice")
+		_, err = tracker.ListJobsByUser(userAlice)
 		if err != nil {
 			t.Error("Table was affected by SQL injection attempt")
 		}
@@ -74,7 +76,7 @@ func TestJobTrackerEdgeCases(t *testing.T) {
 
 	t.Run("Null bytes in strings", func(t *testing.T) {
 		nullByteID := "job-123\x00hidden"
-		err := tracker.StoreJobWithUser(nullByteID, "scheduler-123", "user-alice")
+		err := tracker.StoreJobWithUser(nullByteID, "scheduler-123", userAlice)
 		// Should handle null bytes gracefully
 		if err != nil {
 			t.Logf("Null bytes handled: %v", err)
@@ -82,8 +84,8 @@ func TestJobTrackerEdgeCases(t *testing.T) {
 	})
 
 	t.Run("Update status with empty status", func(t *testing.T) {
-		tracker.StoreJobWithUser("job-status-test", "scheduler-123", "user-alice")
-		err := tracker.UpdateJobStatusByUser("job-status-test", "user-alice", "")
+		tracker.StoreJobWithUser("job-status-test", "scheduler-123", userAlice)
+		err := tracker.UpdateJobStatusByUser("job-status-test", userAlice, "")
 		// Empty status might be valid or invalid depending on design
 		if err != nil {
 			t.Logf("Empty status handled: %v", err)
@@ -121,19 +123,19 @@ func TestJobTrackerEdgeCases(t *testing.T) {
 		}
 
 		// Verify table still exists
-		_, err = tracker.ListJobsByUser("user-alice")
+		_, err = tracker.ListJobsByUser(userAlice)
 		if err != nil {
 			t.Error("Table was affected by SQL injection in filter")
 		}
 	})
 
 	t.Run("Multiple filters with conflicting criteria", func(t *testing.T) {
-		tracker.StoreJobWithUser("job-conflict", "scheduler-123", "user-alice")
+		tracker.StoreJobWithUser("job-conflict", "scheduler-123", userAlice)
 		tracker.StoreJobMetadata("job-conflict", "align-1", "tree-1", "fel", "completed")
 
 		// Filter that should match nothing (user-bob but job owned by alice)
 		jobs, err := tracker.ListJobsWithFilters(map[string]interface{}{
-			"user_id":     "user-bob",
+			"user_id":     userBob,
 			"method_type": "fel",
 		})
 		if err != nil {
@@ -154,13 +156,16 @@ func TestDatasetTrackerEdgeCases(t *testing.T) {
 	}
 	dbPath := tmpFile.Name()
 	tmpFile.Close()
-	defer os.Remove(dbPath)
 
-	tracker, err := sw.NewSQLiteDatasetTracker(dbPath, "/tmp/test_datasets")
-	if err != nil {
-		t.Fatalf("Failed to create tracker: %v", err)
-	}
-	defer tracker.Close()
+	db, cleanup := setupTestDB(t, dbPath)
+	defer cleanup()
+
+	tracker := sw.NewSQLiteDatasetTracker(db.GetDB(), "/tmp/test_datasets")
+
+	// Create test sessions for FK constraints
+	userAlice := createTestSession(t, db)
+	userBob := createTestSession(t, db)
+	userUnicode := createTestSession(t, db)
 
 	t.Run("Empty dataset name", func(t *testing.T) {
 		ds := sw.NewBaseDataset(
@@ -212,7 +217,7 @@ func TestDatasetTrackerEdgeCases(t *testing.T) {
 			sw.DatasetMetadata{Name: longName, Type: "fasta"},
 			[]byte("content"),
 		)
-		err := tracker.StoreWithUser(ds, "user-alice")
+		err := tracker.StoreWithUser(ds, userAlice)
 		// Should handle or reject gracefully
 		if err != nil {
 			t.Logf("Long name handled: %v", err)
@@ -225,7 +230,7 @@ func TestDatasetTrackerEdgeCases(t *testing.T) {
 			sw.DatasetMetadata{Name: specialName, Type: "fasta"},
 			[]byte("content"),
 		)
-		err := tracker.StoreWithUser(ds, "user-alice")
+		err := tracker.StoreWithUser(ds, userAlice)
 		if err != nil {
 			t.Errorf("Should handle special characters: %v", err)
 		}
@@ -238,13 +243,13 @@ func TestDatasetTrackerEdgeCases(t *testing.T) {
 			sw.DatasetMetadata{Name: unicodeName, Type: "fasta"},
 			unicodeContent,
 		)
-		err := tracker.StoreWithUser(ds, "user-unicode-test")
+		err := tracker.StoreWithUser(ds, userUnicode)
 		if err != nil {
 			t.Errorf("Should handle unicode: %v", err)
 		}
 
 		// Retrieve it directly by ID
-		retrieved, err := tracker.GetByUser(ds.GetId(), "user-unicode-test")
+		retrieved, err := tracker.GetByUser(ds.GetId(), userUnicode)
 		if err != nil {
 			t.Errorf("Failed to retrieve unicode dataset: %v", err)
 		}
@@ -261,13 +266,13 @@ func TestDatasetTrackerEdgeCases(t *testing.T) {
 			sw.DatasetMetadata{Name: "binary-test", Type: "binary"},
 			binaryContent,
 		)
-		err := tracker.StoreWithUser(ds, "user-alice")
+		err := tracker.StoreWithUser(ds, userAlice)
 		if err != nil {
 			t.Errorf("Should handle binary content: %v", err)
 		}
 
 		// Verify content is preserved
-		retrieved, err := tracker.GetByUser(ds.GetId(), "user-alice")
+		retrieved, err := tracker.GetByUser(ds.GetId(), userAlice)
 		if err != nil {
 			t.Errorf("Failed to retrieve binary dataset: %v", err)
 		}
@@ -282,7 +287,7 @@ func TestDatasetTrackerEdgeCases(t *testing.T) {
 			sw.DatasetMetadata{Name: "alice-dataset", Type: "fasta"},
 			content,
 		)
-		err := tracker.StoreWithUser(ds1, "user-alice")
+		err := tracker.StoreWithUser(ds1, userAlice)
 		if err != nil {
 			t.Errorf("Failed to store for alice: %v", err)
 		}
@@ -291,7 +296,7 @@ func TestDatasetTrackerEdgeCases(t *testing.T) {
 			sw.DatasetMetadata{Name: "bob-dataset", Type: "fasta"},
 			content,
 		)
-		err = tracker.StoreWithUser(ds2, "user-bob")
+		err = tracker.StoreWithUser(ds2, userBob)
 		if err != nil {
 			t.Errorf("Failed to store for bob: %v", err)
 		}
@@ -307,8 +312,8 @@ func TestDatasetTrackerEdgeCases(t *testing.T) {
 		}
 
 		// Each user should only see their own
-		aliceDatasets, _ := tracker.ListByUser("user-alice")
-		bobDatasets, _ := tracker.ListByUser("user-bob")
+		aliceDatasets, _ := tracker.ListByUser(userAlice)
+		bobDatasets, _ := tracker.ListByUser(userBob)
 
 		aliceHasIt := false
 		for _, d := range aliceDatasets {
@@ -345,7 +350,7 @@ func TestDatasetTrackerEdgeCases(t *testing.T) {
 		)
 
 		// Store once
-		err := tracker.StoreWithUser(ds, "user-alice")
+		err := tracker.StoreWithUser(ds, userAlice)
 		if err != nil {
 			t.Fatalf("First store failed: %v", err)
 		}
@@ -356,7 +361,7 @@ func TestDatasetTrackerEdgeCases(t *testing.T) {
 			sw.DatasetMetadata{Name: "idempotent-test", Type: "fasta"},
 			content,
 		)
-		err = tracker.StoreWithUser(ds2, "user-alice")
+		err = tracker.StoreWithUser(ds2, userAlice)
 		if err != nil {
 			t.Errorf("Idempotent store should succeed: %v", err)
 		}
@@ -368,7 +373,7 @@ func TestDatasetTrackerEdgeCases(t *testing.T) {
 		}
 
 		// Should only have one copy
-		datasets, _ := tracker.ListByUser("user-alice")
+		datasets, _ := tracker.ListByUser(userAlice)
 		count := 0
 		for _, d := range datasets {
 			if d.GetId() == firstID {
@@ -385,9 +390,9 @@ func TestDatasetTrackerEdgeCases(t *testing.T) {
 			sw.DatasetMetadata{Name: "update-test", Type: "fasta"},
 			[]byte("content"),
 		)
-		tracker.StoreWithUser(ds, "user-alice")
+		tracker.StoreWithUser(ds, userAlice)
 
-		err := tracker.UpdateByUser(ds.GetId(), "user-alice", map[string]interface{}{})
+		err := tracker.UpdateByUser(ds.GetId(), userAlice, map[string]interface{}{})
 		// Empty updates should be handled gracefully
 		if err != nil {
 			t.Logf("Empty updates handled: %v", err)
@@ -399,9 +404,9 @@ func TestDatasetTrackerEdgeCases(t *testing.T) {
 			sw.DatasetMetadata{Name: "update-test-2", Type: "fasta"},
 			[]byte("content"),
 		)
-		tracker.StoreWithUser(ds, "user-alice")
+		tracker.StoreWithUser(ds, userAlice)
 
-		err := tracker.UpdateByUser(ds.GetId(), "user-alice", map[string]interface{}{
+		err := tracker.UpdateByUser(ds.GetId(), userAlice, map[string]interface{}{
 			"invalid_field": "value",
 		})
 		// Should handle invalid fields gracefully
@@ -411,14 +416,14 @@ func TestDatasetTrackerEdgeCases(t *testing.T) {
 	})
 
 	t.Run("Delete non-existent dataset", func(t *testing.T) {
-		err := tracker.DeleteByUser("nonexistent-id", "user-alice")
+		err := tracker.DeleteByUser("nonexistent-id", userAlice)
 		if err == nil {
 			t.Error("Should error when deleting non-existent dataset")
 		}
 	})
 
 	t.Run("Get non-existent dataset", func(t *testing.T) {
-		_, err := tracker.GetByUser("nonexistent-id", "user-alice")
+		_, err := tracker.GetByUser("nonexistent-id", userAlice)
 		if err == nil {
 			t.Error("Should error when getting non-existent dataset")
 		}

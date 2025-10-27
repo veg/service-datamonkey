@@ -1,5 +1,45 @@
 package tests
 
+import (
+	"os"
+	"testing"
+
+	sw "github.com/d-callan/service-datamonkey/go"
+)
+
+// setupTestDB creates a temporary unified database for testing
+// Returns the database and a cleanup function
+func setupTestDB(t *testing.T, dbPath string) (*sw.UnifiedDB, func()) {
+	t.Helper()
+
+	// Create the database
+	db, err := sw.NewUnifiedDB(dbPath)
+	if err != nil {
+		t.Fatalf("Failed to create test database: %v", err)
+	}
+
+	// Return cleanup function
+	cleanup := func() {
+		db.Close()
+		os.Remove(dbPath)
+	}
+
+	return db, cleanup
+}
+
+// createTestSession creates a test session and returns the subject
+func createTestSession(t *testing.T, db *sw.UnifiedDB) string {
+	t.Helper()
+
+	sessionTracker := sw.NewSQLiteSessionTracker(db.GetDB())
+	session, err := sessionTracker.CreateSession()
+	if err != nil {
+		t.Fatalf("Failed to create test session: %v", err)
+	}
+
+	return session.Subject
+}
+
 // MockJobTracker is a simple mock implementation of JobTracker for testing
 type MockJobTracker struct{}
 

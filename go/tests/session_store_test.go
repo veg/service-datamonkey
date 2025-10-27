@@ -16,14 +16,12 @@ func TestSessionStore(t *testing.T) {
 	}
 	dbPath := tmpFile.Name()
 	tmpFile.Close()
-	defer os.Remove(dbPath)
 
 	// Create session store
-	store, err := sw.NewSQLiteSessionTracker(dbPath)
-	if err != nil {
-		t.Fatalf("Failed to create session store: %v", err)
-	}
-	defer store.Close()
+	db, cleanup := setupTestDB(t, dbPath)
+	defer cleanup()
+
+	store := sw.NewSQLiteSessionTracker(db.GetDB())
 
 	t.Run("Create session", func(t *testing.T) {
 		session, err := store.CreateSession()
@@ -232,14 +230,12 @@ func TestSessionStoreConcurrency(t *testing.T) {
 	}
 	dbPath := tmpFile.Name()
 	tmpFile.Close()
-	defer os.Remove(dbPath)
 
 	// Create session store
-	store, err := sw.NewSQLiteSessionTracker(dbPath)
-	if err != nil {
-		t.Fatalf("Failed to create session store: %v", err)
-	}
-	defer store.Close()
+	db, cleanup := setupTestDB(t, dbPath)
+	defer cleanup()
+
+	store := sw.NewSQLiteSessionTracker(db.GetDB())
 
 	t.Run("Concurrent session creation", func(t *testing.T) {
 		done := make(chan bool)

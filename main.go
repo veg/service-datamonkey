@@ -38,53 +38,37 @@ func getEnvWithFatal(key string) string {
 	return value
 }
 
-// initDatasetTracker initializes and returns a dataset tracker based on environment configuration
-func initDatasetTracker() sw.DatasetTracker {
-	trackerType := getEnvWithDefault("DATASET_TRACKER_TYPE", "SQLiteDatasetTracker")
-	// for now we assume to put the tracker file, if needed, in the same directory as the datasets
-	dataDir := getEnvWithDefault("DATASET_LOCATION", "/data/uploads")
+// initUnifiedDB initializes the unified database
+func initUnifiedDB() *sw.UnifiedDB {
+	dbPath := getEnvWithDefault("DATAMONKEY_DB_PATH", "/data/stores/datamonkey.db")
+	log.Printf("Initializing unified database at: %s", dbPath)
 
-	switch trackerType {
-	case "FileDatasetTracker":
-		return sw.NewFileDatasetTracker(filepath.Join(dataDir, "datasets.json"), dataDir)
-	case "SQLiteDatasetTracker":
-		dbPath := getEnvWithDefault("DATASET_TRACKER_DB_PATH", "/data/stores/datasets.db")
-		tracker, err := sw.NewSQLiteDatasetTracker(dbPath, dataDir)
-		if err != nil {
-			log.Fatalf("Failed to initialize SQLite dataset tracker: %v", err)
-		}
-		return tracker
-	case "OtherTracker":
-		log.Fatalf("OtherTracker is not implemented")
-		return nil
-	default:
-		log.Fatalf("Unknown dataset tracker type: %s", trackerType)
-		return nil
+	// Ensure the database directory exists
+	dbDir := filepath.Dir(dbPath)
+	if err := os.MkdirAll(dbDir, 0755); err != nil {
+		log.Fatalf("Failed to create database directory %s: %v", dbDir, err)
 	}
+	log.Printf("Database directory verified: %s", dbDir)
+
+	db, err := sw.NewUnifiedDB(dbPath)
+	if err != nil {
+		log.Fatalf("Failed to initialize unified database: %v", err)
+	}
+
+	return db
 }
 
-// initJobTracker initializes and returns a job tracker based on environment configuration
-func initJobTracker() sw.JobTracker {
-	trackerType := getEnvWithDefault("JOB_TRACKER_TYPE", "SQLiteJobTracker")
-	trackerDir := getEnvWithDefault("JOB_TRACKER_LOCATION", "/data/uploads")
+// initTrackers initializes all trackers using the unified database
+func initTrackers(db *sw.UnifiedDB) (sw.DatasetTracker, sw.JobTracker, sw.SessionTracker, sw.ConversationTracker) {
+	dataDir := getEnvWithDefault("DATASET_LOCATION", "/data/uploads")
 
-	switch trackerType {
-	case "FileJobTracker":
-		return sw.NewFileJobTracker(filepath.Join(trackerDir, "jobs.json"))
-	case "SQLiteJobTracker":
-		dbPath := getEnvWithDefault("JOB_TRACKER_DB_PATH", "/data/stores/jobs.db")
-		tracker, err := sw.NewSQLiteJobTracker(dbPath)
-		if err != nil {
-			log.Fatalf("Failed to initialize SQLite job tracker: %v", err)
-		}
-		return tracker
-	case "OtherJobTracker":
-		log.Fatalf("OtherJobTracker is not implemented")
-		return nil
-	default:
-		log.Fatalf("Unknown job tracker type: %s", trackerType)
-		return nil
-	}
+	datasetTracker := sw.NewSQLiteDatasetTracker(db.GetDB(), dataDir)
+	jobTracker := sw.NewSQLiteJobTracker(db.GetDB())
+	sessionTracker := sw.NewSQLiteSessionTracker(db.GetDB())
+	conversationTracker := sw.NewSQLiteConversationTracker(db.GetDB())
+
+	log.Println("All trackers initialized with unified database")
+	return datasetTracker, jobTracker, sessionTracker, conversationTracker
 }
 
 // initSlurmRestConfig initializes and returns Slurm REST configuration
@@ -145,28 +129,8 @@ func initScheduler(jobTracker sw.JobTracker) sw.SchedulerInterface {
 	}
 }
 
-// initConversationTracker initializes the conversation tracker
-func initConversationTracker() sw.ConversationTracker {
-	// Get the tracker type from environment or use default
-	trackerType := getEnvWithDefault("CONVERSATION_TRACKER_TYPE", "SQLiteConversationTracker")
-	log.Printf("Initializing conversation tracker with type: %s", trackerType)
-
-	switch trackerType {
-	case "SQLiteConversationTracker":
-		dbPath := getEnvWithDefault("CONVERSATION_DB_PATH", "./data/conversations.db")
-		tracker, err := sw.NewSQLiteConversationTracker(dbPath)
-		if err != nil {
-			log.Fatalf("Failed to initialize SQLite conversation tracker: %v", err)
-		}
-		return tracker
-	default:
-		log.Fatalf("Unknown conversation tracker type: %s", trackerType)
-		return nil
-	}
-}
-
 // initSessionService initializes the session service for user authentication and session management
-func initSessionService() *sw.SessionService {
+func initSessionService(sessionTracker sw.SessionTracker) *sw.SessionService {
 	// Check if session service is enabled
 	enabled := getEnvWithDefault("USER_TOKEN_ENABLED", "true") == "true"
 	if !enabled {
@@ -190,13 +154,6 @@ func initSessionService() *sw.SessionService {
 
 	// Get token expiration from environment or use default
 	expirationSecs := int64(86400) // Default to 24 hours
-
-	// Initialize session tracker
-	sessionDBPath := getEnvWithDefault("SESSION_DB_PATH", "./data/sessions.db")
-	sessionTracker, err := sw.NewSQLiteSessionTracker(sessionDBPath)
-	if err != nil {
-		log.Fatalf("Failed to initialize session tracker: %v", err)
-	}
 
 	// Create token config
 	config := sw.TokenConfig{
@@ -296,14 +253,16 @@ func initAPIHandlers(scheduler sw.SchedulerInterface, datasetTracker sw.DatasetT
 }
 
 func main() {
-	// Initialize components
-	log.Printf("Initializing dataset tracker with type: %s", getEnvWithDefault("DATASET_TRACKER_TYPE", "SQLiteDatasetTracker"))
-	datasetTracker := initDatasetTracker()
-	log.Printf("Initializing job tracker with type: %s", getEnvWithDefault("JOB_TRACKER_TYPE", "SQLiteJobTracker"))
-	jobTracker := initJobTracker()
-	conversationTracker := initConversationTracker()
+	// Initialize unified database
+	db := initUnifiedDB()
+	defer db.Close()
+
+	// Initialize all trackers
+	datasetTracker, jobTracker, sessionTracker, conversationTracker := initTrackers(db)
+
+	// Initialize scheduler and session service
 	scheduler := initScheduler(jobTracker)
-	sessionService := initSessionService()
+	sessionService := initSessionService(sessionTracker)
 
 	// Ensure proper shutdown of components
 	if slurmScheduler, ok := scheduler.(*sw.SlurmRestScheduler); ok {

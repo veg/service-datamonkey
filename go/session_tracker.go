@@ -34,9 +34,6 @@ type SessionTracker interface {
 
 	// CleanupExpiredSessions removes sessions that haven't been seen in the specified duration
 	CleanupExpiredSessions(maxAge time.Duration) (int, error)
-
-	// Close closes the session store
-	Close() error
 }
 
 // SQLiteSessionTracker implements SessionTracker using SQLite
@@ -44,31 +41,10 @@ type SQLiteSessionTracker struct {
 	db *sql.DB
 }
 
-// NewSQLiteSessionTracker creates a new SQLite-based session store
-func NewSQLiteSessionTracker(dbPath string) (*SQLiteSessionTracker, error) {
-	db, err := sql.Open("sqlite3", dbPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open session database: %v", err)
-	}
-
-	// Create sessions table
-	createTableSQL := `
-	CREATE TABLE IF NOT EXISTS sessions (
-		subject TEXT PRIMARY KEY,
-		created_at INTEGER NOT NULL,
-		last_seen INTEGER NOT NULL,
-		metadata TEXT
-	);
-	CREATE INDEX IF NOT EXISTS idx_sessions_last_seen ON sessions(last_seen);
-	`
-
-	if _, err := db.Exec(createTableSQL); err != nil {
-		db.Close()
-		return nil, fmt.Errorf("failed to create sessions table: %v", err)
-	}
-
-	log.Println("Session store initialized")
-	return &SQLiteSessionTracker{db: db}, nil
+// NewSQLiteSessionTracker creates a new SQLite-based session store using the unified database
+func NewSQLiteSessionTracker(db *sql.DB) *SQLiteSessionTracker {
+	log.Println("Session tracker initialized with unified database")
+	return &SQLiteSessionTracker{db: db}
 }
 
 // CreateSession creates a new session with a generated UUID subject
@@ -208,10 +184,5 @@ func (s *SQLiteSessionTracker) CleanupExpiredSessions(maxAge time.Duration) (int
 	return int(rows), nil
 }
 
-// Close closes the session store database connection
-func (s *SQLiteSessionTracker) Close() error {
-	if s.db != nil {
-		return s.db.Close()
-	}
-	return nil
-}
+// Ensure SQLiteSessionTracker implements SessionTracker interface
+var _ SessionTracker = (*SQLiteSessionTracker)(nil)
