@@ -44,6 +44,13 @@ services:
       - SCHEDULER_TYPE=${SCHEDULER_TYPE:-${SLURM_INTERFACE:-rest}RestScheduler}
       # JWT configuration for REST mode
       - JWT_KEY_PATH=${JWT_KEY_PATH:-/var/spool/slurm/statesave/jwt_hs256.key}
+      # AI/LLM configuration
+      - MODEL_PROVIDER=${MODEL_PROVIDER:-google}
+      - MODEL_NAME=${MODEL_NAME:-gemini-2.5-flash}
+      - MODEL_TEMPERATURE=${MODEL_TEMPERATURE:-0.2}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       # Path for system binaries
       - PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
     networks:

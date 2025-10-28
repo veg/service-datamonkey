@@ -186,7 +186,9 @@ func initAPIHandlers(scheduler sw.SchedulerInterface, datasetTracker sw.DatasetT
 	modelConfig := sw.GetModelConfig()
 	genkitClient, err := sw.NewGenkitClient(context.Background(), modelConfig)
 	if err != nil {
-		log.Fatalf("Failed to initialize Genkit client: %v", err)
+		log.Printf("Warning: Failed to initialize Genkit client: %v", err)
+		log.Printf("Chat functionality will be disabled. Set GOOGLE_API_KEY, OPENAI_API_KEY, or ANTHROPIC_API_KEY to enable AI features.")
+		genkitClient = nil
 	}
 
 	// Create API handlers
@@ -245,10 +247,16 @@ func initAPIHandlers(scheduler sw.SchedulerInterface, datasetTracker sw.DatasetT
 		FADEAPI:            *fadeAPI,
 		SLATKINAPI:         *slatkinAPI,
 		FileUploadAndQCAPI: *sw.NewFileUploadAndQCAPI(datasetTracker, sessionService),
-		HealthAPI:          sw.HealthAPI{Scheduler: scheduler},
-		JobsAPI:            *jobsAPI,
-		MethodsAPI:         methodsAPI,
-		ChatAPI:            *sw.NewChatAPI(genkitClient, conversationTracker, sessionService),
+		HealthAPI: sw.HealthAPI{
+			Scheduler:           scheduler,
+			DatasetTracker:      datasetTracker,
+			JobTracker:          jobTracker,
+			ConversationTracker: conversationTracker,
+			GenkitClient:        genkitClient,
+		},
+		JobsAPI:    *jobsAPI,
+		MethodsAPI: methodsAPI,
+		ChatAPI:    *sw.NewChatAPI(genkitClient, conversationTracker, sessionService),
 	}
 }
 
