@@ -132,6 +132,15 @@ func (api *BGMAPI) GetBGMJob(c *gin.Context) {
 
 // GetBGMJobById retrieves the status and results of a BGM job by job ID from query parameter
 func (api *BGMAPI) GetBGMJobById(c *gin.Context) {
+	// Require valid token for accessing results
+	if api.SessionService != nil {
+		_, err := api.SessionService.GetSubject(c)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized - valid token required to access job results"})
+			return
+		}
+	}
+
 	// Get job ID from query parameter
 	jobId := c.Query("job_id")
 	if jobId == "" {
@@ -182,14 +191,14 @@ func (api *BGMAPI) GetBGMJobById(c *gin.Context) {
 
 // StartBGMJob starts a new BGM analysis job
 func (api *BGMAPI) StartBGMJob(c *gin.Context) {
-	// Get or create user session - automatically adds X-Session-Token header if new
+	// Require valid token - job start requires referencing existing datasets
 	var subject string
 	if api.SessionService != nil {
 		var err error
-		subject, err = api.SessionService.GetOrCreateSubject(c)
+		subject, err = api.SessionService.GetSubject(c)
 		if err != nil {
-			log.Printf("Error with session: %v", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create or validate session"})
+			// Token validation failed
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized - valid token required to start jobs"})
 			return
 		}
 	}

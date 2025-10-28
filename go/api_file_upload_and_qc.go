@@ -243,7 +243,7 @@ func (api *FileUploadAndQCAPI) PostDataset(c *gin.Context) {
 		}
 	}
 
-	c.JSON(200, gin.H{"status": "File uploaded successfully", "file": dataset.GetId()})
+	c.JSON(201, gin.H{"status": "File uploaded successfully", "file": dataset.GetId()})
 }
 
 // GetDatasetById retrieves a specific dataset by ID

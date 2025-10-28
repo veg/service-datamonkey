@@ -131,14 +131,13 @@ func (api *FELAPI) GetFELJob(c *gin.Context) {
 
 // StartFELJob starts a new FEL analysis job
 func (api *FELAPI) StartFELJob(c *gin.Context) {
-	// Get or create user session - this will automatically add X-Session-Token header if new session created
+	// Require valid token - job start requires referencing existing datasets
 	var subject string
 	if api.SessionService != nil {
 		var err error
-		subject, err = api.SessionService.GetOrCreateSubject(c)
+		subject, err = api.SessionService.GetSubject(c)
 		if err != nil {
-			log.Printf("Error with session: %v", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create or validate session"})
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized - valid token required to start jobs"})
 			return
 		}
 	}
@@ -201,6 +200,15 @@ func (api *FELAPI) StartFELJob(c *gin.Context) {
 
 // GetFELJobById retrieves the status and results of a FEL job by job ID from query parameter
 func (api *FELAPI) GetFELJobById(c *gin.Context) {
+	// Require valid token for accessing results
+	if api.SessionService != nil {
+		_, err := api.SessionService.GetSubject(c)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized - valid token required to access job results"})
+			return
+		}
+	}
+
 	// Get job ID from query parameter
 	jobId := c.Query("job_id")
 	if jobId == "" {
