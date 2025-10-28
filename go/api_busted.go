@@ -79,6 +79,15 @@ func (api *BUSTEDAPI) formatBUSTEDJobResults(jobId string, rawResults json.RawMe
 
 // GetBUSTEDJob retrieves the status and results of a BUSTED job
 func (api *BUSTEDAPI) GetBUSTEDJob(c *gin.Context) {
+	// Require valid token for accessing results
+	if api.SessionService != nil {
+		_, err := api.SessionService.GetSubject(c)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized - valid token required to access job results"})
+			return
+		}
+	}
+
 	var request BustedRequest
 	if err := c.BindJSON(&request); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to parse job configuration"})
@@ -172,17 +181,14 @@ func (api *BUSTEDAPI) GetBUSTEDJobById(c *gin.Context) {
 
 // StartBUSTEDJob starts a new BUSTED analysis job
 func (api *BUSTEDAPI) StartBUSTEDJob(c *gin.Context) {
-	// Validate user token if token validator is available
+	// Get or create user session - automatically adds X-Session-Token header if new
+	var subject string
 	if api.SessionService != nil {
-		// Just validate the token exists and is valid
-		_, err := api.SessionService.GetOrCreateSubject(c)
+		var err error
+		subject, err = api.SessionService.GetOrCreateSubject(c)
 		if err != nil {
-			if err.Error() == "missing user token" || strings.Contains(err.Error(), "invalid user token") {
-				c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized - " + err.Error()})
-				return
-			}
-
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Authentication error: " + err.Error()})
+			log.Printf("Error with session: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create or validate session"})
 			return
 		}
 	}
@@ -193,30 +199,15 @@ func (api *BUSTEDAPI) StartBUSTEDJob(c *gin.Context) {
 		return
 	}
 
-	// Extract the user token from the request or from the header/query parameter
-	if request.UserToken == "" && api.SessionService != nil {
-		// Try to get token from query parameter first
-		userToken := c.Query("user_token")
-
-		// If not in query, try header
-		if userToken == "" {
-			userToken = c.GetHeader("user_token")
-		}
-
-		// Set the token in the request
-		if userToken != "" {
-			request.UserToken = userToken
-		}
+	// Set the subject in the request for job tracking
+	if subject != "" {
+		request.UserToken = subject
 	}
 
 	// Check alignment dataset access before starting the job
 	if request.Alignment != "" && api.SessionService != nil && api.DatasetTracker != nil {
 		_, err := api.SessionService.CheckDatasetAccess(c, request.Alignment, api.DatasetTracker)
 		if err != nil {
-			if strings.Contains(err.Error(), "missing user token") || strings.Contains(err.Error(), "invalid user token") {
-				c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized - " + err.Error()})
-				return
-			}
 			if strings.Contains(err.Error(), "not found") {
 				c.JSON(http.StatusNotFound, gin.H{"error": "Alignment dataset not found"})
 				return
@@ -230,10 +221,6 @@ func (api *BUSTEDAPI) StartBUSTEDJob(c *gin.Context) {
 	if request.Tree != "" && api.SessionService != nil && api.DatasetTracker != nil {
 		_, err := api.SessionService.CheckDatasetAccess(c, request.Tree, api.DatasetTracker)
 		if err != nil {
-			if strings.Contains(err.Error(), "missing user token") || strings.Contains(err.Error(), "invalid user token") {
-				c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized - " + err.Error()})
-				return
-			}
 			if strings.Contains(err.Error(), "not found") {
 				c.JSON(http.StatusNotFound, gin.H{"error": "Tree dataset not found"})
 				return

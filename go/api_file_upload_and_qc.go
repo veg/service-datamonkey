@@ -17,6 +17,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -37,9 +38,21 @@ func NewFileUploadAndQCAPI(datasetTracker DatasetTracker, sessionService *Sessio
 // Get /api/v1/datasets
 // Get a list of datasets uploaded to Datamonkey
 func (api *FileUploadAndQCAPI) GetDatasetsList(c *gin.Context) {
-	datasets, err := api.datasetTracker.List()
+	// Require valid token for listing datasets
+	var userToken string
+	if api.sessionService != nil {
+		var err error
+		userToken, err = api.sessionService.GetSubject(c)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized - valid token required to list datasets"})
+			return
+		}
+	}
+
+	// List datasets for the authenticated user
+	datasets, err := api.datasetTracker.ListByUser(userToken)
 	if err != nil {
-		log.Printf("Failed to list datasets: %v", err)
+		log.Printf("Failed to list datasets for user: %v", err)
 		c.JSON(500, gin.H{"error": "Failed to list datasets"})
 		return
 	}
@@ -71,6 +84,18 @@ func (api *FileUploadAndQCAPI) GetDatasetsList(c *gin.Context) {
 // Only one of file or URL should be present in each request entry.
 func (api *FileUploadAndQCAPI) PostDataset(c *gin.Context) {
 	log.Printf("Handling POST request to upload a dataset")
+
+	// Get or create user session - automatically adds X-Session-Token header if new
+	var subject string
+	if api.sessionService != nil {
+		var err error
+		subject, err = api.sessionService.GetOrCreateSubject(c)
+		if err != nil {
+			log.Printf("Error with session: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create or validate session"})
+			return
+		}
+	}
 
 	form, err := c.MultipartForm()
 	if err != nil {
@@ -204,10 +229,18 @@ func (api *FileUploadAndQCAPI) PostDataset(c *gin.Context) {
 		return
 	}
 
-	// Store the dataset in the tracker
-	if err := api.datasetTracker.Store(dataset); err != nil {
-		c.JSON(500, gin.H{"error": fmt.Sprintf("Failed to store dataset: %v", err)})
-		return
+	// Store the dataset in the tracker with owner
+	if subject != "" {
+		if err := api.datasetTracker.StoreWithUser(dataset, subject); err != nil {
+			c.JSON(500, gin.H{"error": fmt.Sprintf("Failed to store dataset: %v", err)})
+			return
+		}
+	} else {
+		// Fallback to Store without owner if no session service
+		if err := api.datasetTracker.Store(dataset); err != nil {
+			c.JSON(500, gin.H{"error": fmt.Sprintf("Failed to store dataset: %v", err)})
+			return
+		}
 	}
 
 	c.JSON(200, gin.H{"status": "File uploaded successfully", "file": dataset.GetId()})
@@ -216,6 +249,17 @@ func (api *FileUploadAndQCAPI) PostDataset(c *gin.Context) {
 // GetDatasetById retrieves a specific dataset by ID
 // GET /api/v1/datasets/:datasetId
 func (api *FileUploadAndQCAPI) GetDatasetById(c *gin.Context) {
+	// Require valid token for accessing datasets
+	var userToken string
+	if api.sessionService != nil {
+		var err error
+		userToken, err = api.sessionService.GetSubject(c)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized - valid token required to access datasets"})
+			return
+		}
+	}
+
 	datasetId := c.Param("datasetId")
 
 	if datasetId == "" {
@@ -223,11 +267,14 @@ func (api *FileUploadAndQCAPI) GetDatasetById(c *gin.Context) {
 		return
 	}
 
-	// Get dataset from tracker
-	dataset, err := api.datasetTracker.Get(datasetId)
+	// Get dataset and verify ownership
+	dataset, err := api.datasetTracker.GetByUser(datasetId, userToken)
 	if err != nil {
-		log.Printf("Dataset %s not found: %v", datasetId, err)
-		c.JSON(404, gin.H{"error": "Dataset not found"})
+		if strings.Contains(err.Error(), "not found") {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Dataset not found"})
+		} else {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Forbidden - you don't have access to this dataset"})
+		}
 		return
 	}
 
@@ -246,6 +293,17 @@ func (api *FileUploadAndQCAPI) GetDatasetById(c *gin.Context) {
 // DeleteDataset deletes a dataset by ID
 // DELETE /api/v1/datasets/:datasetId
 func (api *FileUploadAndQCAPI) DeleteDataset(c *gin.Context) {
+	// Require valid token for deleting datasets
+	var userToken string
+	if api.sessionService != nil {
+		var err error
+		userToken, err = api.sessionService.GetSubject(c)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized - valid token required to delete datasets"})
+			return
+		}
+	}
+
 	datasetId := c.Param("datasetId")
 
 	if datasetId == "" {
@@ -253,25 +311,14 @@ func (api *FileUploadAndQCAPI) DeleteDataset(c *gin.Context) {
 		return
 	}
 
-	// Get user_token from header for authentication
-	userToken := c.GetHeader("user_token")
-	if userToken == "" {
-		c.JSON(401, gin.H{"error": "Unauthorized - user_token header is required"})
-		return
-	}
-
-	// Check if dataset exists and get owner
-	owner, err := api.datasetTracker.GetOwner(datasetId)
+	// Verify dataset exists and user owns it
+	_, err := api.datasetTracker.GetByUser(datasetId, userToken)
 	if err != nil {
-		log.Printf("Dataset %s not found: %v", datasetId, err)
-		c.JSON(404, gin.H{"error": "Dataset not found"})
-		return
-	}
-
-	// Verify user owns the dataset
-	if owner != "" && owner != userToken {
-		log.Printf("User %s attempted to delete dataset %s owned by %s", userToken, datasetId, owner)
-		c.JSON(403, gin.H{"error": "Forbidden - you do not own this dataset"})
+		if strings.Contains(err.Error(), "not found") {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Dataset not found"})
+		} else {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Forbidden - you don't have access to this dataset"})
+		}
 		return
 	}
 

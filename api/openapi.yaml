@@ -141,11 +141,12 @@ paths:
     post:
       operationId: createConversation
       parameters:
-      - description: Token identifying the user
+      - description: "Token identifying the user. If not provided, a new session will\
+          \ be created automatically."
         explode: false
         in: header
         name: user_token
-        required: true
+        required: false
         schema:
           type: string
         style: simple
@@ -161,13 +162,17 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ChatConversation'
-          description: Conversation created
-        "401":
+          description: "Conversation created successfully. If no token was provided,\
+            \ a new session token is returned in the X-Session-Token response header."
+          headers:
+            X-Session-Token:
+              $ref: '#/components/headers/XSessionToken'
+        "500":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UnauthorizedError'
-          description: Unauthorized - Invalid or missing user token
+                $ref: '#/components/schemas/ServerError'
+          description: Internal Server Error - Failed to create session or conversation
       summary: Create a new conversation
       tags:
       - Chat
@@ -365,8 +370,8 @@ paths:
       - Chat
   /jobs:
     get:
-      description: "Get a list of jobs with optional filtering by user token, alignment\
-        \ ID, and/or tree ID"
+      description: "Returns jobs owned by the authenticated user, with optional filtering\
+        \ by alignment ID, tree ID, method, and/or status"
       operationId: getJobsList
       parameters:
       - description: Pretty print response
@@ -377,14 +382,14 @@ paths:
         schema:
           type: boolean
         style: form
-      - description: Filter jobs by user token
-        explode: true
-        in: query
+      - description: Token identifying the user
+        explode: false
+        in: header
         name: user_token
-        required: false
+        required: true
         schema:
           type: string
-        style: form
+        style: simple
       - description: Filter jobs by alignment dataset ID
         explode: true
         in: query
@@ -428,7 +433,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/getJobsList_200_response'
-          description: Success
+          description: Success - returns user's jobs
         "401":
           content:
             application/json:
@@ -441,7 +446,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ServerError'
           description: Internal Server Error
-      summary: Get a list of jobs
+      summary: Get a list of jobs for the authenticated user
       tags:
       - Jobs
   /jobs/{jobId}:
@@ -568,43 +573,8 @@ paths:
       - Jobs
   /datasets:
     get:
-      description: Get a list of datasets with optional filtering by user token
+      description: Returns datasets owned by the authenticated user
       operationId: getDatasetsList
-      parameters:
-      - description: Pretty print response
-        explode: true
-        in: query
-        name: pretty_print
-        required: false
-        schema:
-          type: boolean
-        style: form
-      - description: Filter datasets by user token
-        explode: true
-        in: query
-        name: user_token
-        required: false
-        schema:
-          type: string
-        style: form
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Datasets'
-          description: Success
-        "401":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UnauthorizedError'
-          description: Unauthorized - Invalid user token
-      summary: Get a list of datasets uploaded to Datamonkey
-      tags:
-      - File Upload and QC
-    post:
-      operationId: PostDataset
       parameters:
       - description: Pretty print response
         explode: true
@@ -622,6 +592,42 @@ paths:
         schema:
           type: string
         style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Datasets'
+          description: Success - returns user's datasets
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedError'
+          description: Unauthorized - Invalid or missing user token
+      summary: Get a list of datasets for the authenticated user
+      tags:
+      - File Upload and QC
+    post:
+      operationId: PostDataset
+      parameters:
+      - description: Pretty print response
+        explode: true
+        in: query
+        name: pretty_print
+        required: false
+        schema:
+          type: boolean
+        style: form
+      - description: "Token identifying the user. If not provided, a new session will\
+          \ be created automatically."
+        explode: false
+        in: header
+        name: user_token
+        required: false
+        schema:
+          type: string
+        style: simple
       requestBody:
         content:
           multipart/form-data:
@@ -634,13 +640,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Datasets'
-          description: Success
-        "401":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UnauthorizedError'
-          description: Unauthorized - Invalid or missing user token
+          description: "Dataset uploaded successfully. If no token was provided, a\
+            \ new session token is returned in the X-Session-Token response header."
+          headers:
+            X-Session-Token:
+              $ref: '#/components/headers/XSessionToken'
         "422":
           content:
             application/json:
@@ -813,11 +817,12 @@ paths:
         schema:
           type: boolean
         style: form
-      - description: Token identifying the user
+      - description: "Token identifying the user. If not provided, a new session will\
+          \ be created automatically."
         explode: false
         in: header
         name: user_token
-        required: true
+        required: false
         schema:
           type: string
         style: simple
@@ -833,19 +838,29 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/JobStatus'
-          description: Success
-        "401":
+          description: "Job started successfully. If no token was provided, a new\
+            \ session token is returned in the X-Session-Token response header."
+          headers:
+            X-Session-Token:
+              $ref: '#/components/headers/XSessionToken'
+        "403":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UnauthorizedError'
-          description: Unauthorized - Invalid or missing user token
+                $ref: '#/components/schemas/ForbiddenError'
+          description: Forbidden - User does not have access to the specified dataset(s)
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+          description: Not Found - Specified dataset(s) not found
         "422":
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/InvalidDataError'
-          description: Unprocessable Entity
+          description: Unprocessable Entity - Invalid request parameters
         "500":
           content:
             application/json:
@@ -875,11 +890,11 @@ paths:
         schema:
           $ref: '#/components/schemas/Hash'
         style: form
-      - description: Token identifying the user (required for private jobs)
+      - description: Token identifying the user
         explode: false
         in: header
         name: user_token
-        required: false
+        required: true
         schema:
           type: string
         style: simple
@@ -928,11 +943,11 @@ paths:
         schema:
           type: boolean
         style: form
-      - description: Token identifying the user (required for private jobs)
+      - description: Token identifying the user
         explode: false
         in: header
         name: user_token
-        required: false
+        required: true
         schema:
           type: string
         style: simple
@@ -988,11 +1003,12 @@ paths:
         schema:
           type: boolean
         style: form
-      - description: Token identifying the user
+      - description: "Token identifying the user. If not provided, a new session will\
+          \ be created automatically."
         explode: false
         in: header
         name: user_token
-        required: true
+        required: false
         schema:
           type: string
         style: simple
@@ -1008,13 +1024,23 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/JobStatus'
-          description: Success
-        "401":
+          description: "Job started successfully. If no token was provided, a new\
+            \ session token is returned in the X-Session-Token response header."
+          headers:
+            X-Session-Token:
+              $ref: '#/components/headers/XSessionToken'
+        "403":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UnauthorizedError'
-          description: Unauthorized - Invalid or missing user token
+                $ref: '#/components/schemas/ForbiddenError'
+          description: Forbidden - User does not have access to the specified dataset(s)
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+          description: Not Found - Specified dataset(s) not found
         "422":
           content:
             application/json:
@@ -1050,11 +1076,11 @@ paths:
         schema:
           $ref: '#/components/schemas/Hash'
         style: form
-      - description: Token identifying the user (required for private jobs)
+      - description: Token identifying the user
         explode: false
         in: header
         name: user_token
-        required: false
+        required: true
         schema:
           type: string
         style: simple
@@ -1103,11 +1129,11 @@ paths:
         schema:
           type: boolean
         style: form
-      - description: Token identifying the user (required for private jobs)
+      - description: Token identifying the user
         explode: false
         in: header
         name: user_token
-        required: false
+        required: true
         schema:
           type: string
         style: simple
@@ -1163,11 +1189,12 @@ paths:
         schema:
           type: boolean
         style: form
-      - description: Token identifying the user
+      - description: "Token identifying the user. If not provided, a new session will\
+          \ be created automatically."
         explode: false
         in: header
         name: user_token
-        required: true
+        required: false
         schema:
           type: string
         style: simple
@@ -1183,13 +1210,23 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/JobStatus'
-          description: Success
-        "401":
+          description: "Job started successfully. If no token was provided, a new\
+            \ session token is returned in the X-Session-Token response header."
+          headers:
+            X-Session-Token:
+              $ref: '#/components/headers/XSessionToken'
+        "403":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UnauthorizedError'
-          description: Unauthorized - Invalid or missing user token
+                $ref: '#/components/schemas/ForbiddenError'
+          description: Forbidden - User does not have access to the specified dataset(s)
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+          description: Not Found - Specified dataset(s) not found
         "422":
           content:
             application/json:
@@ -1225,11 +1262,11 @@ paths:
         schema:
           $ref: '#/components/schemas/Hash'
         style: form
-      - description: Token identifying the user (required for private jobs)
+      - description: Token identifying the user
         explode: false
         in: header
         name: user_token
-        required: false
+        required: true
         schema:
           type: string
         style: simple
@@ -1278,11 +1315,11 @@ paths:
         schema:
           type: boolean
         style: form
-      - description: Token identifying the user (required for private jobs)
+      - description: Token identifying the user
         explode: false
         in: header
         name: user_token
-        required: false
+        required: true
         schema:
           type: string
         style: simple
@@ -1338,11 +1375,12 @@ paths:
         schema:
           type: boolean
         style: form
-      - description: Token identifying the user
+      - description: "Token identifying the user. If not provided, a new session will\
+          \ be created automatically."
         explode: false
         in: header
         name: user_token
-        required: true
+        required: false
         schema:
           type: string
         style: simple
@@ -1358,13 +1396,23 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/JobStatus'
-          description: Success
-        "401":
+          description: "Job started successfully. If no token was provided, a new\
+            \ session token is returned in the X-Session-Token response header."
+          headers:
+            X-Session-Token:
+              $ref: '#/components/headers/XSessionToken'
+        "403":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UnauthorizedError'
-          description: Unauthorized - Invalid or missing user token
+                $ref: '#/components/schemas/ForbiddenError'
+          description: Forbidden - User does not have access to the specified dataset(s)
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+          description: Not Found - Specified dataset(s) not found
         "422":
           content:
             application/json:
@@ -1400,11 +1448,11 @@ paths:
         schema:
           $ref: '#/components/schemas/Hash'
         style: form
-      - description: Token identifying the user (required for private jobs)
+      - description: Token identifying the user
         explode: false
         in: header
         name: user_token
-        required: false
+        required: true
         schema:
           type: string
         style: simple
@@ -1453,11 +1501,11 @@ paths:
         schema:
           type: boolean
         style: form
-      - description: Token identifying the user (required for private jobs)
+      - description: Token identifying the user
         explode: false
         in: header
         name: user_token
-        required: false
+        required: true
         schema:
           type: string
         style: simple
@@ -1513,11 +1561,12 @@ paths:
         schema:
           type: boolean
         style: form
-      - description: Token identifying the user
+      - description: "Token identifying the user. If not provided, a new session will\
+          \ be created automatically."
         explode: false
         in: header
         name: user_token
-        required: true
+        required: false
         schema:
           type: string
         style: simple
@@ -1533,13 +1582,23 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/JobStatus'
-          description: Success
-        "401":
+          description: "Job started successfully. If no token was provided, a new\
+            \ session token is returned in the X-Session-Token response header."
+          headers:
+            X-Session-Token:
+              $ref: '#/components/headers/XSessionToken'
+        "403":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UnauthorizedError'
-          description: Unauthorized - Invalid or missing user token
+                $ref: '#/components/schemas/ForbiddenError'
+          description: Forbidden - User does not have access to the specified dataset(s)
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+          description: Not Found - Specified dataset(s) not found
         "422":
           content:
             application/json:
@@ -1575,11 +1634,11 @@ paths:
         schema:
           $ref: '#/components/schemas/Hash'
         style: form
-      - description: Token identifying the user (required for private jobs)
+      - description: Token identifying the user
         explode: false
         in: header
         name: user_token
-        required: false
+        required: true
         schema:
           type: string
         style: simple
@@ -1628,11 +1687,11 @@ paths:
         schema:
           type: boolean
         style: form
-      - description: Token identifying the user (required for private jobs)
+      - description: Token identifying the user
         explode: false
         in: header
         name: user_token
-        required: false
+        required: true
         schema:
           type: string
         style: simple
@@ -1688,11 +1747,12 @@ paths:
         schema:
           type: boolean
         style: form
-      - description: Token identifying the user
+      - description: "Token identifying the user. If not provided, a new session will\
+          \ be created automatically."
         explode: false
         in: header
         name: user_token
-        required: true
+        required: false
         schema:
           type: string
         style: simple
@@ -1708,13 +1768,23 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/JobStatus'
-          description: Success
-        "401":
+          description: "Job started successfully. If no token was provided, a new\
+            \ session token is returned in the X-Session-Token response header."
+          headers:
+            X-Session-Token:
+              $ref: '#/components/headers/XSessionToken'
+        "403":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UnauthorizedError'
-          description: Unauthorized - Invalid or missing user token
+                $ref: '#/components/schemas/ForbiddenError'
+          description: Forbidden - User does not have access to the specified dataset(s)
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+          description: Not Found - Specified dataset(s) not found
         "422":
           content:
             application/json:
@@ -1750,11 +1820,11 @@ paths:
         schema:
           $ref: '#/components/schemas/Hash'
         style: form
-      - description: Token identifying the user (required for private jobs)
+      - description: Token identifying the user
         explode: false
         in: header
         name: user_token
-        required: false
+        required: true
         schema:
           type: string
         style: simple
@@ -1803,11 +1873,11 @@ paths:
         schema:
           type: boolean
         style: form
-      - description: Token identifying the user (required for private jobs)
+      - description: Token identifying the user
         explode: false
         in: header
         name: user_token
-        required: false
+        required: true
         schema:
           type: string
         style: simple
@@ -1863,11 +1933,12 @@ paths:
         schema:
           type: boolean
         style: form
-      - description: Token identifying the user
+      - description: "Token identifying the user. If not provided, a new session will\
+          \ be created automatically."
         explode: false
         in: header
         name: user_token
-        required: true
+        required: false
         schema:
           type: string
         style: simple
@@ -1883,13 +1954,23 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/JobStatus'
-          description: Success
-        "401":
+          description: "Job started successfully. If no token was provided, a new\
+            \ session token is returned in the X-Session-Token response header."
+          headers:
+            X-Session-Token:
+              $ref: '#/components/headers/XSessionToken'
+        "403":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UnauthorizedError'
-          description: Unauthorized - Invalid or missing user token
+                $ref: '#/components/schemas/ForbiddenError'
+          description: Forbidden - User does not have access to the specified dataset(s)
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+          description: Not Found - Specified dataset(s) not found
         "422":
           content:
             application/json:
@@ -1925,11 +2006,11 @@ paths:
         schema:
           $ref: '#/components/schemas/Hash'
         style: form
-      - description: Token identifying the user (required for private jobs)
+      - description: Token identifying the user
         explode: false
         in: header
         name: user_token
-        required: false
+        required: true
         schema:
           type: string
         style: simple
@@ -2023,11 +2104,12 @@ paths:
         schema:
           type: boolean
         style: form
-      - description: Token identifying the user
+      - description: "Token identifying the user. If not provided, a new session will\
+          \ be created automatically."
         explode: false
         in: header
         name: user_token
-        required: true
+        required: false
         schema:
           type: string
         style: simple
@@ -2043,13 +2125,23 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/JobStatus'
-          description: Success
-        "401":
+          description: "Job started successfully. If no token was provided, a new\
+            \ session token is returned in the X-Session-Token response header."
+          headers:
+            X-Session-Token:
+              $ref: '#/components/headers/XSessionToken'
+        "403":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UnauthorizedError'
-          description: Unauthorized - Invalid or missing user token
+                $ref: '#/components/schemas/ForbiddenError'
+          description: Forbidden - User does not have access to the specified dataset(s)
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+          description: Not Found - Specified dataset(s) not found
         "422":
           content:
             application/json:
@@ -2077,11 +2169,11 @@ paths:
         schema:
           $ref: '#/components/schemas/Hash'
         style: form
-      - description: Token identifying the user (required for private jobs)
+      - description: Token identifying the user
         explode: false
         in: header
         name: user_token
-        required: false
+        required: true
         schema:
           type: string
         style: simple
@@ -2126,11 +2218,11 @@ paths:
         \ and non-synonymous substitution rates.\n"
       operationId: getCONTRASTFELJob
       parameters:
-      - description: Token identifying the user (required for private jobs)
+      - description: Token identifying the user
         explode: false
         in: header
         name: user_token
-        required: false
+        required: true
         schema:
           type: string
         style: simple
@@ -2190,11 +2282,12 @@ paths:
         schema:
           type: boolean
         style: form
-      - description: Token identifying the user
+      - description: "Token identifying the user. If not provided, a new session will\
+          \ be created automatically."
         explode: false
         in: header
         name: user_token
-        required: true
+        required: false
         schema:
           type: string
         style: simple
@@ -2210,13 +2303,23 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/JobStatus'
-          description: Success
-        "401":
+          description: "Job started successfully. If no token was provided, a new\
+            \ session token is returned in the X-Session-Token response header."
+          headers:
+            X-Session-Token:
+              $ref: '#/components/headers/XSessionToken'
+        "403":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UnauthorizedError'
-          description: Unauthorized - Invalid or missing user token
+                $ref: '#/components/schemas/ForbiddenError'
+          description: Forbidden - User does not have access to the specified dataset(s)
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+          description: Not Found - Specified dataset(s) not found
         "422":
           content:
             application/json:
@@ -2252,11 +2355,11 @@ paths:
         schema:
           $ref: '#/components/schemas/Hash'
         style: form
-      - description: Token identifying the user (required for private jobs)
+      - description: Token identifying the user
         explode: false
         in: header
         name: user_token
-        required: false
+        required: true
         schema:
           type: string
         style: simple
@@ -2309,11 +2412,11 @@ paths:
         schema:
           type: boolean
         style: form
-      - description: Token identifying the user (required for private jobs)
+      - description: Token identifying the user
         explode: false
         in: header
         name: user_token
-        required: false
+        required: true
         schema:
           type: string
         style: simple
@@ -2373,11 +2476,12 @@ paths:
         schema:
           type: boolean
         style: form
-      - description: Token identifying the user
+      - description: "Token identifying the user. If not provided, a new session will\
+          \ be created automatically."
         explode: false
         in: header
         name: user_token
-        required: true
+        required: false
         schema:
           type: string
         style: simple
@@ -2393,13 +2497,23 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/JobStatus'
-          description: Success
-        "401":
+          description: "Job started successfully. If no token was provided, a new\
+            \ session token is returned in the X-Session-Token response header."
+          headers:
+            X-Session-Token:
+              $ref: '#/components/headers/XSessionToken'
+        "403":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UnauthorizedError'
-          description: Unauthorized - Invalid or missing user token
+                $ref: '#/components/schemas/ForbiddenError'
+          description: Forbidden - User does not have access to the specified dataset(s)
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+          description: Not Found - Specified dataset(s) not found
         "422":
           content:
             application/json:
@@ -2435,11 +2549,11 @@ paths:
         schema:
           $ref: '#/components/schemas/Hash'
         style: form
-      - description: Token identifying the user (required for private jobs)
+      - description: Token identifying the user
         explode: false
         in: header
         name: user_token
-        required: false
+        required: true
         schema:
           type: string
         style: simple
@@ -2492,11 +2606,11 @@ paths:
         schema:
           type: boolean
         style: form
-      - description: Token identifying the user (required for private jobs)
+      - description: Token identifying the user
         explode: false
         in: header
         name: user_token
-        required: false
+        required: true
         schema:
           type: string
         style: simple
@@ -2557,11 +2671,12 @@ paths:
         schema:
           type: boolean
         style: form
-      - description: Token identifying the user
+      - description: "Token identifying the user. If not provided, a new session will\
+          \ be created automatically."
         explode: false
         in: header
         name: user_token
-        required: true
+        required: false
         schema:
           type: string
         style: simple
@@ -2577,13 +2692,23 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/JobStatus'
-          description: Success
-        "401":
+          description: "Job started successfully. If no token was provided, a new\
+            \ session token is returned in the X-Session-Token response header."
+          headers:
+            X-Session-Token:
+              $ref: '#/components/headers/XSessionToken'
+        "403":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UnauthorizedError'
-          description: Unauthorized - Invalid or missing user token
+                $ref: '#/components/schemas/ForbiddenError'
+          description: Forbidden - User does not have access to the specified dataset(s)
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+          description: Not Found - Specified dataset(s) not found
         "422":
           content:
             application/json:
@@ -2619,11 +2744,11 @@ paths:
         schema:
           $ref: '#/components/schemas/Hash'
         style: form
-      - description: Token identifying the user (required for private jobs)
+      - description: Token identifying the user
         explode: false
         in: header
         name: user_token
-        required: false
+        required: true
         schema:
           type: string
         style: simple
@@ -2675,11 +2800,11 @@ paths:
         schema:
           type: boolean
         style: form
-      - description: Token identifying the user (required for private jobs)
+      - description: Token identifying the user
         explode: false
         in: header
         name: user_token
-        required: false
+        required: true
         schema:
           type: string
         style: simple
@@ -2735,11 +2860,12 @@ paths:
         schema:
           type: boolean
         style: form
-      - description: Token identifying the user
+      - description: "Token identifying the user. If not provided, a new session will\
+          \ be created automatically."
         explode: false
         in: header
         name: user_token
-        required: true
+        required: false
         schema:
           type: string
         style: simple
@@ -2755,13 +2881,23 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/JobStatus'
-          description: Success
-        "401":
+          description: "Job started successfully. If no token was provided, a new\
+            \ session token is returned in the X-Session-Token response header."
+          headers:
+            X-Session-Token:
+              $ref: '#/components/headers/XSessionToken'
+        "403":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UnauthorizedError'
-          description: Unauthorized - Invalid or missing user token
+                $ref: '#/components/schemas/ForbiddenError'
+          description: Forbidden - User does not have access to the specified dataset(s)
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+          description: Not Found - Specified dataset(s) not found
         "422":
           content:
             application/json:
@@ -2797,11 +2933,11 @@ paths:
         schema:
           $ref: '#/components/schemas/Hash'
         style: form
-      - description: Token identifying the user (required for private jobs)
+      - description: Token identifying the user
         explode: false
         in: header
         name: user_token
-        required: false
+        required: true
         schema:
           type: string
         style: simple
@@ -2850,11 +2986,11 @@ paths:
         schema:
           type: boolean
         style: form
-      - description: Token identifying the user (required for private jobs)
+      - description: Token identifying the user
         explode: false
         in: header
         name: user_token
-        required: false
+        required: true
         schema:
           type: string
         style: simple
@@ -2912,11 +3048,12 @@ paths:
         schema:
           type: boolean
         style: form
-      - description: Token identifying the user
+      - description: "Token identifying the user. If not provided, a new session will\
+          \ be created automatically."
         explode: false
         in: header
         name: user_token
-        required: true
+        required: false
         schema:
           type: string
         style: simple
@@ -2932,13 +3069,23 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/JobStatus'
-          description: Success
-        "401":
+          description: "Job started successfully. If no token was provided, a new\
+            \ session token is returned in the X-Session-Token response header."
+          headers:
+            X-Session-Token:
+              $ref: '#/components/headers/XSessionToken'
+        "403":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UnauthorizedError'
-          description: Unauthorized - Invalid or missing user token
+                $ref: '#/components/schemas/ForbiddenError'
+          description: Forbidden - User does not have access to the specified dataset(s)
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+          description: Not Found - Specified dataset(s) not found
         "422":
           content:
             application/json:
@@ -2974,11 +3121,11 @@ paths:
         schema:
           $ref: '#/components/schemas/Hash'
         style: form
-      - description: Token identifying the user (required for private jobs)
+      - description: Token identifying the user
         explode: false
         in: header
         name: user_token
-        required: false
+        required: true
         schema:
           type: string
         style: simple
@@ -3027,11 +3174,11 @@ paths:
         schema:
           type: boolean
         style: form
-      - description: Token identifying the user (required for private jobs)
+      - description: Token identifying the user
         explode: false
         in: header
         name: user_token
-        required: false
+        required: true
         schema:
           type: string
         style: simple
@@ -3087,11 +3234,12 @@ paths:
         schema:
           type: boolean
         style: form
-      - description: Token identifying the user
+      - description: "Token identifying the user. If not provided, a new session will\
+          \ be created automatically."
         explode: false
         in: header
         name: user_token
-        required: true
+        required: false
         schema:
           type: string
         style: simple
@@ -3107,13 +3255,23 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/JobStatus'
-          description: Success
-        "401":
+          description: "Job started successfully. If no token was provided, a new\
+            \ session token is returned in the X-Session-Token response header."
+          headers:
+            X-Session-Token:
+              $ref: '#/components/headers/XSessionToken'
+        "403":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UnauthorizedError'
-          description: Unauthorized - Invalid or missing user token
+                $ref: '#/components/schemas/ForbiddenError'
+          description: Forbidden - User does not have access to the specified dataset(s)
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+          description: Not Found - Specified dataset(s) not found
         "422":
           content:
             application/json:
@@ -3149,11 +3307,11 @@ paths:
         schema:
           $ref: '#/components/schemas/Hash'
         style: form
-      - description: Token identifying the user (required for private jobs)
+      - description: Token identifying the user
         explode: false
         in: header
         name: user_token
-        required: false
+        required: true
         schema:
           type: string
         style: simple
@@ -3202,11 +3360,11 @@ paths:
         schema:
           type: boolean
         style: form
-      - description: Token identifying the user (required for private jobs)
+      - description: Token identifying the user
         explode: false
         in: header
         name: user_token
-        required: false
+        required: true
         schema:
           type: string
         style: simple
@@ -3251,6 +3409,15 @@ paths:
       tags:
       - SLATKIN
 components:
+  headers:
+    XSessionToken:
+      description: JWT token for the session (returned when a new session is created
+        automatically)
+      explode: false
+      schema:
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2OTc2NDQ4MDAsImlhdCI6MTY5NzU1ODQwMCwic3ViIjoiNTUwZTg0MDAtZTI5Yi00MWQ0LWE3MTYtNDQ2NjU1NDQwMDAwIiwidHlwZSI6InVzZXIifQ.signature
+        type: string
+      style: simple
   schemas:
     Status:
       enum:
@@ -3353,6 +3520,22 @@ components:
       - code
       - message
       type: object
+    ServerError:
+      example:
+        code: code
+        details: details
+        error: error
+      properties:
+        error:
+          description: A general description of the error.
+          type: string
+        code:
+          description: A unique error code (if available).
+          type: string
+        details:
+          description: Optional details about the error.
+          type: string
+      type: object
     ForbiddenError:
       example:
         code: 403
@@ -3423,22 +3606,6 @@ components:
           type: string
         method:
           description: The HyPhy method used for this job
-          type: string
-      type: object
-    ServerError:
-      example:
-        code: code
-        details: details
-        error: error
-      properties:
-        error:
-          description: A general description of the error.
-          type: string
-        code:
-          description: A unique error code (if available).
-          type: string
-        details:
-          description: Optional details about the error.
           type: string
       type: object
     DatasetMeta:

@@ -79,6 +79,15 @@ func (api *FUBARAPI) formatFUBARJobResults(jobId string, rawResults json.RawMess
 
 // GetFUBARJob retrieves the status and results of a FUBAR job
 func (api *FUBARAPI) GetFUBARJob(c *gin.Context) {
+	// Require valid token for accessing results
+	if api.SessionService != nil {
+		_, err := api.SessionService.GetSubject(c)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized - valid token required to access job results"})
+			return
+		}
+	}
+
 	var request FubarRequest
 	if err := c.BindJSON(&request); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to parse job configuration"})
@@ -172,15 +181,14 @@ func (api *FUBARAPI) GetFUBARJobById(c *gin.Context) {
 
 // StartFUBARJob starts a new FUBAR analysis job
 func (api *FUBARAPI) StartFUBARJob(c *gin.Context) {
-	// Validate user token if token validator is available
+	// Get or create user session - automatically adds X-Session-Token header if new
+	var subject string
 	if api.SessionService != nil {
-		_, err := api.SessionService.GetOrCreateSubject(c)
+		var err error
+		subject, err = api.SessionService.GetOrCreateSubject(c)
 		if err != nil {
-			if err.Error() == "missing user token" || strings.Contains(err.Error(), "invalid user token") {
-				c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized - " + err.Error()})
-				return
-			}
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Authentication error: " + err.Error()})
+			log.Printf("Error with session: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create or validate session"})
 			return
 		}
 	}
@@ -191,25 +199,15 @@ func (api *FUBARAPI) StartFUBARJob(c *gin.Context) {
 		return
 	}
 
-	// Extract the user token from the request or from the header/query parameter
-	if request.UserToken == "" && api.SessionService != nil {
-		userToken := c.Query("user_token")
-		if userToken == "" {
-			userToken = c.GetHeader("user_token")
-		}
-		if userToken != "" {
-			request.UserToken = userToken
-		}
+	// Set the subject in the request for job tracking
+	if subject != "" {
+		request.UserToken = subject
 	}
 
 	// Check alignment dataset access
 	if request.Alignment != "" && api.SessionService != nil && api.DatasetTracker != nil {
 		_, err := api.SessionService.CheckDatasetAccess(c, request.Alignment, api.DatasetTracker)
 		if err != nil {
-			if strings.Contains(err.Error(), "missing user token") || strings.Contains(err.Error(), "invalid user token") {
-				c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized - " + err.Error()})
-				return
-			}
 			if strings.Contains(err.Error(), "not found") {
 				c.JSON(http.StatusNotFound, gin.H{"error": "Alignment dataset not found"})
 				return
@@ -223,10 +221,6 @@ func (api *FUBARAPI) StartFUBARJob(c *gin.Context) {
 	if request.Tree != "" && api.SessionService != nil && api.DatasetTracker != nil {
 		_, err := api.SessionService.CheckDatasetAccess(c, request.Tree, api.DatasetTracker)
 		if err != nil {
-			if strings.Contains(err.Error(), "missing user token") || strings.Contains(err.Error(), "invalid user token") {
-				c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized - " + err.Error()})
-				return
-			}
 			if strings.Contains(err.Error(), "not found") {
 				c.JSON(http.StatusNotFound, gin.H{"error": "Tree dataset not found"})
 				return

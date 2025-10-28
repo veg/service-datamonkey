@@ -25,21 +25,17 @@ func NewJobsAPI(jobTracker JobTracker, sessionService *SessionService, scheduler
 }
 
 // GetJobsList returns a list of jobs with optional filtering
-// GET /jobs?user_token=xxx&alignment_id=xxx&tree_id=xxx&method=xxx&status=xxx
+// GET /jobs?alignment_id=xxx&tree_id=xxx&method=xxx&status=xxx
 func (api *JobsAPI) GetJobsList(c *gin.Context) {
-	// Validate user token
+	// Require valid token for listing jobs
 	if api.SessionService == nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "User token validator not available"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Session service not available"})
 		return
 	}
 
-	subject, err := api.SessionService.GetOrCreateSubject(c)
+	subject, err := api.SessionService.GetSubject(c)
 	if err != nil {
-		if strings.Contains(err.Error(), "missing user token") || strings.Contains(err.Error(), "invalid user token") {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized - " + err.Error()})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Authentication error: " + err.Error()})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized - valid token required to list jobs"})
 		return
 	}
 
