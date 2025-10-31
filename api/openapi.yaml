@@ -720,7 +720,10 @@ paths:
       tags:
       - File Upload and QC
     get:
-      description: Get detailed information about a specific dataset
+      description: |
+        Get detailed information about a specific dataset.
+        By default, returns metadata only (id, name, type, description, timestamps).
+        Use `include_content=true` query parameter to include the actual sequence data.
       operationId: getDatasetById
       parameters:
       - description: ID of the dataset to retrieve
@@ -747,6 +750,18 @@ paths:
         schema:
           type: string
         style: simple
+      - description: |
+          If true, includes the dataset content (sequence data) in the response.
+          Default is false (metadata only) for better performance.
+        example: true
+        explode: true
+        in: query
+        name: include_content
+        required: false
+        schema:
+          default: false
+          type: boolean
+        style: form
       responses:
         "200":
           content:
@@ -3660,6 +3675,17 @@ components:
           updated:
             format: date-time
             type: string
+          content:
+            description: |
+              The actual dataset content (sequence data).
+              Only included when `include_content=true` query parameter is used.
+              For FASTA files, this will be the raw FASTA format text.
+            example: |-
+              >seq1
+              ATGCATGCATGCATGC
+              >seq2
+              ATGCATGCATGCATGT
+            type: string
         type: object
       example:
         created: 2000-01-23T04:56:07.000+00:00
@@ -3669,6 +3695,11 @@ components:
         user_token: user_token
         type: type
         updated: 2000-01-23T04:56:07.000+00:00
+        content: |-
+          >seq1
+          ATGCATGCATGCATGC
+          >seq2
+          ATGCATGCATGCATGT
       type: object
     Datasets:
       example:
@@ -3680,6 +3711,11 @@ components:
           user_token: user_token
           type: type
           updated: 2000-01-23T04:56:07.000+00:00
+          content: |-
+            >seq1
+            ATGCATGCATGCATGC
+            >seq2
+            ATGCATGCATGCATGT
         - created: 2000-01-23T04:56:07.000+00:00
           name: name
           description: description
@@ -3687,6 +3723,11 @@ components:
           user_token: user_token
           type: type
           updated: 2000-01-23T04:56:07.000+00:00
+          content: |-
+            >seq1
+            ATGCATGCATGCATGC
+            >seq2
+            ATGCATGCATGCATGT
       properties:
         datasets:
           items:

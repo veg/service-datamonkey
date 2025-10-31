@@ -29,4 +29,7 @@ type Dataset struct {
 	Created time.Time `json:"created,omitempty"`
 
 	Updated time.Time `json:"updated,omitempty"`
+
+	// The actual dataset content (sequence data). Only included when `include_content=true` query parameter is used. For FASTA files, this will be the raw FASTA format text.
+	Content string `json:"content,omitempty"`
 }
