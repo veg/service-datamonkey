@@ -556,3 +556,88 @@ func TestHyPhyGetCommandMultipleBranches(t *testing.T) {
 		t.Errorf("Branches should be comma-separated, got: %s", cmd)
 	}
 }
+
+// TestHyPhyGetCommandWithAdapter tests command generation using AdaptRequest (interface path)
+func TestHyPhyGetCommandWithAdapter(t *testing.T) {
+	tests := []struct {
+		name       string
+		request    interface{}
+		methodType sw.HyPhyMethodType
+		contains   []string
+	}{
+		{
+			name:       "FEL with adapter",
+			request:    &sw.FelRequest{Alignment: "test.fas", Tree: "test.nwk", Ci: "Yes"},
+			methodType: sw.MethodFEL,
+			contains:   []string{"fel", "--alignment", "--tree", "--ci"},
+		},
+		{
+			name:       "BUSTED with adapter",
+			request:    &sw.BustedRequest{Alignment: "test.fas", Rates: 3, SynRates: 2},
+			methodType: sw.MethodBUSTED,
+			contains:   []string{"busted", "--alignment"},
+		},
+		{
+			name:       "SLAC with adapter",
+			request:    &sw.SlacRequest{Alignment: "test.fas", Samples: 100},
+			methodType: sw.MethodSLAC,
+			contains:   []string{"slac", "--alignment"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			adapted, err := sw.AdaptRequest(tt.request)
+			if err != nil {
+				t.Fatalf("AdaptRequest failed: %v", err)
+			}
+
+			method := sw.NewHyPhyMethod(adapted, "/data", "/usr/local/bin/hyphy", tt.methodType, "/data/uploads")
+			cmd := method.GetCommand()
+
+			for _, substr := range tt.contains {
+				if !strings.Contains(cmd, substr) {
+					t.Errorf("Command should contain '%s', got: %s", substr, cmd)
+				}
+			}
+		})
+	}
+}
+
+// TestHyPhyGetCommandAdapterAllParameters tests all interface methods via adapter
+func TestHyPhyGetCommandAdapterAllParameters(t *testing.T) {
+	// Test with a request that has many parameters set
+	request := &sw.FelRequest{
+		Alignment:   "test.fas",
+		Tree:        "test.nwk",
+		Branches:    []string{"fg", "bg"},
+		Ci:          "Yes",
+		Srv:         "Yes",
+		GeneticCode: "Universal",
+	}
+
+	adapted, err := sw.AdaptRequest(request)
+	if err != nil {
+		t.Fatalf("AdaptRequest failed: %v", err)
+	}
+
+	method := sw.NewHyPhyMethod(adapted, "/data", "/usr/local/bin/hyphy", sw.MethodFEL, "/data/uploads")
+	cmd := method.GetCommand()
+
+	// Verify all parameters are in the command
+	// Note: When using adapter, genetic code uses --code instead of --genetic_code
+	expected := []string{
+		"--alignment", "/data/uploads/test.fas",
+		"--tree", "/data/uploads/test.nwk",
+		"--branches", "fg,bg",
+		"--ci", "Yes",
+		"--srv", "Yes",
+		"--code", "Universal",
+	}
+
+	for _, substr := range expected {
+		if !strings.Contains(cmd, substr) {
+			t.Errorf("Command should contain '%s', got: %s", substr, cmd)
+		}
+	}
+}

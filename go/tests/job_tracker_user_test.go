@@ -627,3 +627,185 @@ func TestSQLiteJobTrackerListJobsWithFilters(t *testing.T) {
 		})
 	}
 }
+
+// TestSQLiteJobTrackerStoreJobWithUserValidation tests input validation
+func TestSQLiteJobTrackerStoreJobWithUserValidation(t *testing.T) {
+	dbPath := "/tmp/test_user_jobs_validation.db"
+	db, cleanup := setupTestDB(t, dbPath)
+	defer cleanup()
+
+	tracker := sw.NewSQLiteJobTracker(db.GetDB())
+	userAlice := createTestSession(t, db)
+
+	tests := []struct {
+		name           string
+		jobID          string
+		schedulerJobID string
+		userID         string
+		wantErr        bool
+		wantErrSubstr  string
+	}{
+		{
+			name:           "Empty job ID",
+			jobID:          "",
+			schedulerJobID: "slurm-1",
+			userID:         userAlice,
+			wantErr:        true,
+			wantErrSubstr:  "job ID cannot be empty",
+		},
+		{
+			name:           "Empty scheduler job ID",
+			jobID:          "job-1",
+			schedulerJobID: "",
+			userID:         userAlice,
+			wantErr:        true,
+			wantErrSubstr:  "scheduler job ID cannot be empty",
+		},
+		{
+			name:           "Both IDs empty",
+			jobID:          "",
+			schedulerJobID: "",
+			userID:         userAlice,
+			wantErr:        true,
+			wantErrSubstr:  "job ID cannot be empty",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tracker.StoreJobWithUser(tt.jobID, tt.schedulerJobID, tt.userID)
+			if !tt.wantErr {
+				t.Errorf("Expected error but got none")
+			}
+			if err == nil || !strings.Contains(err.Error(), tt.wantErrSubstr) {
+				t.Errorf("Expected error containing '%s', got: %v", tt.wantErrSubstr, err)
+			}
+		})
+	}
+}
+
+// TestSQLiteJobTrackerStoreJobWithUserUpdate tests updating existing jobs
+func TestSQLiteJobTrackerStoreJobWithUserUpdate(t *testing.T) {
+	dbPath := "/tmp/test_user_jobs_update.db"
+	db, cleanup := setupTestDB(t, dbPath)
+	defer cleanup()
+
+	tracker := sw.NewSQLiteJobTracker(db.GetDB())
+	userAlice := createTestSession(t, db)
+	userBob := createTestSession(t, db)
+
+	tests := []struct {
+		name               string
+		initialJobID       string
+		initialSchedulerID string
+		initialUserID      string
+		updateJobID        string
+		updateSchedulerID  string
+		updateUserID       string
+		wantErr            bool
+		expectSchedulerID  string
+		expectUserID       string
+	}{
+		{
+			name:               "Update user ID for existing job (same scheduler ID)",
+			initialJobID:       "job-1",
+			initialSchedulerID: "slurm-1",
+			initialUserID:      "",
+			updateJobID:        "job-1",
+			updateSchedulerID:  "slurm-1",
+			updateUserID:       userAlice,
+			wantErr:            false,
+			expectSchedulerID:  "slurm-1",
+			expectUserID:       userAlice,
+		},
+		{
+			name:               "Update scheduler ID for existing job",
+			initialJobID:       "job-2",
+			initialSchedulerID: "slurm-2a",
+			initialUserID:      userAlice,
+			updateJobID:        "job-2",
+			updateSchedulerID:  "slurm-2b",
+			updateUserID:       userAlice,
+			wantErr:            false,
+			expectSchedulerID:  "slurm-2b",
+			expectUserID:       userAlice,
+		},
+		{
+			name:               "Update both scheduler ID and user ID",
+			initialJobID:       "job-3",
+			initialSchedulerID: "slurm-3a",
+			initialUserID:      userAlice,
+			updateJobID:        "job-3",
+			updateSchedulerID:  "slurm-3b",
+			updateUserID:       userBob,
+			wantErr:            false,
+			expectSchedulerID:  "slurm-3b",
+			expectUserID:       userBob,
+		},
+		{
+			name:               "Update scheduler ID without changing user ID",
+			initialJobID:       "job-4",
+			initialSchedulerID: "slurm-4a",
+			initialUserID:      userAlice,
+			updateJobID:        "job-4",
+			updateSchedulerID:  "slurm-4b",
+			updateUserID:       "",
+			wantErr:            false,
+			expectSchedulerID:  "slurm-4b",
+			expectUserID:       userAlice,
+		},
+		{
+			name:               "Store same job again (idempotent)",
+			initialJobID:       "job-5",
+			initialSchedulerID: "slurm-5",
+			initialUserID:      userAlice,
+			updateJobID:        "job-5",
+			updateSchedulerID:  "slurm-5",
+			updateUserID:       userAlice,
+			wantErr:            false,
+			expectSchedulerID:  "slurm-5",
+			expectUserID:       userAlice,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Store initial job
+			err := tracker.StoreJobWithUser(tt.initialJobID, tt.initialSchedulerID, tt.initialUserID)
+			if err != nil {
+				t.Fatalf("Failed to store initial job: %v", err)
+			}
+
+			// Update the job
+			err = tracker.StoreJobWithUser(tt.updateJobID, tt.updateSchedulerID, tt.updateUserID)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("StoreJobWithUser() error = %v, wantErr %v", err, tt.wantErr)
+			}
+
+			if !tt.wantErr {
+				// Verify scheduler ID
+				schedulerID, err := tracker.GetSchedulerJobID(tt.updateJobID)
+				if err != nil {
+					t.Errorf("Failed to get scheduler ID: %v", err)
+				}
+				if schedulerID != tt.expectSchedulerID {
+					t.Errorf("Scheduler ID = %v, want %v", schedulerID, tt.expectSchedulerID)
+				}
+
+				// Verify user ID if expected
+				if tt.expectUserID != "" {
+					userID, err := tracker.GetJobOwner(tt.updateJobID)
+					if err != nil {
+						t.Errorf("Failed to get job owner: %v", err)
+					}
+					if userID != tt.expectUserID {
+						t.Errorf("User ID = %v, want %v", userID, tt.expectUserID)
+					}
+				}
+			}
+
+			// Cleanup
+			tracker.DeleteJobMapping(tt.initialJobID)
+		})
+	}
+}

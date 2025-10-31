@@ -1047,3 +1047,114 @@ func TestCheckConversationAccess(t *testing.T) {
 		})
 	}
 }
+
+// TestGetOrCreateSubject tests the GetOrCreateSubject method (which internally calls createNewSession)
+func TestGetOrCreateSubject(t *testing.T) {
+	keyPath, cleanup := setupTestKey(t)
+	defer cleanup()
+
+	// Setup database with session tracker
+	tmpFile, err := os.CreateTemp("", "test_sessions_*.db")
+	if err != nil {
+		t.Fatalf("Failed to create temp file: %v", err)
+	}
+	dbPath := tmpFile.Name()
+	tmpFile.Close()
+	defer os.Remove(dbPath)
+
+	db, dbCleanup := setupTestDB(t, dbPath)
+	defer dbCleanup()
+
+	sessionTracker := sw.NewSQLiteSessionTracker(db.GetDB())
+
+	service := sw.NewSessionService(sw.TokenConfig{
+		KeyPath:        keyPath,
+		ExpirationSecs: 3600,
+	}, sessionTracker)
+
+	tests := []struct {
+		name          string
+		setupToken    bool
+		wantNewToken  bool
+		wantErr       bool
+		wantErrSubstr string
+	}{
+		{
+			name:         "Valid existing token",
+			setupToken:   true,
+			wantNewToken: false,
+			wantErr:      false,
+		},
+		{
+			name:         "No token - create new session",
+			setupToken:   false,
+			wantNewToken: true,
+			wantErr:      false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			c, _ := gin.CreateTestContext(w)
+
+			if tt.setupToken {
+				// Generate a valid token
+				token, err := service.GenerateUserToken("test-user")
+				if err != nil {
+					t.Fatalf("Failed to generate token: %v", err)
+				}
+				c.Request, _ = http.NewRequest("GET", "/?user_token="+token, nil)
+			} else {
+				c.Request, _ = http.NewRequest("GET", "/", nil)
+			}
+
+			subject, err := service.GetOrCreateSubject(c)
+
+			if tt.wantErr {
+				if err == nil {
+					t.Error("Expected error but got none")
+				} else if tt.wantErrSubstr != "" && !strings.Contains(err.Error(), tt.wantErrSubstr) {
+					t.Errorf("Expected error containing '%s', got: %v", tt.wantErrSubstr, err)
+				}
+			} else {
+				if err != nil {
+					t.Errorf("Unexpected error: %v", err)
+				}
+				if subject == "" {
+					t.Error("Expected non-empty subject")
+				}
+			}
+
+			if tt.wantNewToken {
+				token := w.Header().Get("X-Session-Token")
+				if token == "" {
+					t.Error("Expected new session token in header")
+				}
+			}
+		})
+	}
+}
+
+// TestGetOrCreateSubjectNoTracker tests GetOrCreateSubject without session tracker
+func TestGetOrCreateSubjectNoTracker(t *testing.T) {
+	keyPath, cleanup := setupTestKey(t)
+	defer cleanup()
+
+	service := sw.NewSessionService(sw.TokenConfig{
+		KeyPath:        keyPath,
+		ExpirationSecs: 3600,
+	}, nil) // No session tracker
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request, _ = http.NewRequest("GET", "/", nil)
+
+	_, err := service.GetOrCreateSubject(c)
+	if err == nil {
+		t.Error("Expected error when session tracker is nil")
+	}
+	if !strings.Contains(err.Error(), "session tracker not available") {
+		t.Errorf("Expected 'session tracker not available' error, got: %v", err)
+	}
+}

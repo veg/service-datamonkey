@@ -151,3 +151,73 @@ func TestSQLiteDatasetTracker(t *testing.T) {
 		}
 	}
 }
+
+// TestSQLiteDatasetTrackerStore tests the basic Store method (without user)
+func TestSQLiteDatasetTrackerStore(t *testing.T) {
+	dataDir := "/tmp/test_dataset_store"
+	dbPath := "/tmp/test_dataset_store.db"
+	defer os.RemoveAll(dataDir)
+
+	db, cleanup := setupTestDB(t, dbPath)
+	defer cleanup()
+
+	tracker := sw.NewSQLiteDatasetTracker(db.GetDB(), dataDir)
+
+	tests := []struct {
+		name     string
+		metadata sw.DatasetMetadata
+		content  []byte
+		wantErr  bool
+	}{
+		{
+			name: "Store basic dataset",
+			metadata: sw.DatasetMetadata{
+				Name: "Basic Dataset",
+				Type: "fasta",
+			},
+			content: []byte(">seq1\nACGT\n"),
+			wantErr: false,
+		},
+		{
+			name: "Store dataset with description",
+			metadata: sw.DatasetMetadata{
+				Name:        "Described Dataset",
+				Type:        "nexus",
+				Description: "A dataset with description",
+			},
+			content: []byte("#NEXUS\nBEGIN DATA;\nEND;"),
+			wantErr: false,
+		},
+		{
+			name: "Store empty content",
+			metadata: sw.DatasetMetadata{
+				Name: "Empty Dataset",
+				Type: "fasta",
+			},
+			content: []byte(""),
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dataset := sw.NewBaseDataset(tt.metadata, tt.content)
+			err := tracker.Store(dataset)
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Store() error = %v, wantErr %v", err, tt.wantErr)
+			}
+
+			if !tt.wantErr {
+				// Verify dataset can be retrieved
+				retrieved, err := tracker.Get(dataset.GetId())
+				if err != nil {
+					t.Errorf("Failed to retrieve stored dataset: %v", err)
+				}
+				if retrieved.GetId() != dataset.GetId() {
+					t.Errorf("Retrieved ID = %v, want %v", retrieved.GetId(), dataset.GetId())
+				}
+			}
+		})
+	}
+}
