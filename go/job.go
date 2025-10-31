@@ -11,12 +11,21 @@ import (
 type JobStatusValue string
 
 const (
-	JobStatusPending   JobStatusValue = "pending"
-	JobStatusRunning   JobStatusValue = "running"
-	JobStatusComplete  JobStatusValue = "complete"
-	JobStatusFailed    JobStatusValue = "failed"
+	JobStatusPending  JobStatusValue = "pending"
+	JobStatusRunning  JobStatusValue = "running"
+	JobStatusComplete JobStatusValue = "complete"
+	JobStatusFailed   JobStatusValue = "failed"
+	// JobStatusCancelled is the status for a cancelled job
 	JobStatusCancelled JobStatusValue = "cancelled"
 )
+
+// JobInfo holds raw data for a job retrieved from the database.
+type JobInfo struct {
+	ID             string
+	SchedulerJobID string
+	MethodType     HyPhyMethodType
+	Status         JobStatusValue
+}
 
 // JobInterface defines the core job operations
 type JobInterface interface {

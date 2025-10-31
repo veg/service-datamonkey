@@ -81,46 +81,42 @@ Configuration is in `.golangci.yml`.
 
 ## Testing
 
-### Run All Unit Tests
+For comprehensive testing instructions, including unit tests, integration tests, and API testing, see [TESTING.md](./TESTING.md).
+
+### Quick Reference
 
 ```bash
+# Run unit tests
 make test
-# Or directly:
-go test ./go/tests/... -v
-```
 
-### Run with Coverage
-
-```bash
-# Using Makefile (recommended - includes filtered report)
+# Run tests with coverage report
 make test-coverage
 
-# Or manually:
-go test -v -race -coverprofile=coverage.out -covermode=atomic -coverpkg=./go ./go/tests/...
+# Run API integration tests (requires running service)
+make api-tests
 
-# View coverage report
-go tool cover -func=coverage.out
+# Run specific test file or test function
+go test ./go/tests/job_tracker_test.go -v
+go test ./go/tests/... -run TestSQLiteJobTracker -v
 
-# View in browser
+# Run integration tests with external dependencies
+RUN_INTEGRATION_TESTS=true go test ./go/tests/... -v
+```
+
+### Coverage Reports
+
+```bash
+# Generate coverage report
+make test-coverage
+
+# View coverage in browser
 go tool cover -html=coverage.out
 
 # Filtered coverage (core infrastructure only)
 ./bin/filter-coverage.sh
 ```
 
-### Run Specific Test
-
-```bash
-go test ./go/tests/job_tracker_test.go -v
-go test ./go/tests/... -run TestSQLiteJobTracker -v
-```
-
-### Run Integration Tests
-
-```bash
-# Requires Redis, Slurm, etc.
-RUN_INTEGRATION_TESTS=true go test ./go/tests/... -v
-```
+For detailed information on testing strategies, test data, and manual testing procedures, please refer to [TESTING.md](./TESTING.md).
 
 ## Integration Testing
 

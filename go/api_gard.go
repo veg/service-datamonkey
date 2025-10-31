@@ -111,14 +111,22 @@ func (api *GARDAPI) GetGARDJob(c *gin.Context) {
 		return
 	}
 
-	// Parse the raw JSON results into GardResult
+	// Parse the raw JSON results
 	resultMap := result.(map[string]interface{})
 
-	// Get the job ID from the result map
-	jobId := resultMap["jobId"].(string)
+	// Get the job ID from the result map (note: key is "jobId" not "job_id")
+	jobId, ok := resultMap["jobId"].(string)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid result format - missing jobId"})
+		return
+	}
 
 	// Get the raw results
-	rawResults := resultMap["results"].(json.RawMessage)
+	rawResults, ok := resultMap["results"].(json.RawMessage)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid results format"})
+		return
+	}
 
 	// Format the results using the shared utility function
 	formattedResult, err := api.formatGARDJobResults(jobId, rawResults)
@@ -155,6 +163,12 @@ func (api *GARDAPI) GetGARDJobById(c *gin.Context) {
 			c.JSON(http.StatusNotFound, gin.H{
 				"error":  "Job not found",
 				"status": 404,
+				"job_id": jobId,
+			})
+		} else if err.Error() == "job failed" {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error":  "Job execution failed",
+				"status": 500,
 				"job_id": jobId,
 			})
 		} else if err.Error() == "job is not complete" {
@@ -237,6 +251,8 @@ func (api *GARDAPI) StartGARDJob(c *gin.Context) {
 	if err != nil {
 		if err.Error() == "authentication token required" {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		} else if strings.Contains(err.Error(), "parameter is required") || strings.Contains(err.Error(), "invalid") {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		} else {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		}

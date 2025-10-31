@@ -16,7 +16,7 @@ This is a REST service intended to drive Datamonkey3 server-side. It is designed
 
 ## Development
 
-**For detailed development instructions, see [DEVELOPMENT.md](DEVELOPMENT.md).**
+**For detailed development instructions, see [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).**
 
 ### Quick Start
 
@@ -40,13 +40,44 @@ make fmt
 make check
 ```
 
-### Docker & Deployment
+### Testing
+
+For comprehensive testing instructions, see [TESTING.md](docs/TESTING.md).
+
+#### Quick Start
+
+```bash
+# Start the service in SLURM CLI mode (recommended for testing)
+make start-slurm-cli
+
+# Run all API tests (token policy, priority1, and job lifecycle)
+make api-tests
+```
+
+#### Individual Test Suites
+
+You can also run test suites individually:
+
+```bash
+# Run token policy tests (fast)
+make test
+
+# Run tests with coverage report
+make test-coverage
+
+# Run API integration tests (requires running service)
+make api-tests
+```
+
+For more details on testing, including manual testing procedures, see [TESTING.md](docs/TESTING.md).
+
+## Docker & Deployment
 
  - `make build` - Build the service-datamonkey container
  - `make start` - Start the entire datamonkey 3 backend using docker compose
  - `make stop` - Stop the datamonkey 3 backend containers
  - `make start-slurm-rest` - Start with service-slurm in REST mode
- - `make start-slurm-cli` - Start with service-slurm in CLI mode
+ - `make start-slurm-cli` - Start with service-slurm in CLI mode (recommended for testing)
  - `make test-slurm-modes` - Test both REST and CLI modes
 
 ### OpenAPI Code Generation

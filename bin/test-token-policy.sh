@@ -370,6 +370,56 @@ rm -f /tmp/user_a_headers.txt /tmp/user_b_headers.txt
 
 echo ""
 echo "========================================"
+echo "Test 5: Invalid/Malformed Token Tests"
+echo "========================================"
+
+# Test 5.1: Invalid token format
+TOTAL=$((TOTAL + 1))
+response=$(curl -s -w "\n%{http_code}" -X GET "$BASE_URL/api/v1/datasets" \
+    -H "Authorization: Bearer invalid-token-12345" 2>/dev/null || echo -e "\n000")
+
+http_code=$(echo "$response" | tail -n1)
+
+if [ "$http_code" = "401" ]; then
+    echo -e "${GREEN}✅ PASS${NC} - Invalid token rejected (401)"
+    PASSED=$((PASSED + 1))
+else
+    echo -e "${RED}❌ FAIL${NC} - Invalid token not rejected (expected 401, got: $http_code)"
+    FAILED=$((FAILED + 1))
+fi
+
+# Test 5.2: Malformed Authorization header
+TOTAL=$((TOTAL + 1))
+response=$(curl -s -w "\n%{http_code}" -X GET "$BASE_URL/api/v1/datasets" \
+    -H "Authorization: NotBearer sometoken" 2>/dev/null || echo -e "\n000")
+
+http_code=$(echo "$response" | tail -n1)
+
+if [ "$http_code" = "401" ]; then
+    echo -e "${GREEN}✅ PASS${NC} - Malformed auth header rejected (401)"
+    PASSED=$((PASSED + 1))
+else
+    echo -e "${RED}❌ FAIL${NC} - Malformed auth header not rejected (expected 401, got: $http_code)"
+    FAILED=$((FAILED + 1))
+fi
+
+# Test 5.3: Empty token
+TOTAL=$((TOTAL + 1))
+response=$(curl -s -w "\n%{http_code}" -X GET "$BASE_URL/api/v1/datasets" \
+    -H "Authorization: Bearer " 2>/dev/null || echo -e "\n000")
+
+http_code=$(echo "$response" | tail -n1)
+
+if [ "$http_code" = "401" ]; then
+    echo -e "${GREEN}✅ PASS${NC} - Empty token rejected (401)"
+    PASSED=$((PASSED + 1))
+else
+    echo -e "${RED}❌ FAIL${NC} - Empty token not rejected (expected 401, got: $http_code)"
+    FAILED=$((FAILED + 1))
+fi
+
+echo ""
+echo "========================================"
 echo "📊 Test Results Summary"
 echo "========================================"
 echo "Total Tests: $TOTAL"

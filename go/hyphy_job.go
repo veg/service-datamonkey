@@ -8,7 +8,9 @@ import (
 // HyPhyJob represents a HyPhy analysis job
 type HyPhyJob struct {
 	*BaseJob
-	Request interface{} // FelRequest or BustedRequest
+	Request        interface{}    `json:"-"`
+	SchedulerJobID string         `json:"scheduler_job_id,omitempty"`
+	Status         JobStatusValue `json:"status,omitempty"`
 }
 
 // NewHyPhyJob creates a new HyPhy job instance

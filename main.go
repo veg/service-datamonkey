@@ -38,7 +38,7 @@ func getEnvWithFatal(key string) string {
 	return value
 }
 
-// initUnifiedDB initializes the unified database
+// initUnifiedDB initializes the unified database and enables WAL mode
 func initUnifiedDB() *sw.UnifiedDB {
 	dbPath := getEnvWithDefault("DATAMONKEY_DB_PATH", "/data/stores/datamonkey.db")
 	log.Printf("Initializing unified database at: %s", dbPath)
@@ -55,20 +55,12 @@ func initUnifiedDB() *sw.UnifiedDB {
 		log.Fatalf("Failed to initialize unified database: %v", err)
 	}
 
+	// Enable WAL mode for better concurrency
+	if _, err := db.GetDB().Exec("PRAGMA journal_mode=WAL;"); err != nil {
+		log.Fatalf("Failed to enable WAL mode: %v", err)
+	}
+
 	return db
-}
-
-// initTrackers initializes all trackers using the unified database
-func initTrackers(db *sw.UnifiedDB) (sw.DatasetTracker, sw.JobTracker, sw.SessionTracker, sw.ConversationTracker) {
-	dataDir := getEnvWithDefault("DATASET_LOCATION", "/data/uploads")
-
-	datasetTracker := sw.NewSQLiteDatasetTracker(db.GetDB(), dataDir)
-	jobTracker := sw.NewSQLiteJobTracker(db.GetDB())
-	sessionTracker := sw.NewSQLiteSessionTracker(db.GetDB())
-	conversationTracker := sw.NewSQLiteConversationTracker(db.GetDB())
-
-	log.Println("All trackers initialized with unified database")
-	return datasetTracker, jobTracker, sessionTracker, conversationTracker
 }
 
 // initSlurmRestConfig initializes and returns Slurm REST configuration
@@ -265,11 +257,31 @@ func main() {
 	db := initUnifiedDB()
 	defer db.Close()
 
-	// Initialize all trackers
-	datasetTracker, jobTracker, sessionTracker, conversationTracker := initTrackers(db)
+	// Initialize trackers
+	dataDir := getEnvWithDefault("DATASET_LOCATION", "/data/uploads")
+	datasetTracker := sw.NewSQLiteDatasetTracker(db.GetDB(), dataDir)
+	jobTracker := sw.NewSQLiteJobTracker(db.GetDB())
+	sessionTracker := sw.NewSQLiteSessionTracker(db.GetDB())
+	conversationTracker := sw.NewSQLiteConversationTracker(db.GetDB())
 
-	// Initialize scheduler and session service
+	// Initialize scheduler
 	scheduler := initScheduler(jobTracker)
+
+	// Create the method factory
+	hyphyPath := getEnvWithDefault("HYPHY_PATH", "hyphy")
+	basePath := getEnvWithDefault("HYPHY_BASE_PATH", "/data/uploads")
+	methodFactory := func(methodType sw.HyPhyMethodType) (sw.ComputeMethodInterface, error) {
+		return sw.NewHyPhyMethod(nil, basePath, hyphyPath, methodType, ""), nil
+	}
+
+	// Initialize and start the job status monitor
+	// This is used to update the job status in the database
+	monitorInterval := 30 * time.Second // Check job statuses every 30 seconds
+	jobMonitor := sw.NewJobStatusMonitor(jobTracker, scheduler, methodFactory, monitorInterval)
+	jobMonitor.Start()
+	defer jobMonitor.Stop()
+
+	// Initialize session service
 	sessionService := initSessionService(sessionTracker)
 
 	// Ensure proper shutdown of components

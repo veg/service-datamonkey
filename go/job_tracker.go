@@ -46,6 +46,9 @@ type JobTracker interface {
 
 	// GetJobMetadata retrieves metadata for a specific job
 	GetJobMetadata(jobID string) (alignmentID string, treeID string, methodType string, status string, err error)
+
+	// ListJobsByStatus retrieves all jobs that have one of the given statuses
+	ListJobsByStatus(statuses []JobStatusValue) ([]JobInfo, error)
 }
 
 // SQLiteJobTracker implements JobTracker using the unified SQLite database
@@ -399,6 +402,49 @@ func (t *SQLiteJobTracker) GetJobMetadata(jobID string) (string, string, string,
 	}
 
 	return alignmentIDStr, treeIDStr, methodTypeStr, statusStr, nil
+}
+
+// ListJobsByStatus retrieves all jobs that have one of the given statuses
+func (t *SQLiteJobTracker) ListJobsByStatus(statuses []JobStatusValue) ([]JobInfo, error) {
+	if len(statuses) == 0 {
+		return []JobInfo{}, nil
+	}
+
+	// Build the query with placeholders for the statuses
+	query := `SELECT job_id, scheduler_job_id, method_type, status FROM jobs WHERE status IN (?` + strings.Repeat(",?", len(statuses)-1) + `)`
+
+	// Convert statuses to a slice of interfaces for the query
+	args := make([]interface{}, len(statuses))
+	for i, s := range statuses {
+		args[i] = s
+	}
+
+	rows, err := t.db.Query(query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list jobs by status: %v", err)
+	}
+	defer rows.Close()
+
+	var jobs []JobInfo
+	for rows.Next() {
+		var job JobInfo
+		var methodType, status sql.NullString
+
+		if err := rows.Scan(&job.ID, &job.SchedulerJobID, &methodType, &status); err != nil {
+			return nil, fmt.Errorf("failed to scan job row: %v", err)
+		}
+
+		if methodType.Valid {
+			job.MethodType = HyPhyMethodType(methodType.String)
+		}
+		if status.Valid {
+			job.Status = JobStatusValue(status.String)
+		}
+
+		jobs = append(jobs, job)
+	}
+
+	return jobs, nil
 }
 
 // Ensure SQLiteJobTracker implements JobTracker interface

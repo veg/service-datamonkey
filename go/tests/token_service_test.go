@@ -517,6 +517,11 @@ func (m *mockJobTracker) ListJobsWithFilters(filters map[string]interface{}) ([]
 	return nil, nil
 }
 
+func (m *mockJobTracker) ListJobsByStatus(statuses []sw.JobStatusValue) ([]sw.JobInfo, error) {
+	// This is a mock implementation and can be empty for these tests.
+	return []sw.JobInfo{}, nil
+}
+
 // TestCheckJobAccess tests job access verification
 func TestCheckJobAccess(t *testing.T) {
 	keyPath, cleanup := setupTestKey(t)

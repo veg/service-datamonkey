@@ -94,3 +94,7 @@ func (m *MockJobTracker) ListJobsWithFilters(filters map[string]interface{}) ([]
 func (m *MockJobTracker) GetJobMetadata(jobID string) (string, string, string, string, error) {
 	return "alignment-id", "tree-id", "fel", "completed", nil
 }
+
+func (m *MockJobTracker) ListJobsByStatus(statuses []sw.JobStatusValue) ([]sw.JobInfo, error) {
+	return []sw.JobInfo{}, nil
+}

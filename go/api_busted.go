@@ -113,7 +113,7 @@ func (api *BUSTEDAPI) GetBUSTEDJob(c *gin.Context) {
 	// Parse the raw JSON results into BustedResult
 	resultMap := result.(map[string]interface{})
 
-	// Get the job ID from the result map
+	// Get the job ID from the result map (note: key is "jobId" not "job_id")
 	jobId := resultMap["jobId"].(string)
 
 	// Get the raw results
@@ -154,6 +154,12 @@ func (api *BUSTEDAPI) GetBUSTEDJobById(c *gin.Context) {
 			c.JSON(http.StatusNotFound, gin.H{
 				"error":  "Job not found",
 				"status": 404,
+				"job_id": jobId,
+			})
+		} else if err.Error() == "job failed" {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error":  "Job execution failed",
+				"status": 500,
 				"job_id": jobId,
 			})
 		} else if err.Error() == "job is not complete" {
@@ -249,6 +255,8 @@ func (api *BUSTEDAPI) StartBUSTEDJob(c *gin.Context) {
 	if err != nil {
 		if err.Error() == "authentication token required" {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		} else if strings.Contains(err.Error(), "parameter is required") || strings.Contains(err.Error(), "invalid") {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		} else {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		}

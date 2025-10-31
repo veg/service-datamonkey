@@ -86,10 +86,17 @@ func (api *HyPhyBaseAPI) HandleGetJob(c *gin.Context, request HyPhyRequest, meth
 	// Get job status
 	status, err := job.GetStatus()
 	if err != nil {
+		// Check if this is a "not found" error
+		if strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "does not exist") {
+			return nil, fmt.Errorf("job not found")
+		}
 		return nil, fmt.Errorf("failed to get job status: %v", err)
 	}
 
-	// If job is not complete, return error
+	// Handle different job statuses
+	if status == JobStatusFailed {
+		return nil, fmt.Errorf("job failed")
+	}
 	if status != JobStatusComplete {
 		return nil, fmt.Errorf("job is not complete")
 	}
@@ -113,10 +120,17 @@ func (api *HyPhyBaseAPI) HandleGetJobById(jobId string, methodType HyPhyMethodTy
 	// Get job status
 	status, err := job.GetStatus()
 	if err != nil {
+		// Check if this is a "not found" error
+		if strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "does not exist") {
+			return nil, fmt.Errorf("job not found")
+		}
 		return nil, fmt.Errorf("failed to get job status: %v", err)
 	}
 
-	// If job is not complete, return error
+	// Handle different job statuses
+	if status == JobStatusFailed {
+		return nil, fmt.Errorf("job failed")
+	}
 	if status != JobStatusComplete {
 		return nil, fmt.Errorf("job is not complete")
 	}
@@ -127,8 +141,14 @@ func (api *HyPhyBaseAPI) HandleGetJobById(jobId string, methodType HyPhyMethodTy
 
 // HandleStartJob handles starting a new job for any HyPhy method
 func (api *HyPhyBaseAPI) HandleStartJob(c *gin.Context, request HyPhyRequest, methodType HyPhyMethodType) (interface{}, error) {
+	// Validate required parameters
+	alignmentID := request.GetAlignment()
+	if alignmentID == "" && methodType != MethodSLATKIN {
+		return nil, fmt.Errorf("alignment parameter is required")
+	}
+
 	// Get dataset from tracker
-	dataset, err := api.DatasetTracker.Get(request.GetAlignment())
+	dataset, err := api.DatasetTracker.Get(alignmentID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get dataset: %v", err)
 	}
@@ -170,7 +190,7 @@ func (api *HyPhyBaseAPI) HandleStartJob(c *gin.Context, request HyPhyRequest, me
 	if err == nil {
 		// Job exists, return its status
 		return map[string]interface{}{
-			"jobId":  job.GetId(),
+			"job_id": job.GetId(),
 			"status": status,
 		}, nil
 	}
@@ -209,7 +229,7 @@ func (api *HyPhyBaseAPI) HandleStartJob(c *gin.Context, request HyPhyRequest, me
 
 	// Return job ID and initial status
 	return map[string]interface{}{
-		"jobId":  job.GetId(),
+		"job_id": job.GetId(),
 		"status": JobStatusPending,
 	}, nil
 }

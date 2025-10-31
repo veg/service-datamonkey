@@ -266,6 +266,15 @@ func (m *MockJobTrackerWithInspection) GetJobMetadata(jobID string) (string, str
 	return "alignment-id", "tree-id", "fel", "completed", nil
 }
 
+func (m *MockJobTrackerWithInspection) ListJobsByStatus(statuses []sw.JobStatusValue) ([]sw.JobInfo, error) {
+	// This is a mock, so we'll just return all jobs regardless of status
+	jobs := make([]sw.JobInfo, 0, len(m.mappings))
+	for jobID := range m.mappings {
+		jobs = append(jobs, sw.JobInfo{ID: jobID})
+	}
+	return jobs, nil
+}
+
 // MockMethod is a mock implementation for testing
 type MockMethod struct {
 	command string

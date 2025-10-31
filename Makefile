@@ -32,6 +32,9 @@ default:
 	@echo "$(C_BLUE)    make test-coverage$(C_NONE)"
 	@echo "      runs tests with coverage report"
 	@echo ""
+	@echo "$(C_BLUE)    make api-tests$(C_NONE)"
+	@echo "      runs API integration tests (requires running service)"
+	@echo ""
 	@echo "$(C_BLUE)    make fmt$(C_NONE)"
 	@echo "      formats all Go code"
 	@echo ""
@@ -130,6 +133,13 @@ test-coverage:
 	@echo ""
 	@echo "Coverage report (filtered):"
 	@$(BIN_DIR)/filter-coverage.sh
+
+.PHONY: api-tests
+api-tests:
+	@echo "Running API integration tests..."
+	@echo "Note: Make sure the service is running with 'make start' or 'make start-slurm-cli'"
+	@echo ""
+	@./bin/run-manual-tests.sh
 
 # Code formatting and linting
 .PHONY: fmt
