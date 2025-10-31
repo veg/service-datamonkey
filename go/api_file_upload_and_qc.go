@@ -219,17 +219,8 @@ func (api *FileUploadAndQCAPI) PostDataset(c *gin.Context) {
 		Updated:     time.Now(),
 	}, content)
 
-	// Now use the dataset ID (content hash) as the filename
-	filename := fmt.Sprintf("%s/%s", api.datasetTracker.GetDatasetDir(), dataset.GetId())
-
-	// Write the file to disk
-	err = os.WriteFile(filename, content, 0644)
-	if err != nil {
-		c.JSON(500, gin.H{"error": err.Error()})
-		return
-	}
-
-	// Store the dataset in the tracker with owner
+	// Store the dataset in the tracker with owner FIRST
+	// This updates the dataset ID to be user-specific
 	if subject != "" {
 		if err := api.datasetTracker.StoreWithUser(dataset, subject); err != nil {
 			c.JSON(500, gin.H{"error": fmt.Sprintf("Failed to store dataset: %v", err)})
@@ -241,6 +232,17 @@ func (api *FileUploadAndQCAPI) PostDataset(c *gin.Context) {
 			c.JSON(500, gin.H{"error": fmt.Sprintf("Failed to store dataset: %v", err)})
 			return
 		}
+	}
+
+	// Now use the dataset ID (user-specific hash) as the filename
+	// IMPORTANT: This must happen AFTER StoreWithUser which updates the ID
+	filename := fmt.Sprintf("%s/%s", api.datasetTracker.GetDatasetDir(), dataset.GetId())
+
+	// Write the file to disk with the correct user-specific ID
+	err = os.WriteFile(filename, content, 0644)
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
 	}
 
 	c.JSON(201, gin.H{"status": "File uploaded successfully", "file": dataset.GetId()})
@@ -278,16 +280,27 @@ func (api *FileUploadAndQCAPI) GetDatasetById(c *gin.Context) {
 		return
 	}
 
-	// Return dataset metadata
+	// Return dataset metadata and optionally content
 	metadata := dataset.GetMetadata()
-	c.JSON(200, gin.H{
+	response := gin.H{
 		"id":          dataset.GetId(),
 		"name":        metadata.Name,
 		"type":        metadata.Type,
 		"description": metadata.Description,
 		"created":     metadata.Created,
 		"updated":     metadata.Updated,
-	})
+	}
+
+	// Include content if requested via query parameter
+	if c.Query("include_content") == "true" {
+		datasetPath := fmt.Sprintf("%s/%s", api.datasetTracker.GetDatasetDir(), dataset.GetId())
+		content, err := os.ReadFile(datasetPath)
+		if err == nil {
+			response["content"] = string(content)
+		}
+	}
+
+	c.JSON(200, response)
 }
 
 // DeleteDataset deletes a dataset by ID
