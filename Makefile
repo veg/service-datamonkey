@@ -136,8 +136,8 @@ test-coverage:
 
 .PHONY: api-tests
 api-tests:
-	@echo "Running API integration tests..."
-	@echo "Note: Make sure the service is running with 'make start' or 'make start-slurm-cli'"
+	@echo "${BLUE}=== Running API Integration Tests ===${NC}"
+	@echo "${YELLOW}Note: Make sure the service is running with 'make start-slurm-cli'${NC}"
 	@echo ""
 	@./bin/run-manual-tests.sh
 

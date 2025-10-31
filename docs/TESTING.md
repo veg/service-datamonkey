@@ -73,7 +73,7 @@ RUN_INTEGRATION_TESTS=true go test ./go/tests/... -v
 
 ## Integration Testing
 
-Integration tests verify that different components work together correctly. These tests may interact with external services like Slurm or Redis.
+Integration tests verify that different components work together correctly. These tests may interact with external services like Slurm.
 
 ### Testing Modes
 
