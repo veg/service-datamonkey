@@ -208,6 +208,9 @@ func (c *GenkitClient) ChatFlow() (any, error) {
 	// Initialize all HyPhy method tools
 	hyphyTools := NewHyPhyGenkitTools(c.Genkit)
 
+	// Initialize Vega tool
+	vegaTool := NewVegaTools(c.Genkit)
+
 	// Define a tool for listing datasets
 	listDatasetsTool := genkit.DefineTool[ListDatasetsInput, ListDatasetsOutput](c.Genkit, "listDatasets",
 		"List all available datasets for analysis",
@@ -711,6 +714,7 @@ func (c *GenkitClient) ChatFlow() (any, error) {
 				hyphyTools.RelaxTool,
 				hyphyTools.SlacTool,
 				hyphyTools.SlatkinTool,
+				vegaTool,
 			),
 		)
 

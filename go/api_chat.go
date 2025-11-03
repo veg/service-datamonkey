@@ -27,47 +27,6 @@ func NewChatAPI(genkitClient *GenkitClient, tracker ConversationTracker, session
 	}
 }
 
-// validateToken validates the user token and returns the token string
-func (api *ChatAPI) validateToken(c *gin.Context) (string, error) {
-	// Check if token service is available
-	if api.sessionService == nil {
-		// If no token service, just return the user_token header without validation
-		userToken := c.GetHeader("user_token")
-		if userToken == "" {
-			return "", fmt.Errorf("user token is required")
-		}
-		return userToken, nil
-	}
-
-	// Try to get token from Authorization header first
-	authHeader := c.GetHeader("Authorization")
-	userToken := ""
-
-	if authHeader != "" {
-		// Extract token from Bearer format
-		parts := strings.Split(authHeader, " ")
-		if len(parts) == 2 && parts[0] == "Bearer" {
-			userToken = parts[1]
-		}
-	}
-
-	// If not in Authorization header, try user_token header
-	if userToken == "" {
-		userToken = c.GetHeader("user_token")
-	}
-
-	// Validate the token
-	if userToken != "" {
-		_, err := api.sessionService.ValidateToken(userToken)
-		if err != nil {
-			return "", fmt.Errorf("invalid token: %v", err)
-		}
-		return userToken, nil
-	}
-
-	return "", fmt.Errorf("user token is required")
-}
-
 // CreateConversation creates a new conversation
 func (api *ChatAPI) CreateConversation(c *gin.Context) {
 	// Use GetOrCreateSubject to handle token validation or session creation
