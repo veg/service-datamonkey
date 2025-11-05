@@ -79,10 +79,41 @@ if [ -z "$USER_TOKEN" ]; then
     echo ""
 fi
 
-# Test 2: Start New Conversation
-echo "Test 2: Start New Conversation"
-echo "-------------------------------"
+# Test 2: Create New Conversation
+echo "Test 2: Create New Conversation"
+echo "--------------------------------"
 response=$(curl -s -w "\n%{http_code}" -X POST "$BASE_URL/api/v1/chat" \
+  -H "Content-Type: application/json" \
+  -H "user_token: $USER_TOKEN" \
+  -d '{
+    "title": "Test Conversation"
+  }')
+
+http_code=$(echo "$response" | tail -n1)
+body=$(echo "$response" | head -n-1)
+
+if [ "$http_code" = "201" ]; then
+    conversation_id=$(echo "$body" | jq -r '.id // empty')
+    
+    if [ -n "$conversation_id" ]; then
+        print_result "Conversation created" "PASS"
+        echo "   Conversation ID: $conversation_id"
+    else
+        print_result "Conversation created" "FAIL" "Missing conversation ID"
+        echo "   Response: $body"
+        exit 1
+    fi
+else
+    print_result "Conversation created" "FAIL" "HTTP $http_code"
+    echo "   Response: $body"
+    exit 1
+fi
+echo ""
+
+# Test 3: Send First Message
+echo "Test 3: Send First Message"
+echo "---------------------------"
+response=$(curl -s -w "\n%{http_code}" -X POST "$BASE_URL/api/v1/chat/$conversation_id/messages" \
   -H "Content-Type: application/json" \
   -H "user_token: $USER_TOKEN" \
   -d '{
@@ -93,64 +124,96 @@ http_code=$(echo "$response" | tail -n1)
 body=$(echo "$response" | head -n-1)
 
 if [ "$http_code" = "200" ]; then
-    conversation_id=$(echo "$body" | jq -r '.conversation_id // empty')
-    response_text=$(echo "$body" | jq -r '.response // empty')
+    response_text=$(echo "$body" | jq -r '.message.content // empty')
+    response_role=$(echo "$body" | jq -r '.message.role // empty')
     
-    if [ -n "$conversation_id" ] && [ -n "$response_text" ]; then
-        print_result "New conversation created" "PASS"
-        echo "   Conversation ID: $conversation_id"
+    if [ "$response_role" = "assistant" ] && [ -n "$response_text" ]; then
+        print_result "First message sent and response received" "PASS"
         echo "   Response preview: ${response_text:0:100}..."
     else
-        print_result "New conversation created" "FAIL" "Missing conversation_id or response"
+        print_result "First message sent and response received" "FAIL" "No assistant response"
         echo "   Response: $body"
         exit 1
     fi
 else
-    print_result "New conversation created" "FAIL" "HTTP $http_code"
+    print_result "First message sent and response received" "FAIL" "HTTP $http_code"
     echo "   Response: $body"
     exit 1
 fi
 echo ""
 
-# Test 3: Continue Conversation
-echo "Test 3: Continue Existing Conversation"
-echo "---------------------------------------"
-response=$(curl -s -w "\n%{http_code}" -X POST "$BASE_URL/api/v1/chat" \
+# Test 4: Send Follow-up Message (Tests Conversation History)
+echo "Test 4: Send Follow-up Message (Tests Conversation History)"
+echo "------------------------------------------------------------"
+# First, establish context with a specific piece of information
+response=$(curl -s -w "\n%{http_code}" -X POST "$BASE_URL/api/v1/chat/$conversation_id/messages" \
   -H "Content-Type: application/json" \
   -H "user_token: $USER_TOKEN" \
-  -d "{
-    \"conversation_id\": \"$conversation_id\",
-    \"message\": \"What methods are available for detecting positive selection?\"
-  }")
+  -d '{
+    "message": "My favorite analysis method is FEL. Can you tell me what it does?"
+  }')
 
 http_code=$(echo "$response" | tail -n1)
 body=$(echo "$response" | head -n-1)
 
 if [ "$http_code" = "200" ]; then
-    same_conv_id=$(echo "$body" | jq -r '.conversation_id // empty')
-    response_text=$(echo "$body" | jq -r '.response // empty')
+    response_text=$(echo "$body" | jq -r '.message.content // empty')
     
-    if [ "$same_conv_id" = "$conversation_id" ] && [ -n "$response_text" ]; then
-        print_result "Conversation continued successfully" "PASS"
-        echo "   Same conversation ID: $same_conv_id"
-        echo "   Response preview: ${response_text:0:100}..."
+    if [ -n "$response_text" ]; then
+        echo "   ✓ Context message sent successfully"
     else
-        print_result "Conversation continued successfully" "FAIL" "Conversation ID mismatch or no response"
-        echo "   Expected: $conversation_id"
-        echo "   Got: $same_conv_id"
+        print_result "Follow-up message sent successfully" "FAIL" "No response to context message"
+        echo "   Response: $body"
         exit 1
     fi
 else
-    print_result "Conversation continued successfully" "FAIL" "HTTP $http_code"
+    print_result "Follow-up message sent successfully" "FAIL" "HTTP $http_code on context message"
+    echo "   Response: $body"
+    exit 1
+fi
+
+# Now send a follow-up that requires remembering the previous context
+sleep 1
+response=$(curl -s -w "\n%{http_code}" -X POST "$BASE_URL/api/v1/chat/$conversation_id/messages" \
+  -H "Content-Type: application/json" \
+  -H "user_token: $USER_TOKEN" \
+  -d '{
+    "message": "What was my favorite method that I just mentioned?"
+  }')
+
+http_code=$(echo "$response" | tail -n1)
+body=$(echo "$response" | head -n-1)
+
+if [ "$http_code" = "200" ]; then
+    response_text=$(echo "$body" | jq -r '.message.content // empty')
+    
+    if [ -n "$response_text" ]; then
+        # Check if the response mentions FEL (case-insensitive)
+        if echo "$response_text" | grep -qi "fel"; then
+            print_result "Follow-up message sent successfully" "PASS"
+            echo "   ✓ AI correctly remembered context from previous message"
+            echo "   Response preview: ${response_text:0:100}..."
+        else
+            print_result "Follow-up message sent successfully" "FAIL" "AI did not remember conversation context"
+            echo "   Expected response to mention 'FEL' but got: ${response_text:0:150}..."
+            exit 1
+        fi
+    else
+        print_result "Follow-up message sent successfully" "FAIL" "No response"
+        echo "   Response: $body"
+        exit 1
+    fi
+else
+    print_result "Follow-up message sent successfully" "FAIL" "HTTP $http_code"
     echo "   Response: $body"
     exit 1
 fi
 echo ""
 
-# Test 4: List Conversations
-echo "Test 4: List User Conversations"
+# Test 5: List Conversations
+echo "Test 5: List User Conversations"
 echo "--------------------------------"
-response=$(curl -s -w "\n%{http_code}" -X GET "$BASE_URL/api/v1/conversations" \
+response=$(curl -s -w "\n%{http_code}" -X GET "$BASE_URL/api/v1/chat" \
   -H "user_token: $USER_TOKEN")
 
 http_code=$(echo "$response" | tail -n1)
@@ -176,10 +239,10 @@ else
 fi
 echo ""
 
-# Test 5: Get Conversation History
-echo "Test 5: Get Conversation History"
+# Test 6: Get Conversation Details
+echo "Test 6: Get Conversation Details"
 echo "---------------------------------"
-response=$(curl -s -w "\n%{http_code}" -X GET "$BASE_URL/api/v1/conversations/$conversation_id" \
+response=$(curl -s -w "\n%{http_code}" -X GET "$BASE_URL/api/v1/chat/$conversation_id" \
   -H "user_token: $USER_TOKEN")
 
 http_code=$(echo "$response" | tail -n1)
@@ -205,22 +268,49 @@ else
 fi
 echo ""
 
-# Test 6: Chat with Tool Usage (List Available Methods)
-echo "Test 6: Chat with Tool Usage"
-echo "-----------------------------"
-response=$(curl -s -w "\n%{http_code}" -X POST "$BASE_URL/api/v1/chat" \
-  -H "Content-Type: application/json" \
-  -H "user_token: $USER_TOKEN" \
-  -d "{
-    \"conversation_id\": \"$conversation_id\",
-    \"message\": \"Can you list all available HyPhy methods?\"
-  }")
+# Test 7: Get Conversation Messages
+echo "Test 7: Get Conversation Messages"
+echo "----------------------------------"
+response=$(curl -s -w "\n%{http_code}" -X GET "$BASE_URL/api/v1/chat/$conversation_id/messages" \
+  -H "user_token: $USER_TOKEN")
 
 http_code=$(echo "$response" | tail -n1)
 body=$(echo "$response" | head -n-1)
 
 if [ "$http_code" = "200" ]; then
-    response_text=$(echo "$body" | jq -r '.response // empty')
+    message_count=$(echo "$body" | jq -r '.messages | length')
+    
+    # Should have at least 4 messages (2 user + 2 assistant)
+    if [ "$message_count" -ge 4 ]; then
+        print_result "Conversation messages retrieved" "PASS"
+        echo "   Message count: $message_count"
+    else
+        print_result "Conversation messages retrieved" "FAIL" "Expected at least 4 messages, got $message_count"
+        echo "   Response: $body"
+        exit 1
+    fi
+else
+    print_result "Conversation messages retrieved" "FAIL" "HTTP $http_code"
+    echo "   Response: $body"
+    exit 1
+fi
+echo ""
+
+# Test 8: Chat with Tool Usage (List Available Methods)
+echo "Test 8: Chat with Tool Usage"
+echo "-----------------------------"
+response=$(curl -s -w "\n%{http_code}" -X POST "$BASE_URL/api/v1/chat/$conversation_id/messages" \
+  -H "Content-Type: application/json" \
+  -H "user_token: $USER_TOKEN" \
+  -d '{
+    "message": "Can you list all available HyPhy methods that I can use to start jobs?"
+  }')
+
+http_code=$(echo "$response" | tail -n1)
+body=$(echo "$response" | head -n-1)
+
+if [ "$http_code" = "200" ]; then
+    response_text=$(echo "$body" | jq -r '.message.content // empty')
     
     # Check if response mentions some common methods
     if echo "$response_text" | grep -qi "FEL\|SLAC\|MEME\|BUSTED"; then
@@ -237,10 +327,10 @@ else
 fi
 echo ""
 
-# Test 7: Invalid Conversation ID
-echo "Test 7: Access Invalid Conversation"
+# Test 9: Invalid Conversation ID
+echo "Test 9: Access Invalid Conversation"
 echo "------------------------------------"
-response=$(curl -s -w "\n%{http_code}" -X GET "$BASE_URL/api/v1/conversations/invalid-conv-id" \
+response=$(curl -s -w "\n%{http_code}" -X GET "$BASE_URL/api/v1/chat/invalid-conv-id" \
   -H "user_token: $USER_TOKEN")
 
 http_code=$(echo "$response" | tail -n1)
@@ -253,10 +343,10 @@ else
 fi
 echo ""
 
-# Test 8: Unauthorized Access (Wrong Token)
-echo "Test 8: Unauthorized Access Prevention"
-echo "---------------------------------------"
-response=$(curl -s -w "\n%{http_code}" -X GET "$BASE_URL/api/v1/conversations/$conversation_id" \
+# Test 10: Unauthorized Access (Wrong Token)
+echo "Test 10: Unauthorized Access Prevention"
+echo "----------------------------------------"
+response=$(curl -s -w "\n%{http_code}" -X GET "$BASE_URL/api/v1/chat/$conversation_id" \
   -H "user_token: wrong-token-12345")
 
 http_code=$(echo "$response" | tail -n1)
@@ -269,20 +359,20 @@ else
 fi
 echo ""
 
-# Test 9: Delete Conversation
-echo "Test 9: Delete Conversation"
-echo "----------------------------"
-response=$(curl -s -w "\n%{http_code}" -X DELETE "$BASE_URL/api/v1/conversations/$conversation_id" \
+# Test 11: Delete Conversation
+echo "Test 11: Delete Conversation"
+echo "-----------------------------"
+response=$(curl -s -w "\n%{http_code}" -X DELETE "$BASE_URL/api/v1/chat/$conversation_id" \
   -H "user_token: $USER_TOKEN")
 
 http_code=$(echo "$response" | tail -n1)
 
-if [ "$http_code" = "200" ] || [ "$http_code" = "204" ]; then
+if [ "$http_code" = "204" ]; then
     print_result "Conversation deleted successfully" "PASS"
     echo "   HTTP $http_code"
     
     # Verify it's really deleted
-    verify_response=$(curl -s -w "\n%{http_code}" -X GET "$BASE_URL/api/v1/conversations/$conversation_id" \
+    verify_response=$(curl -s -w "\n%{http_code}" -X GET "$BASE_URL/api/v1/chat/$conversation_id" \
       -H "user_token: $USER_TOKEN")
     verify_code=$(echo "$verify_response" | tail -n1)
     
@@ -293,7 +383,7 @@ if [ "$http_code" = "200" ] || [ "$http_code" = "204" ]; then
         print_result "Deleted conversation not accessible" "FAIL" "Still accessible after deletion: HTTP $verify_code"
     fi
 else
-    print_result "Conversation deleted successfully" "FAIL" "HTTP $http_code"
+    print_result "Conversation deleted successfully" "FAIL" "HTTP $http_code (expected 204)"
 fi
 echo ""
 

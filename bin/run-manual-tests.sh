@@ -7,6 +7,7 @@
 # 2. Priority 1 critical path tests
 # 3. Job lifecycle tests
 # 4. Chat lifecycle tests
+# 5. Visualization generation test (long-running, runs real job)
 
 set -e
 
@@ -174,12 +175,14 @@ case "$PRIORITY" in
         verify_test_files "$SCRIPT_DIR/test-token-policy.sh" \
                          "$SCRIPT_DIR/test-priority1.sh" \
                          "$SCRIPT_DIR/test-job-lifecycle.sh" \
-                         "$SCRIPT_DIR/test-chat-lifecycle.sh" || exit 1
+                         "$SCRIPT_DIR/test-chat-lifecycle.sh" \
+                         "$SCRIPT_DIR/test-visualization-generation.sh" || exit 1
         
         run_test "$SCRIPT_DIR/test-token-policy.sh" "Token Policy Tests"
         run_test "$SCRIPT_DIR/test-priority1.sh" "Priority 1 Critical Path Tests"
         run_test "$SCRIPT_DIR/test-job-lifecycle.sh" "Job Lifecycle Tests"
         run_test "$SCRIPT_DIR/test-chat-lifecycle.sh" "Chat Lifecycle Tests"
+        run_test "$SCRIPT_DIR/test-visualization-generation.sh" "Visualization Generation Test"
         ;;
     viz)
         echo -e "${BLUE}Running visualization generation test (long-running)...${NC}"

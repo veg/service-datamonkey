@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"sync"
 
 	"github.com/firebase/genkit/go/genkit"
 	"github.com/firebase/genkit/go/plugins/googlegenai"
@@ -72,10 +73,12 @@ func GetModelConfig() ModelConfig {
 
 // GenkitClient represents a client for interacting with AI models using Genkit
 type GenkitClient struct {
-	Config  ModelConfig
-	Ctx     context.Context
-	Genkit  *genkit.Genkit
-	BaseURL string // Base URL for API endpoints used by tools
+	Config       ModelConfig
+	Ctx          context.Context
+	Genkit       *genkit.Genkit
+	BaseURL      string      // Base URL for API endpoints used by tools
+	cachedFlow   interface{} // Cached chat flow to avoid re-registration
+	flowInitOnce sync.Once   // Ensures flow is initialized only once
 }
 
 // InitGenkit initializes the Genkit client with the provided configuration

@@ -13,10 +13,10 @@ import (
 
 // MakeVegaSpecInput represents the input for generating a Vega-Lite specification
 type MakeVegaSpecInput struct {
-	UserToken string        `json:"user_token" jsonschema:"description=User authentication token"`
-	Prompt    string        `json:"prompt" jsonschema:"description=Description of the desired visualization"`
-	Data      []interface{} `json:"data" jsonschema:"description=Data to visualize"`
-	JobID     string        `json:"job_id" jsonschema:"description=Job ID to associate with this visualization"`
+	UserToken string                   `json:"user_token" jsonschema:"description=User authentication token"`
+	Prompt    string                   `json:"prompt" jsonschema:"description=Description of the desired visualization"`
+	Data      []map[string]interface{} `json:"data" jsonschema:"description=Data to visualize as array of objects"`
+	JobID     string                   `json:"job_id" jsonschema:"description=Job ID to associate with this visualization"`
 }
 
 // MakeVegaSpecOutput represents the output from generating a Vega-Lite specification

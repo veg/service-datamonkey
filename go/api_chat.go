@@ -264,13 +264,17 @@ func (api *ChatAPI) ListUserConversations(c *gin.Context) {
 
 // SendConversationMessage sends a message to a conversation
 func (api *ChatAPI) SendConversationMessage(c *gin.Context) {
-	// Require valid token for sending messages
+	// Extract the actual token string (not subject) for passing to tools
+	var userToken string
 	if api.sessionService != nil {
+		// First validate the token by checking subject
 		_, err := api.sessionService.GetSubject(c)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized - valid token required to send messages"})
 			return
 		}
+		// Then extract the actual token string to pass to AI tools
+		userToken = api.sessionService.ExtractToken(c)
 	}
 
 	// Get conversation ID from path
@@ -326,26 +330,32 @@ func (api *ChatAPI) SendConversationMessage(c *gin.Context) {
 
 	// Call the Genkit chat flow with the new message and history
 	chatInput := &ChatInput{
-		Message: req.Message,
-		History: history,
+		Message:   req.Message,
+		History:   history,
+		UserToken: userToken,
 	}
 
-	result, err := api.genkitClient.ChatFlow()
+	chatFlowAny, err := api.genkitClient.ChatFlow()
 	if err != nil {
 		log.Printf("Error initializing chat flow: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to initialize chat"})
 		return
 	}
 
-	// Execute the flow
-	flowFunc, ok := result.(func(context.Context, *ChatInput) (*ChatResponse, error))
+	// Execute the flow - use reflection to call Run method
+	// The chatFlow is a genkit flow with a Run method
+	type FlowRunner interface {
+		Run(context.Context, *ChatInput) (*ChatResponse, error)
+	}
+
+	chatFlow, ok := chatFlowAny.(FlowRunner)
 	if !ok {
-		log.Printf("Chat flow has unexpected type")
+		log.Printf("Chat flow does not implement FlowRunner interface")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Chat flow error"})
 		return
 	}
 
-	response, err := flowFunc(ctx, chatInput)
+	response, err := chatFlow.Run(ctx, chatInput)
 	if err != nil {
 		log.Printf("Error executing chat flow: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process chat: " + err.Error()})

@@ -100,7 +100,7 @@ http_code=$(echo "$response" | tail -n1)
 body=$(echo "$response" | head -n-1)
 
 if [ "$http_code" = "201" ] || [ "$http_code" = "200" ]; then
-    DATASET_ID=$(echo "$body" | grep -o '"file":"[^"]*"' | head -1 | cut -d'"' -f4)
+    DATASET_ID=$(echo "$body" | jq -r '.id // empty')
     if [ -n "$DATASET_ID" ]; then
         print_result "Dataset upload succeeds" "PASS"
         echo "   Dataset ID: $DATASET_ID"
@@ -324,7 +324,7 @@ http_code=$(echo "$response" | tail -n1)
 body=$(echo "$response" | head -n-1)
 
 if [ "$http_code" = "201" ] || [ "$http_code" = "200" ]; then
-    FAIL_DATASET_ID=$(echo "$body" | grep -o '"file":"[^"]*"' | head -1 | cut -d'"' -f4)
+    FAIL_DATASET_ID=$(echo "$body" | jq -r '.id // empty')
     
     # Submit job with invalid dataset
     response=$(curl -s -w "\n%{http_code}" -X POST "$BASE_URL/api/v1/methods/fel-start" \

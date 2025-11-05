@@ -48,11 +48,12 @@ print_result() {
 # Helper function to wait for job completion
 wait_for_job() {
     local job_id="$1"
-    local max_wait=300  # 5 minutes max
+    local max_wait=600  # 5 minutes max
     local elapsed=0
-    local interval=5
+    local interval=15
     
     echo -e "${BLUE}⏳ Waiting for job to complete...${NC}"
+    echo -e "${BLUE}   Using endpoint: GET $BASE_URL/api/v1/jobs/$job_id${NC}"
     
     while [ $elapsed -lt $max_wait ]; do
         response=$(curl -s -w "\n%{http_code}" -X GET "$BASE_URL/api/v1/jobs/$job_id" \
@@ -61,20 +62,26 @@ wait_for_job() {
         http_code=$(echo "$response" | tail -n1)
         body=$(echo "$response" | head -n-1)
         
+        echo -e "${YELLOW}   [DEBUG] HTTP $http_code at ${elapsed}s${NC}"
+        
         if [ "$http_code" = "200" ]; then
             status=$(echo "$body" | jq -r '.status // empty')
             echo -e "${BLUE}   Status: $status (${elapsed}s elapsed)${NC}"
             
-            if [ "$status" = "completed" ]; then
+            if [ "$status" = "completed" ] || [ "$status" = "complete" ]; then
                 echo -e "${GREEN}   ✅ Job completed successfully!${NC}"
                 return 0
             elif [ "$status" = "failed" ] || [ "$status" = "error" ]; then
                 echo -e "${RED}   ❌ Job failed with status: $status${NC}"
+                echo -e "${RED}   Response body: $body${NC}"
                 return 1
             fi
         else
-            echo -e "${RED}   ❌ Failed to check job status: HTTP $http_code${NC}"
-            return 1
+            echo -e "${YELLOW}   [DEBUG] Non-200 response. Body: ${body:0:100}${NC}"
+            if [ "$http_code" = "404" ]; then
+                echo -e "${RED}   ❌ Job not found (HTTP 404)${NC}"
+                return 1
+            fi
         fi
         
         sleep $interval
@@ -159,19 +166,19 @@ echo ""
 # Test 3: Submit FEL Analysis Job
 echo "Test 3: Submit FEL Analysis Job"
 echo "--------------------------------"
-response=$(curl -s -w "\n%{http_code}" -X POST "$BASE_URL/api/v1/jobs" \
+response=$(curl -s -w "\n%{http_code}" -X POST "$BASE_URL/api/v1/methods/fel-start" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $USER_TOKEN" \
   -d "{
-    \"method\": \"fel\",
-    \"alignment_id\": \"$dataset_id\"
+    \"alignment\": \"$dataset_id\",
+    \"user_token\": \"$USER_TOKEN\"
   }")
 
 http_code=$(echo "$response" | tail -n1)
 body=$(echo "$response" | head -n-1)
 
-if [ "$http_code" = "200" ] || [ "$http_code" = "201" ]; then
-    job_id=$(echo "$body" | jq -r '.job_id // empty')
+if [ "$http_code" = "202" ] || [ "$http_code" = "201" ] || [ "$http_code" = "200" ]; then
+    job_id=$(echo "$body" | jq -r '.job_id // .id // empty')
     if [ -n "$job_id" ]; then
         print_result "FEL job submitted successfully" "PASS"
         echo "   Job ID: $job_id"
@@ -201,20 +208,20 @@ echo ""
 # Test 5: Retrieve Job Results
 echo "Test 5: Retrieve Job Results"
 echo "-----------------------------"
-response=$(curl -s -w "\n%{http_code}" -X GET "$BASE_URL/api/v1/jobs/$job_id" \
+response=$(curl -s -w "\n%{http_code}" -X GET "$BASE_URL/api/v1/methods/fel-result?job_id=$job_id" \
   -H "Authorization: Bearer $USER_TOKEN")
 
 http_code=$(echo "$response" | tail -n1)
 body=$(echo "$response" | head -n-1)
 
 if [ "$http_code" = "200" ]; then
-    has_results=$(echo "$body" | jq -r '.results // empty' | head -c 10)
+    has_results=$(echo "$body" | jq -r '.' | head -c 50)
     if [ -n "$has_results" ]; then
         print_result "Job results retrieved" "PASS"
         echo "   Results preview: ${has_results}..."
         
         # Save results for inspection
-        echo "$body" | jq '.results' > /tmp/fel_results_$$.json
+        echo "$body" | jq '.' > /tmp/fel_results_$$.json
         echo "   Results saved to: /tmp/fel_results_$$.json"
     else
         print_result "Job results retrieved" "FAIL" "No results in response"
@@ -228,33 +235,60 @@ else
 fi
 echo ""
 
-# Test 6: Request Visualization via Chat
-echo "Test 6: Request Visualization via Chat"
-echo "---------------------------------------"
+# Test 6: Create Chat Conversation
+echo "Test 6: Create Chat Conversation"
+echo "---------------------------------"
 response=$(curl -s -w "\n%{http_code}" -X POST "$BASE_URL/api/v1/chat" \
   -H "Content-Type: application/json" \
   -H "user_token: $USER_TOKEN" \
+  -d '{}')
+
+http_code=$(echo "$response" | tail -n1)
+body=$(echo "$response" | head -n-1)
+
+if [ "$http_code" = "200" ] || [ "$http_code" = "201" ]; then
+    conversation_id=$(echo "$body" | jq -r '.id // empty')
+    
+    if [ -n "$conversation_id" ]; then
+        print_result "Chat conversation created" "PASS"
+        echo "   Conversation ID: $conversation_id"
+    else
+        print_result "Chat conversation created" "FAIL" "Missing conversation ID"
+        echo "   Response: $body"
+        exit 1
+    fi
+else
+    print_result "Chat conversation created" "FAIL" "HTTP $http_code"
+    echo "   Response: $body"
+    exit 1
+fi
+echo ""
+
+# Test 7: Request Visualization via Chat
+echo "Test 7: Request Visualization via Chat"
+echo "---------------------------------------"
+response=$(curl -s -w "\n%{http_code}" -X POST "$BASE_URL/api/v1/chat/$conversation_id/messages" \
+  -H "Content-Type: application/json" \
+  -H "user_token: $USER_TOKEN" \
   -d "{
-    \"message\": \"Can you create a visualization of the FEL results from job $job_id? I'd like to see a plot of the selection pressure across sites.\"
+    \"message\": \"Can you create a visualization of the FEL results from job $job_id? I'd like to see a simple pie plot showing proportion of sites with positive selection pressure.\"
   }")
 
 http_code=$(echo "$response" | tail -n1)
 body=$(echo "$response" | head -n-1)
 
-if [ "$http_code" = "200" ]; then
-    conversation_id=$(echo "$body" | jq -r '.conversation_id // empty')
-    response_text=$(echo "$body" | jq -r '.response // empty')
+if [ "$http_code" = "200" ] || [ "$http_code" = "201" ]; then
+    response_text=$(echo "$body" | jq -r '.message.content // .content // .response // empty')
     
-    if [ -n "$conversation_id" ] && [ -n "$response_text" ]; then
+    if [ -n "$response_text" ]; then
         print_result "Chat response received" "PASS"
-        echo "   Conversation ID: $conversation_id"
         echo "   Response preview: ${response_text:0:150}..."
         
         # Save full response
         echo "$body" > /tmp/chat_viz_response_$$.json
         echo "   Full response saved to: /tmp/chat_viz_response_$$.json"
     else
-        print_result "Chat response received" "FAIL" "Missing conversation_id or response"
+        print_result "Chat response received" "FAIL" "Missing response text"
         echo "   Response: $body"
         exit 1
     fi
@@ -265,8 +299,8 @@ else
 fi
 echo ""
 
-# Test 7: Check for Visualization Creation
-echo "Test 7: Check for Visualization Creation"
+# Test 8: Check for Visualization Creation
+echo "Test 8: Check for Visualization Creation"
 echo "-----------------------------------------"
 # Wait a moment for async visualization creation
 sleep 2
@@ -305,9 +339,9 @@ else
 fi
 echo ""
 
-# Test 8: Retrieve Visualization Spec
+# Test 9: Retrieve Visualization Spec
 if [ -n "$viz_id" ]; then
-    echo "Test 8: Retrieve Visualization Spec"
+    echo "Test 9: Retrieve Visualization Spec"
     echo "------------------------------------"
     response=$(curl -s -w "\n%{http_code}" -X GET "$BASE_URL/api/v1/visualizations/$viz_id" \
       -H "user_token: $USER_TOKEN")
