@@ -28,6 +28,8 @@ tags:
   name: File Upload and QC
 - description: Manage analysis jobs
   name: Jobs
+- description: Manage data visualizations (Vega-Lite specs)
+  name: Visualizations
 - description: List and manage available HyPhy methods
   name: Methods
 - description: Examples starting jobs and fetching results for FEL
@@ -790,6 +792,310 @@ paths:
       summary: Get details for a specific dataset
       tags:
       - File Upload and QC
+  /visualizations:
+    get:
+      description: Returns visualizations owned by the authenticated user. Can be
+        filtered by job ID or dataset ID.
+      operationId: getVisualizationsList
+      parameters:
+      - description: Pretty print response
+        explode: true
+        in: query
+        name: pretty_print
+        required: false
+        schema:
+          type: boolean
+        style: form
+      - description: Token identifying the user
+        explode: false
+        in: header
+        name: user_token
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: Filter visualizations by job ID
+        explode: true
+        in: query
+        name: job_id
+        required: false
+        schema:
+          type: string
+        style: form
+      - description: Filter visualizations by dataset ID
+        explode: true
+        in: query
+        name: dataset_id
+        required: false
+        schema:
+          type: string
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Visualizations'
+          description: Success - returns user's visualizations
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedError'
+          description: Unauthorized - Invalid or missing user token
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerError'
+          description: Internal Server Error
+      summary: Get a list of visualizations for the authenticated user
+      tags:
+      - Visualizations
+    post:
+      description: Create and store a new Vega-Lite visualization specification
+      operationId: createVisualization
+      parameters:
+      - description: Pretty print response
+        explode: true
+        in: query
+        name: pretty_print
+        required: false
+        schema:
+          type: boolean
+        style: form
+      - description: Token identifying the user
+        explode: false
+        in: header
+        name: user_token
+        required: true
+        schema:
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateVisualizationRequest'
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Visualization'
+          description: Visualization created successfully
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvalidDataError'
+          description: Bad Request - Invalid visualization data
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedError'
+          description: Unauthorized - Invalid or missing user token
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerError'
+          description: Internal Server Error
+      summary: Create a new visualization
+      tags:
+      - Visualizations
+  /visualizations/{vizId}:
+    delete:
+      description: Delete a visualization from the Datamonkey server
+      operationId: deleteVisualization
+      parameters:
+      - description: ID of the visualization to retrieve
+        explode: false
+        in: path
+        name: vizId
+        required: true
+        schema:
+          $ref: '#/components/schemas/Hash'
+        style: simple
+      - description: Pretty print response
+        explode: true
+        in: query
+        name: pretty_print
+        required: false
+        schema:
+          type: boolean
+        style: form
+      - description: Token identifying the user who owns the visualization
+        explode: false
+        in: header
+        name: user_token
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "204":
+          description: Visualization deleted successfully
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedError'
+          description: Unauthorized - Invalid or missing user token
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForbiddenError'
+          description: Forbidden - User does not own this visualization
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+          description: Visualization not found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerError'
+          description: Internal Server Error
+      summary: Delete a visualization
+      tags:
+      - Visualizations
+    get:
+      description: Retrieve a specific visualization by its ID
+      operationId: getVisualization
+      parameters:
+      - description: ID of the visualization to retrieve
+        explode: false
+        in: path
+        name: vizId
+        required: true
+        schema:
+          $ref: '#/components/schemas/Hash'
+        style: simple
+      - description: Pretty print response
+        explode: true
+        in: query
+        name: pretty_print
+        required: false
+        schema:
+          type: boolean
+        style: form
+      - description: "Token identifying the user. Required for private visualizations,\
+          \ optional for public ones."
+        explode: false
+        in: header
+        name: user_token
+        required: false
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Visualization'
+          description: Success
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedError'
+          description: Unauthorized - Invalid or missing user token for private visualization
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+          description: Visualization not found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerError'
+          description: Internal Server Error
+      summary: Get details for a specific visualization
+      tags:
+      - Visualizations
+    put:
+      description: Update an existing visualization's metadata or spec
+      operationId: updateVisualization
+      parameters:
+      - description: ID of the visualization to retrieve
+        explode: false
+        in: path
+        name: vizId
+        required: true
+        schema:
+          $ref: '#/components/schemas/Hash'
+        style: simple
+      - description: Pretty print response
+        explode: true
+        in: query
+        name: pretty_print
+        required: false
+        schema:
+          type: boolean
+        style: form
+      - description: Token identifying the user who owns the visualization
+        explode: false
+        in: header
+        name: user_token
+        required: true
+        schema:
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateVisualizationRequest'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Visualization'
+          description: Visualization updated successfully
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvalidDataError'
+          description: Bad Request - Invalid update data
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedError'
+          description: Unauthorized - Invalid or missing user token
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForbiddenError'
+          description: Forbidden - User does not own this visualization
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+          description: Visualization not found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerError'
+          description: Internal Server Error
+      summary: Update a visualization
+      tags:
+      - Visualizations
   /methods:
     get:
       description: Returns a list of all available HyPhy methods that can be run on
@@ -3762,6 +4068,187 @@ components:
             $ref: '#/components/schemas/InvalidDataError_errors_inner'
           type: array
       type: object
+    Visualization:
+      example:
+        metadata:
+          generated_by: makeVegaSpec
+          library: vega-lite
+          prompt: Create a bar chart showing selection pressure
+        updated_at: 2024-11-04T19:30:00Z
+        job_id: 550e8400-e29b-41d4-a716-446655440000
+        dataset_id: 550e8400-e29b-41d4-a716-446655440001
+        description: Bar chart showing dN/dS ratios for each codon position
+        created_at: 2024-11-04T19:00:00Z
+        title: Selection Pressure Across Sites
+        config:
+          key: ""
+        spec:
+          key: ""
+        viz_id: viz_1730764800_123
+      properties:
+        viz_id:
+          description: Unique identifier for the visualization
+          example: viz_1730764800_123
+          type: string
+        job_id:
+          description: Job ID associated with this visualization
+          example: 550e8400-e29b-41d4-a716-446655440000
+          type: string
+        dataset_id:
+          description: Dataset ID associated with this visualization (optional)
+          example: 550e8400-e29b-41d4-a716-446655440001
+          type: string
+        title:
+          description: Title of the visualization
+          example: Selection Pressure Across Sites
+          type: string
+        description:
+          description: Description of what the visualization shows
+          example: Bar chart showing dN/dS ratios for each codon position
+          type: string
+        spec:
+          additionalProperties: true
+          description: The Vega-Lite visualization specification
+          type: object
+        config:
+          additionalProperties: true
+          description: Additional configuration options
+          type: object
+        metadata:
+          $ref: '#/components/schemas/Visualization_metadata'
+        created_at:
+          description: Timestamp when the visualization was created
+          example: 2024-11-04T19:00:00Z
+          format: date-time
+          type: string
+        updated_at:
+          description: Timestamp when the visualization was last updated
+          example: 2024-11-04T19:30:00Z
+          format: date-time
+          type: string
+      required:
+      - job_id
+      - spec
+      - title
+      - viz_id
+      type: object
+    Visualizations:
+      example:
+        visualizations:
+        - metadata:
+            generated_by: makeVegaSpec
+            library: vega-lite
+            prompt: Create a bar chart showing selection pressure
+          updated_at: 2024-11-04T19:30:00Z
+          job_id: 550e8400-e29b-41d4-a716-446655440000
+          dataset_id: 550e8400-e29b-41d4-a716-446655440001
+          description: Bar chart showing dN/dS ratios for each codon position
+          created_at: 2024-11-04T19:00:00Z
+          title: Selection Pressure Across Sites
+          config:
+            key: ""
+          spec:
+            key: ""
+          viz_id: viz_1730764800_123
+        - metadata:
+            generated_by: makeVegaSpec
+            library: vega-lite
+            prompt: Create a bar chart showing selection pressure
+          updated_at: 2024-11-04T19:30:00Z
+          job_id: 550e8400-e29b-41d4-a716-446655440000
+          dataset_id: 550e8400-e29b-41d4-a716-446655440001
+          description: Bar chart showing dN/dS ratios for each codon position
+          created_at: 2024-11-04T19:00:00Z
+          title: Selection Pressure Across Sites
+          config:
+            key: ""
+          spec:
+            key: ""
+          viz_id: viz_1730764800_123
+      properties:
+        visualizations:
+          items:
+            $ref: '#/components/schemas/Visualization'
+          type: array
+      type: object
+    CreateVisualizationRequest:
+      example:
+        metadata:
+          key: ""
+        job_id: 550e8400-e29b-41d4-a716-446655440000
+        dataset_id: 550e8400-e29b-41d4-a716-446655440001
+        description: Bar chart showing dN/dS ratios for each codon position
+        title: Selection Pressure Across Sites
+        config:
+          key: ""
+        spec:
+          key: ""
+      properties:
+        job_id:
+          description: Job ID to associate with this visualization
+          example: 550e8400-e29b-41d4-a716-446655440000
+          type: string
+        dataset_id:
+          description: Dataset ID to associate with this visualization (optional)
+          example: 550e8400-e29b-41d4-a716-446655440001
+          type: string
+        title:
+          description: Title of the visualization
+          example: Selection Pressure Across Sites
+          type: string
+        description:
+          description: Description of what the visualization shows
+          example: Bar chart showing dN/dS ratios for each codon position
+          type: string
+        spec:
+          additionalProperties: true
+          description: The Vega-Lite visualization specification
+          type: object
+        config:
+          additionalProperties: true
+          description: Additional configuration options
+          type: object
+        metadata:
+          additionalProperties: true
+          description: Additional metadata about the visualization
+          type: object
+      required:
+      - job_id
+      - spec
+      - title
+      type: object
+    UpdateVisualizationRequest:
+      example:
+        metadata:
+          key: ""
+        description: Updated bar chart showing dN/dS ratios
+        title: Updated Selection Pressure Chart
+        config:
+          key: ""
+        spec:
+          key: ""
+      properties:
+        title:
+          description: Updated title of the visualization
+          example: Updated Selection Pressure Chart
+          type: string
+        description:
+          description: Updated description
+          example: Updated bar chart showing dN/dS ratios
+          type: string
+        spec:
+          additionalProperties: true
+          description: Updated Vega-Lite visualization specification
+          type: object
+        config:
+          additionalProperties: true
+          description: Updated configuration options
+          type: object
+        metadata:
+          additionalProperties: true
+          description: Updated metadata
+          type: object
+      type: object
     MethodsList:
       example:
         methods:
@@ -5774,6 +6261,27 @@ components:
           type: string
         message:
           description: The error message
+          type: string
+      type: object
+    Visualization_metadata:
+      additionalProperties: true
+      description: Additional metadata about the visualization
+      example:
+        generated_by: makeVegaSpec
+        library: vega-lite
+        prompt: Create a bar chart showing selection pressure
+      properties:
+        library:
+          description: Visualization library used
+          example: vega-lite
+          type: string
+        generated_by:
+          description: Tool or method that generated this visualization
+          example: makeVegaSpec
+          type: string
+        prompt:
+          description: Original prompt used to generate the visualization
+          example: Create a bar chart showing selection pressure
           type: string
       type: object
     MethodsList_methods_inner_parameters_inner:

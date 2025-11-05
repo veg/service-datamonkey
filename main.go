@@ -168,7 +168,7 @@ func initSessionService(sessionTracker sw.SessionTracker) *sw.SessionService {
 }
 
 // initAPIHandlers initializes the API handlers with the given components
-func initAPIHandlers(scheduler sw.SchedulerInterface, datasetTracker sw.DatasetTracker, jobTracker sw.JobTracker, conversationTracker sw.ConversationTracker, sessionService *sw.SessionService) sw.ApiHandleFunctions {
+func initAPIHandlers(scheduler sw.SchedulerInterface, datasetTracker sw.DatasetTracker, jobTracker sw.JobTracker, conversationTracker sw.ConversationTracker, vizTracker sw.VisualizationTracker, sessionService *sw.SessionService) sw.ApiHandleFunctions {
 	// Get HyPhy executable path from environment or use default
 	hyPhyPath := getEnvWithDefault("HYPHY_PATH", "hyphy")
 	// TODO: change this default so that upload files and log/ results are stored in a different directory
@@ -223,6 +223,9 @@ func initAPIHandlers(scheduler sw.SchedulerInterface, datasetTracker sw.DatasetT
 	// Create MethodsAPI
 	methodsAPI := sw.NewMethodsAPIService()
 
+	// Create VisualizationsAPI
+	visualizationsAPI := sw.NewVisualizationsAPI(vizTracker, sessionService)
+
 	return sw.ApiHandleFunctions{
 		ABSRELAPI:          *absrelAPI,
 		FELAPI:             *felAPI,
@@ -246,9 +249,10 @@ func initAPIHandlers(scheduler sw.SchedulerInterface, datasetTracker sw.DatasetT
 			ConversationTracker: conversationTracker,
 			GenkitClient:        genkitClient,
 		},
-		JobsAPI:    *jobsAPI,
-		MethodsAPI: methodsAPI,
-		ChatAPI:    *sw.NewChatAPI(genkitClient, conversationTracker, sessionService),
+		JobsAPI:           *jobsAPI,
+		MethodsAPI:        methodsAPI,
+		ChatAPI:           *sw.NewChatAPI(genkitClient, conversationTracker, sessionService),
+		VisualizationsAPI: *visualizationsAPI,
 	}
 }
 
@@ -263,6 +267,7 @@ func main() {
 	jobTracker := sw.NewSQLiteJobTracker(db.GetDB())
 	sessionTracker := sw.NewSQLiteSessionTracker(db.GetDB())
 	conversationTracker := sw.NewSQLiteConversationTracker(db.GetDB())
+	vizTracker := sw.NewSQLiteVisualizationTracker(db.GetDB())
 
 	// Initialize scheduler
 	scheduler := initScheduler(jobTracker)
@@ -292,7 +297,7 @@ func main() {
 	}
 
 	// Initialize API handlers
-	routes := initAPIHandlers(scheduler, datasetTracker, jobTracker, conversationTracker, sessionService)
+	routes := initAPIHandlers(scheduler, datasetTracker, jobTracker, conversationTracker, vizTracker, sessionService)
 
 	// Start server
 	port := getEnvWithDefault("SERVICE_DATAMONKEY_PORT", "9300")

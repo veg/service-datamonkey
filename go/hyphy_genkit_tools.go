@@ -62,6 +62,11 @@ func NewHyPhyGenkitTools(genkitClient *genkit.Genkit) *HyPhyGenkitTools {
 			}
 			req.Header.Set("Content-Type", "application/json")
 
+			// Add user token header if provided
+			if input.UserToken != "" {
+				req.Header.Set("user_token", input.UserToken)
+			}
+
 			resp, err := client.Do(req)
 			if err != nil {
 				return AbsrelResult{}, fmt.Errorf("failed to send request: %w", err)
@@ -100,6 +105,11 @@ func NewHyPhyGenkitTools(genkitClient *genkit.Genkit) *HyPhyGenkitTools {
 				return BgmResult{}, fmt.Errorf("failed to create request: %w", err)
 			}
 			req.Header.Set("Content-Type", "application/json")
+
+			// Add user token header if provided
+			if input.UserToken != "" {
+				req.Header.Set("user_token", input.UserToken)
+			}
 
 			resp, err := client.Do(req)
 			if err != nil {
@@ -143,6 +153,11 @@ func NewHyPhyGenkitTools(genkitClient *genkit.Genkit) *HyPhyGenkitTools {
 			}
 			req.Header.Set("Content-Type", "application/json")
 
+			// Add user token header if provided
+			if input.UserToken != "" {
+				req.Header.Set("user_token", input.UserToken)
+			}
+
 			resp, err := client.Do(req)
 			if err != nil {
 				return BustedResult{}, fmt.Errorf("failed to send request: %w", err)
@@ -184,6 +199,11 @@ func NewHyPhyGenkitTools(genkitClient *genkit.Genkit) *HyPhyGenkitTools {
 				return ContrastFelResult{}, fmt.Errorf("failed to create request: %w", err)
 			}
 			req.Header.Set("Content-Type", "application/json")
+
+			// Add user token header if provided
+			if input.UserToken != "" {
+				req.Header.Set("user_token", input.UserToken)
+			}
 
 			resp, err := client.Do(req)
 			if err != nil {
@@ -227,6 +247,11 @@ func NewHyPhyGenkitTools(genkitClient *genkit.Genkit) *HyPhyGenkitTools {
 			}
 			req.Header.Set("Content-Type", "application/json")
 
+			// Add user token header if provided
+			if input.UserToken != "" {
+				req.Header.Set("user_token", input.UserToken)
+			}
+
 			resp, err := client.Do(req)
 			if err != nil {
 				return HyPhyJobResponse{}, fmt.Errorf("failed to send request: %w", err)
@@ -269,6 +294,11 @@ func NewHyPhyGenkitTools(genkitClient *genkit.Genkit) *HyPhyGenkitTools {
 			}
 			req.Header.Set("Content-Type", "application/json")
 
+			// Add user token header if provided
+			if input.UserToken != "" {
+				req.Header.Set("user_token", input.UserToken)
+			}
+
 			resp, err := client.Do(req)
 			if err != nil {
 				return FelResult{}, fmt.Errorf("failed to send request: %w", err)
@@ -308,6 +338,11 @@ func NewHyPhyGenkitTools(genkitClient *genkit.Genkit) *HyPhyGenkitTools {
 			}
 			req.Header.Set("Content-Type", "application/json")
 
+			// Add user token header if provided
+			if input.UserToken != "" {
+				req.Header.Set("user_token", input.UserToken)
+			}
+
 			resp, err := client.Do(req)
 			if err != nil {
 				return FubarResult{}, fmt.Errorf("failed to send request: %w", err)
@@ -346,6 +381,11 @@ func NewHyPhyGenkitTools(genkitClient *genkit.Genkit) *HyPhyGenkitTools {
 				return GardResult{}, fmt.Errorf("failed to create request: %w", err)
 			}
 			req.Header.Set("Content-Type", "application/json")
+
+			// Add user token header if provided
+			if input.UserToken != "" {
+				req.Header.Set("user_token", input.UserToken)
+			}
 
 			resp, err := client.Do(req)
 			if err != nil {
@@ -389,6 +429,11 @@ func NewHyPhyGenkitTools(genkitClient *genkit.Genkit) *HyPhyGenkitTools {
 			}
 			req.Header.Set("Content-Type", "application/json")
 
+			// Add user token header if provided
+			if input.UserToken != "" {
+				req.Header.Set("user_token", input.UserToken)
+			}
+
 			resp, err := client.Do(req)
 			if err != nil {
 				return MemeResult{}, fmt.Errorf("failed to send request: %w", err)
@@ -427,6 +472,11 @@ func NewHyPhyGenkitTools(genkitClient *genkit.Genkit) *HyPhyGenkitTools {
 				return MultihitResult{}, fmt.Errorf("failed to create request: %w", err)
 			}
 			req.Header.Set("Content-Type", "application/json")
+
+			// Add user token header if provided
+			if input.UserToken != "" {
+				req.Header.Set("user_token", input.UserToken)
+			}
 
 			resp, err := client.Do(req)
 			if err != nil {
@@ -467,6 +517,11 @@ func NewHyPhyGenkitTools(genkitClient *genkit.Genkit) *HyPhyGenkitTools {
 			}
 			req.Header.Set("Content-Type", "application/json")
 
+			// Add user token header if provided
+			if input.UserToken != "" {
+				req.Header.Set("user_token", input.UserToken)
+			}
+
 			resp, err := client.Do(req)
 			if err != nil {
 				return NrmResult{}, fmt.Errorf("failed to send request: %w", err)
@@ -505,6 +560,11 @@ func NewHyPhyGenkitTools(genkitClient *genkit.Genkit) *HyPhyGenkitTools {
 				return RelaxResult{}, fmt.Errorf("failed to create request: %w", err)
 			}
 			req.Header.Set("Content-Type", "application/json")
+
+			// Add user token header if provided
+			if input.UserToken != "" {
+				req.Header.Set("user_token", input.UserToken)
+			}
 
 			resp, err := client.Do(req)
 			if err != nil {
@@ -548,6 +608,11 @@ func NewHyPhyGenkitTools(genkitClient *genkit.Genkit) *HyPhyGenkitTools {
 			}
 			req.Header.Set("Content-Type", "application/json")
 
+			// Add user token header if provided
+			if input.UserToken != "" {
+				req.Header.Set("user_token", input.UserToken)
+			}
+
 			resp, err := client.Do(req)
 			if err != nil {
 				return SlacResult{}, fmt.Errorf("failed to send request: %w", err)
@@ -586,6 +651,11 @@ func NewHyPhyGenkitTools(genkitClient *genkit.Genkit) *HyPhyGenkitTools {
 				return HyPhyJobResponse{}, fmt.Errorf("failed to create request: %w", err)
 			}
 			req.Header.Set("Content-Type", "application/json")
+
+			// Add user token header if provided
+			if input.UserToken != "" {
+				req.Header.Set("user_token", input.UserToken)
+			}
 
 			resp, err := client.Do(req)
 			if err != nil {

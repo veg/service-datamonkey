@@ -33,6 +33,7 @@ go/model_contrast_fel_result.go
 go/model_contrast_fel_result_result.go
 go/model_contrast_fel_result_result_all_of_mle.go
 go/model_create_conversation_request.go
+go/model_create_visualization_request.go
 go/model_dataset.go
 go/model_dataset_meta.go
 go/model_datasets.go
@@ -125,4 +126,8 @@ go/model_slatkin_result_result_all_of_simulations.go
 go/model_status.go
 go/model_timers_info_value.go
 go/model_unauthorized_error.go
+go/model_update_visualization_request.go
+go/model_visualization.go
+go/model_visualization_metadata.go
+go/model_visualizations.go
 go/routers.go

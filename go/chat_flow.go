@@ -30,7 +30,9 @@ type ChatInput struct {
 }
 
 // ListDatasetsInput represents the input for listing datasets
-type ListDatasetsInput struct{}
+type ListDatasetsInput struct {
+	UserToken string `json:"user_token" jsonschema:"description=User authentication token"`
+}
 
 // ListDatasetsOutput represents the output for listing datasets
 type ListDatasetsOutput struct {
@@ -75,9 +77,13 @@ type GetAvailableMethodsInput struct{}
 
 // MethodInfo represents information about a HyPhy method
 type MethodInfo struct {
-	Name        string `json:"name"`
-	FullName    string `json:"full_name"`
-	Description string `json:"description"`
+	ID             string   `json:"id"`
+	Name           string   `json:"name"`
+	Description    string   `json:"description"`
+	Status         string   `json:"status,omitempty"`
+	StartEndpoint  string   `json:"start_endpoint,omitempty"`
+	ResultEndpoint string   `json:"result_endpoint,omitempty"`
+	Parameters     []string `json:"parameters,omitempty"`
 }
 
 // GetAvailableMethodsOutput represents the output for getting available methods
@@ -101,6 +107,7 @@ type GetJobResultsOutput struct {
 
 // GetDatasetDetailsInput represents the input for getting dataset details
 type GetDatasetDetailsInput struct {
+	UserToken string `json:"user_token,omitempty" jsonschema:"description=User authentication token (optional for public datasets)"`
 	DatasetID string `json:"dataset_id" jsonschema:"description=Dataset ID to get details for"`
 }
 
@@ -117,7 +124,8 @@ type GetDatasetDetailsOutput struct {
 
 // GetJobByIdInput represents the input for getting a job by ID
 type GetJobByIdInput struct {
-	JobID string `json:"job_id" jsonschema:"description=ID of the job to retrieve"`
+	UserToken string `json:"user_token,omitempty" jsonschema:"description=User authentication token (optional for public jobs)"`
+	JobID     string `json:"job_id" jsonschema:"description=ID of the job to retrieve"`
 }
 
 // GetJobByIdOutput represents the output for getting a job by ID
@@ -132,6 +140,7 @@ type GetJobByIdOutput struct {
 
 // ListJobsInput represents the input for listing jobs
 type ListJobsInput struct {
+	UserToken   string `json:"user_token" jsonschema:"description=User authentication token"`
 	AlignmentID string `json:"alignment_id,omitempty" jsonschema:"description=Filter jobs by alignment dataset ID"`
 	TreeID      string `json:"tree_id,omitempty" jsonschema:"description=Filter jobs by tree dataset ID"`
 	Method      string `json:"method,omitempty" jsonschema:"description=Filter jobs by HyPhy method"`
@@ -146,6 +155,7 @@ type ListJobsOutput struct {
 
 // GetDatasetJobsInput represents the input for getting jobs associated with a dataset
 type GetDatasetJobsInput struct {
+	UserToken string `json:"user_token" jsonschema:"description=User authentication token"`
 	DatasetID string `json:"dataset_id" jsonschema:"description=Dataset ID to find associated jobs"`
 }
 
@@ -221,6 +231,11 @@ func (c *GenkitClient) ChatFlow() (any, error) {
 				return ListDatasetsOutput{}, fmt.Errorf("failed to create request: %w", err)
 			}
 
+			// Add user token header if provided
+			if input.UserToken != "" {
+				req.Header.Set("user_token", input.UserToken)
+			}
+
 			resp, err := client.Do(req)
 			if err != nil {
 				return ListDatasetsOutput{}, fmt.Errorf("failed to send request: %w", err)
@@ -278,22 +293,42 @@ func (c *GenkitClient) ChatFlow() (any, error) {
 	getAvailableMethodsTool := genkit.DefineTool[GetAvailableMethodsInput, GetAvailableMethodsOutput](c.Genkit, "getAvailableMethods",
 		"Get a list of available HyPhy analysis methods supported by the Datamonkey API",
 		func(ctx *ai.ToolContext, input GetAvailableMethodsInput) (GetAvailableMethodsOutput, error) {
-			methods := []MethodInfo{
-				{Name: "ABSREL", FullName: "Adaptive Branch-Site Random Effects Likelihood", Description: "Tests for evidence of episodic diversifying selection on a per-branch basis"},
-				{Name: "BGM", FullName: "Bayesian Graphical Model", Description: "Infers patterns of conditional dependence among sites in an alignment"},
-				{Name: "BUSTED", FullName: "Branch-Site Unrestricted Statistical Test for Episodic Diversification", Description: "Tests for evidence of episodic positive selection at a subset of sites"},
-				{Name: "CONTRAST-FEL", FullName: "Contrast Fixed Effects Likelihood", Description: "Tests for differences in selective pressures between two sets of branches"},
-				{Name: "FADE", FullName: "FUBAR Approach to Directional Evolution", Description: "Detects directional selection in protein-coding sequences"},
-				{Name: "FEL", FullName: "Fixed Effects Likelihood", Description: "Tests for pervasive positive or negative selection at individual sites"},
-				{Name: "FUBAR", FullName: "Fast Unconstrained Bayesian AppRoximation", Description: "Detects sites under positive or negative selection using a Bayesian approach"},
-				{Name: "GARD", FullName: "Genetic Algorithm for Recombination Detection", Description: "Identifies evidence of recombination breakpoints in an alignment"},
-				{Name: "MEME", FullName: "Mixed Effects Model of Evolution", Description: "Detects sites evolving under episodic positive selection"},
-				{Name: "MULTIHIT", FullName: "Multiple Hit Analysis", Description: "Accounts for multiple nucleotide substitutions in evolutionary models"},
-				{Name: "NRM", FullName: "Nucleotide Rate Matrix", Description: "Estimates nucleotide substitution rates from sequence data"},
-				{Name: "RELAX", FullName: "Relaxation of Selection", Description: "Tests for relaxation or intensification of selection between two sets of branches"},
-				{Name: "SLAC", FullName: "Single-Likelihood Ancestor Counting", Description: "Counts ancestral mutations to infer selection at individual sites"},
-				{Name: "SLATKIN", FullName: "Slatkin-Maddison Test", Description: "Tests for phylogeny-trait associations in viral evolution"},
+			client := &http.Client{}
+			req, err := http.NewRequest("GET", "http://localhost:8080/api/v1/methods", nil)
+			if err != nil {
+				return GetAvailableMethodsOutput{}, fmt.Errorf("failed to create request: %w", err)
 			}
+
+			resp, err := client.Do(req)
+			if err != nil {
+				return GetAvailableMethodsOutput{}, fmt.Errorf("failed to send request: %w", err)
+			}
+			defer resp.Body.Close()
+
+			if resp.StatusCode != http.StatusOK {
+				return GetAvailableMethodsOutput{}, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+			}
+
+			var result map[string]interface{}
+			if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+				return GetAvailableMethodsOutput{}, fmt.Errorf("failed to parse response: %w", err)
+			}
+
+			methodsRaw, ok := result["methods"]
+			if !ok {
+				return GetAvailableMethodsOutput{Methods: []MethodInfo{}}, nil
+			}
+
+			methodsJSON, err := json.Marshal(methodsRaw)
+			if err != nil {
+				return GetAvailableMethodsOutput{}, fmt.Errorf("failed to marshal methods: %w", err)
+			}
+
+			var methods []MethodInfo
+			if err := json.Unmarshal(methodsJSON, &methods); err != nil {
+				return GetAvailableMethodsOutput{}, fmt.Errorf("failed to unmarshal methods: %w", err)
+			}
+
 			return GetAvailableMethodsOutput{Methods: methods}, nil
 		})
 
@@ -360,6 +395,11 @@ func (c *GenkitClient) ChatFlow() (any, error) {
 				return GetDatasetDetailsOutput{Error: fmt.Sprintf("failed to create request: %v", err)}, nil
 			}
 
+			// Add user token header if provided
+			if input.UserToken != "" {
+				req.Header.Set("user_token", input.UserToken)
+			}
+
 			resp, err := client.Do(req)
 			if err != nil {
 				return GetDatasetDetailsOutput{Error: fmt.Sprintf("failed to send request: %v", err)}, nil
@@ -402,6 +442,11 @@ func (c *GenkitClient) ChatFlow() (any, error) {
 			req, err := http.NewRequest("GET", url, nil)
 			if err != nil {
 				return GetJobByIdOutput{Error: fmt.Sprintf("failed to create request: %v", err)}, nil
+			}
+
+			// Add user token header if provided
+			if input.UserToken != "" {
+				req.Header.Set("user_token", input.UserToken)
 			}
 
 			resp, err := client.Do(req)
@@ -464,6 +509,11 @@ func (c *GenkitClient) ChatFlow() (any, error) {
 				return ListJobsOutput{Error: fmt.Sprintf("failed to create request: %v", err)}, nil
 			}
 
+			// Add user token header
+			if input.UserToken != "" {
+				req.Header.Set("user_token", input.UserToken)
+			}
+
 			resp, err := client.Do(req)
 			if err != nil {
 				return ListJobsOutput{Error: fmt.Sprintf("failed to send request: %v", err)}, nil
@@ -504,6 +554,9 @@ func (c *GenkitClient) ChatFlow() (any, error) {
 			// Query by alignment_id
 			url1 := fmt.Sprintf("http://localhost:8080/api/v1/jobs?alignment_id=%s", input.DatasetID)
 			req1, _ := http.NewRequest("GET", url1, nil)
+			if input.UserToken != "" {
+				req1.Header.Set("user_token", input.UserToken)
+			}
 			resp1, err := client.Do(req1)
 			if err == nil && resp1.StatusCode == http.StatusOK {
 				var result1 map[string]interface{}
@@ -521,6 +574,9 @@ func (c *GenkitClient) ChatFlow() (any, error) {
 			// Query by tree_id
 			url2 := fmt.Sprintf("http://localhost:8080/api/v1/jobs?tree_id=%s", input.DatasetID)
 			req2, _ := http.NewRequest("GET", url2, nil)
+			if input.UserToken != "" {
+				req2.Header.Set("user_token", input.UserToken)
+			}
 			resp2, err := client.Do(req2)
 			if err == nil && resp2.StatusCode == http.StatusOK {
 				var result2 map[string]interface{}
@@ -661,30 +717,19 @@ func (c *GenkitClient) ChatFlow() (any, error) {
 
 		// Add information about available tools
 		prompt += "\n\nYou have access to the following tools:\n"
-		prompt += "1. listDatasets - List all available datasets for analysis\n"
-		prompt += "2. checkDatasetExists - Check if a dataset exists on the Datamonkey API\n"
-		prompt += "3. getDatasetDetails - Get detailed information about a specific dataset\n"
-		prompt += "4. getAvailableMethods - Get a list of available HyPhy analysis methods\n"
-		prompt += "5. getJobResults - Get the complete results of a completed HyPhy analysis job\n"
-		prompt += "6. getJobById - Get detailed information about a specific job\n"
-		prompt += "7. listJobs - List all jobs with optional filtering\n"
-		prompt += "8. getDatasetJobs - Get all jobs that used a specific dataset\n"
-		prompt += "9. deleteDataset - Delete a dataset (requires authentication)\n"
-		prompt += "10. deleteJob - Delete a job (requires authentication)\n"
-		prompt += "11. runAbsrelAnalysis - Start ABSREL analysis for detecting branch-specific selection\n"
-		prompt += "12. runBgmAnalysis - Start BGM analysis for detecting recombination\n"
-		prompt += "13. runBustedAnalysis - Start BUSTED analysis for detecting gene-wide selection\n"
-		prompt += "14. runContrastFelAnalysis - Start CONTRAST-FEL analysis for detecting selection differences between groups\n"
-		prompt += "15. runFadeAnalysis - Start FADE analysis for detecting directional selection\n"
-		prompt += "16. runFelAnalysis - Start FEL analysis for site-by-site selection analysis\n"
-		prompt += "17. runFubarAnalysis - Start FUBAR analysis for detecting pervasive selection\n"
-		prompt += "18. runGardAnalysis - Start GARD analysis for detecting recombination breakpoints\n"
-		prompt += "19. runMemeAnalysis - Start MEME analysis for detecting episodic selection\n"
-		prompt += "20. runMultihitAnalysis - Start MULTI-HIT analysis for multiple nucleotide substitutions\n"
-		prompt += "21. runNrmAnalysis - Start NRM analysis for detecting directional evolution\n"
-		prompt += "22. runRelaxAnalysis - Start RELAX analysis for detecting relaxed or intensified selection\n"
-		prompt += "23. runSlacAnalysis - Start SLAC analysis for detecting selection\n"
-		prompt += "24. runSlatkinAnalysis - Start SLATKIN analysis for detecting compartmentalization\n"
+		prompt += "- listDatasets: List all available datasets for analysis (requires user_token)\n"
+		prompt += "- checkDatasetExists: Check if a dataset exists on the Datamonkey API\n"
+		prompt += "- getDatasetDetails: Get detailed information about a specific dataset\n"
+		prompt += "- getAvailableMethods: Get a dynamically updated list of available HyPhy analysis methods from the API\n"
+		prompt += "- getJobResults: Get the complete results of a completed HyPhy analysis job\n"
+		prompt += "- getJobById: Get detailed information about a specific job\n"
+		prompt += "- listJobs: List all jobs with optional filtering by alignment_id, tree_id, method, or status (requires user_token)\n"
+		prompt += "- getDatasetJobs: Get all jobs that used a specific dataset (requires user_token)\n"
+		prompt += "- deleteDataset: Delete a dataset (requires user_token)\n"
+		prompt += "- deleteJob: Delete a job (requires user_token)\n"
+		prompt += "- makeVegaSpec: Generate a Vega-Lite visualization specification\n"
+		prompt += "- Various HyPhy method tools (runAbsrelAnalysis, runBgmAnalysis, runBustedAnalysis, etc.) - use getAvailableMethods to see the full list\n"
+		prompt += "\nNote: Most operations require a user_token for authentication. The API now supports filtering jobs and datasets by various criteria.\n"
 
 		// Generate structured response using the same schema
 		response, _, err := genkit.GenerateData[ChatResponse](ctx, c.Genkit,

@@ -101,6 +101,8 @@ type ApiHandleFunctions struct {
 	SLACAPI SLACAPI
 	// Routes for the SLATKINAPI part of the API
 	SLATKINAPI SLATKINAPI
+	// Routes for the VisualizationsAPI part of the API
+	VisualizationsAPI VisualizationsAPI
 }
 
 func getRoutes(handleFunctions ApiHandleFunctions) []Route {
@@ -446,6 +448,36 @@ func getRoutes(handleFunctions ApiHandleFunctions) []Route {
 			http.MethodPost,
 			"/api/v1/methods/slatkin-start",
 			handleFunctions.SLATKINAPI.StartSlatkinJob,
+		},
+		{
+			"CreateVisualization",
+			http.MethodPost,
+			"/api/v1/visualizations",
+			handleFunctions.VisualizationsAPI.CreateVisualization,
+		},
+		{
+			"DeleteVisualization",
+			http.MethodDelete,
+			"/api/v1/visualizations/:vizId",
+			handleFunctions.VisualizationsAPI.DeleteVisualization,
+		},
+		{
+			"GetVisualization",
+			http.MethodGet,
+			"/api/v1/visualizations/:vizId",
+			handleFunctions.VisualizationsAPI.GetVisualization,
+		},
+		{
+			"GetVisualizationsList",
+			http.MethodGet,
+			"/api/v1/visualizations",
+			handleFunctions.VisualizationsAPI.GetVisualizationsList,
+		},
+		{
+			"UpdateVisualization",
+			http.MethodPut,
+			"/api/v1/visualizations/:vizId",
+			handleFunctions.VisualizationsAPI.UpdateVisualization,
 		},
 	}
 }

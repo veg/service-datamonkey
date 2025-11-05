@@ -103,9 +103,35 @@ CREATE TABLE IF NOT EXISTS messages (
 );
 CREATE INDEX IF NOT EXISTS idx_messages_conversation_id ON messages(conversation_id);
 CREATE INDEX IF NOT EXISTS idx_messages_timestamp ON messages(timestamp);
+
+-- ============================================================================
+-- VISUALIZATIONS TABLE
+-- Stores Vega-Lite visualization specifications
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS visualizations (
+    viz_id TEXT PRIMARY KEY,
+    job_id TEXT NOT NULL,
+    dataset_id TEXT,
+    user_id TEXT NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT,
+    spec TEXT NOT NULL,
+    config TEXT,
+    metadata TEXT,
+    created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+    updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+    FOREIGN KEY (job_id) REFERENCES jobs(job_id) ON DELETE CASCADE,
+    FOREIGN KEY (dataset_id) REFERENCES datasets(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES sessions(subject) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_visualizations_job_id ON visualizations(job_id);
+CREATE INDEX IF NOT EXISTS idx_visualizations_dataset_id ON visualizations(dataset_id);
+CREATE INDEX IF NOT EXISTS idx_visualizations_user_id ON visualizations(user_id);
+CREATE INDEX IF NOT EXISTS idx_visualizations_created_at ON visualizations(created_at);
 `,
 			Down: `
 -- Drop tables in reverse order (respecting foreign keys)
+DROP TABLE IF EXISTS visualizations;
 DROP TABLE IF EXISTS messages;
 DROP TABLE IF EXISTS conversations;
 DROP TABLE IF EXISTS jobs;
