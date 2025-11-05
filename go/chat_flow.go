@@ -218,7 +218,7 @@ func (c *GenkitClient) ChatFlow() (any, error) {
 	// Initialize all HyPhy method tools
 	hyphyTools := NewHyPhyGenkitTools(c.Genkit)
 
-	// Initialize Vega tool
+	// Initialize Vega tool (uses API endpoint for saving visualizations)
 	vegaTool := NewVegaTools(c.Genkit)
 
 	// Define a tool for listing datasets
@@ -608,6 +608,70 @@ func (c *GenkitClient) ChatFlow() (any, error) {
 			}, nil
 		})
 
+	// Define input/output types for visualization listing tools
+	type ListVisualizationsInput struct {
+		UserToken string `json:"user_token" jsonschema:"description=User authentication token"`
+		JobID     string `json:"job_id,omitempty" jsonschema:"description=Filter visualizations by job ID"`
+		DatasetID string `json:"dataset_id,omitempty" jsonschema:"description=Filter visualizations by dataset ID"`
+	}
+
+	type ListVisualizationsOutput struct {
+		Visualizations []map[string]interface{} `json:"visualizations"`
+		Error          string                   `json:"error,omitempty"`
+	}
+
+	// Define a tool for listing visualizations
+	listVisualizationsTool := genkit.DefineTool[ListVisualizationsInput, ListVisualizationsOutput](c.Genkit, "listVisualizations",
+		"List visualizations for the authenticated user, optionally filtered by job or dataset",
+		func(ctx *ai.ToolContext, input ListVisualizationsInput) (ListVisualizationsOutput, error) {
+			if input.UserToken == "" {
+				return ListVisualizationsOutput{Error: "user_token is required"}, nil
+			}
+
+			client := &http.Client{}
+			url := "http://localhost:8080/api/v1/visualizations"
+
+			// Add query parameters if provided
+			if input.JobID != "" {
+				url += fmt.Sprintf("?job_id=%s", input.JobID)
+			} else if input.DatasetID != "" {
+				url += fmt.Sprintf("?dataset_id=%s", input.DatasetID)
+			}
+
+			req, err := http.NewRequest("GET", url, nil)
+			if err != nil {
+				return ListVisualizationsOutput{Error: fmt.Sprintf("failed to create request: %v", err)}, nil
+			}
+
+			req.Header.Set("user_token", input.UserToken)
+
+			resp, err := client.Do(req)
+			if err != nil {
+				return ListVisualizationsOutput{Error: fmt.Sprintf("failed to send request: %v", err)}, nil
+			}
+			defer resp.Body.Close()
+
+			if resp.StatusCode != http.StatusOK {
+				return ListVisualizationsOutput{Error: fmt.Sprintf("API returned status %d", resp.StatusCode)}, nil
+			}
+
+			var result map[string]interface{}
+			if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+				return ListVisualizationsOutput{Error: fmt.Sprintf("failed to parse response: %v", err)}, nil
+			}
+
+			visualizations := []map[string]interface{}{}
+			if vizList, ok := result["visualizations"].([]interface{}); ok {
+				for _, viz := range vizList {
+					if vizMap, ok := viz.(map[string]interface{}); ok {
+						visualizations = append(visualizations, vizMap)
+					}
+				}
+			}
+
+			return ListVisualizationsOutput{Visualizations: visualizations}, nil
+		})
+
 	// Define a tool for deleting a dataset
 	deleteDatasetTool := genkit.DefineTool[DeleteDatasetInput, DeleteDatasetOutput](c.Genkit, "deleteDataset",
 		"Delete a dataset from the Datamonkey server (requires user authentication)",
@@ -743,6 +807,7 @@ func (c *GenkitClient) ChatFlow() (any, error) {
 				getJobByIdTool,
 				listJobsTool,
 				getDatasetJobsTool,
+				listVisualizationsTool,
 				deleteDatasetTool,
 				deleteJobTool,
 				hyphyTools.AbsrelTool,
