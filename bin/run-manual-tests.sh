@@ -6,6 +6,7 @@
 # 1. Token policy tests
 # 2. Priority 1 critical path tests
 # 3. Job lifecycle tests
+# 4. Chat lifecycle tests
 
 set -e
 
@@ -46,6 +47,7 @@ show_usage() {
     echo "  health    - Health check only (no token required)"
     echo "  1         - Critical path tests (default)"
     echo "  all       - All test suites"
+    echo "  viz       - Visualization generation test (long-running, runs real job)"
     echo ""
     echo "Examples:"
     echo "  $0                                    # Run all tests with default URL"
@@ -171,15 +173,22 @@ case "$PRIORITY" in
         echo -e "${BLUE}Running all test suites...${NC}"
         verify_test_files "$SCRIPT_DIR/test-token-policy.sh" \
                          "$SCRIPT_DIR/test-priority1.sh" \
-                         "$SCRIPT_DIR/test-job-lifecycle.sh" || exit 1
+                         "$SCRIPT_DIR/test-job-lifecycle.sh" \
+                         "$SCRIPT_DIR/test-chat-lifecycle.sh" || exit 1
         
         run_test "$SCRIPT_DIR/test-token-policy.sh" "Token Policy Tests"
         run_test "$SCRIPT_DIR/test-priority1.sh" "Priority 1 Critical Path Tests"
         run_test "$SCRIPT_DIR/test-job-lifecycle.sh" "Job Lifecycle Tests"
+        run_test "$SCRIPT_DIR/test-chat-lifecycle.sh" "Chat Lifecycle Tests"
+        ;;
+    viz)
+        echo -e "${BLUE}Running visualization generation test (long-running)...${NC}"
+        verify_test_files "$SCRIPT_DIR/test-visualization-generation.sh" || exit 1
+        run_test "$SCRIPT_DIR/test-visualization-generation.sh" "Visualization Generation Test"
         ;;
     *)
         echo -e "${RED}❌ Error: Invalid priority: '$PRIORITY'${NC}"
-        echo "Valid priorities: health, 1, all"
+        echo "Valid priorities: health, 1, all, viz"
         show_usage
         exit 1
         ;;
