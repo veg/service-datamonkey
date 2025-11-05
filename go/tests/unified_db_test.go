@@ -68,7 +68,7 @@ func TestUnifiedDB_Migrations(t *testing.T) {
 	}
 
 	// Verify all expected tables exist
-	tables := []string{"sessions", "datasets", "jobs", "conversations", "messages"}
+	tables := []string{"sessions", "datasets", "jobs", "conversations", "messages", "visualizations"}
 	for _, table := range tables {
 		var tableName string
 		query := "SELECT name FROM sqlite_master WHERE type='table' AND name=?"
@@ -139,5 +139,98 @@ func TestUnifiedDB_ForeignKeys(t *testing.T) {
 	db.GetDB().QueryRow("SELECT COUNT(*) FROM jobs WHERE job_id = ?", "test-job").Scan(&count)
 	if count != 0 {
 		t.Error("Job was not cascade deleted")
+	}
+}
+
+func TestUnifiedDB_VisualizationCascadeDelete(t *testing.T) {
+	// Create temporary database
+	dbPath := "/tmp/test_unified_viz_cascade.db"
+	defer os.Remove(dbPath)
+
+	// Create unified database
+	db, err := sw.NewUnifiedDB(dbPath)
+	if err != nil {
+		t.Fatalf("Failed to create unified database: %v", err)
+	}
+	defer db.Close()
+
+	// Insert a session
+	_, err = db.GetDB().Exec("INSERT INTO sessions (subject, created_at, last_seen) VALUES (?, ?, ?)",
+		"viz-session", 1000000, 1000000)
+	if err != nil {
+		t.Fatalf("Failed to insert session: %v", err)
+	}
+
+	// Insert a job
+	_, err = db.GetDB().Exec(`INSERT INTO jobs 
+		(job_id, scheduler_job_id, user_id, status, created_at, updated_at) 
+		VALUES (?, ?, ?, ?, ?, ?)`,
+		"viz-job", "scheduler-456", "viz-session", "completed", 1000000, 1000000)
+	if err != nil {
+		t.Fatalf("Failed to insert job: %v", err)
+	}
+
+	// Insert a visualization linked to the job
+	_, err = db.GetDB().Exec(`INSERT INTO visualizations 
+		(viz_id, job_id, user_id, title, spec, created_at, updated_at) 
+		VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		"viz-123", "viz-job", "viz-session", "Test Viz", "{}", 1000000, 1000000)
+	if err != nil {
+		t.Fatalf("Failed to insert visualization: %v", err)
+	}
+
+	// Verify visualization exists
+	var count int
+	db.GetDB().QueryRow("SELECT COUNT(*) FROM visualizations WHERE viz_id = ?", "viz-123").Scan(&count)
+	if count != 1 {
+		t.Error("Visualization was not inserted")
+	}
+
+	// Delete the job - should cascade delete visualization
+	_, err = db.GetDB().Exec("DELETE FROM jobs WHERE job_id = ?", "viz-job")
+	if err != nil {
+		t.Fatalf("Failed to delete job: %v", err)
+	}
+
+	// Verify visualization was cascade deleted
+	db.GetDB().QueryRow("SELECT COUNT(*) FROM visualizations WHERE viz_id = ?", "viz-123").Scan(&count)
+	if count != 0 {
+		t.Error("Visualization was not cascade deleted when job was deleted")
+	}
+
+	// Test session cascade delete
+	// Insert another job and visualization
+	_, err = db.GetDB().Exec(`INSERT INTO jobs 
+		(job_id, scheduler_job_id, user_id, status, created_at, updated_at) 
+		VALUES (?, ?, ?, ?, ?, ?)`,
+		"viz-job-2", "scheduler-789", "viz-session", "completed", 1000000, 1000000)
+	if err != nil {
+		t.Fatalf("Failed to insert second job: %v", err)
+	}
+
+	_, err = db.GetDB().Exec(`INSERT INTO visualizations 
+		(viz_id, job_id, user_id, title, spec, created_at, updated_at) 
+		VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		"viz-456", "viz-job-2", "viz-session", "Session Viz", "{}", 1000000, 1000000)
+	if err != nil {
+		t.Fatalf("Failed to insert second visualization: %v", err)
+	}
+
+	// Delete the session - should cascade delete the job and visualization
+	_, err = db.GetDB().Exec("DELETE FROM sessions WHERE subject = ?", "viz-session")
+	if err != nil {
+		t.Fatalf("Failed to delete session: %v", err)
+	}
+
+	// Verify visualization was cascade deleted
+	db.GetDB().QueryRow("SELECT COUNT(*) FROM visualizations WHERE viz_id = ?", "viz-456").Scan(&count)
+	if count != 0 {
+		t.Error("Visualization was not cascade deleted when session was deleted")
+	}
+
+	// Verify job was also cascade deleted
+	db.GetDB().QueryRow("SELECT COUNT(*) FROM jobs WHERE job_id = ?", "viz-job-2").Scan(&count)
+	if count != 0 {
+		t.Error("Job was not cascade deleted when session was deleted")
 	}
 }
