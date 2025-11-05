@@ -215,18 +215,24 @@ func getStringFromMap(m map[string]interface{}, key string) string {
 
 // ChatFlow defines a flow for chat interactions using Genkit
 func (c *GenkitClient) ChatFlow() (any, error) {
+	// Get base URL for API calls
+	baseURL := c.BaseURL
+	if baseURL == "" {
+		baseURL = "http://localhost:9300" // Fallback default
+	}
+
 	// Initialize all HyPhy method tools
-	hyphyTools := NewHyPhyGenkitTools(c.Genkit)
+	hyphyTools := NewHyPhyGenkitTools(c.Genkit, baseURL)
 
 	// Initialize Vega tool (uses API endpoint for saving visualizations)
-	vegaTool := NewVegaTools(c.Genkit)
+	vegaTool := NewVegaTools(c.Genkit, baseURL)
 
 	// Define a tool for listing datasets
 	listDatasetsTool := genkit.DefineTool[ListDatasetsInput, ListDatasetsOutput](c.Genkit, "listDatasets",
 		"List all available datasets for analysis",
 		func(ctx *ai.ToolContext, input ListDatasetsInput) (ListDatasetsOutput, error) {
 			client := &http.Client{}
-			req, err := http.NewRequest("GET", "http://localhost:8080/api/v1/datasets", nil)
+			req, err := http.NewRequest("GET", fmt.Sprintf("%s/api/v1/datasets", baseURL), nil)
 			if err != nil {
 				return ListDatasetsOutput{}, fmt.Errorf("failed to create request: %w", err)
 			}
@@ -270,7 +276,7 @@ func (c *GenkitClient) ChatFlow() (any, error) {
 		"Check if a dataset exists on the Datamonkey API",
 		func(ctx *ai.ToolContext, input CheckDatasetExistsInput) (CheckDatasetExistsOutput, error) {
 			client := &http.Client{}
-			url := fmt.Sprintf("http://localhost:8080/api/v1/datasets/%s", input.DatasetID)
+			url := fmt.Sprintf("%s/api/v1/datasets/%s", baseURL, input.DatasetID)
 			req, err := http.NewRequest("GET", url, nil)
 			if err != nil {
 				return CheckDatasetExistsOutput{}, fmt.Errorf("failed to create request: %w", err)
@@ -294,7 +300,7 @@ func (c *GenkitClient) ChatFlow() (any, error) {
 		"Get a list of available HyPhy analysis methods supported by the Datamonkey API",
 		func(ctx *ai.ToolContext, input GetAvailableMethodsInput) (GetAvailableMethodsOutput, error) {
 			client := &http.Client{}
-			req, err := http.NewRequest("GET", "http://localhost:8080/api/v1/methods", nil)
+			req, err := http.NewRequest("GET", fmt.Sprintf("%s/api/v1/methods", baseURL), nil)
 			if err != nil {
 				return GetAvailableMethodsOutput{}, fmt.Errorf("failed to create request: %w", err)
 			}
@@ -344,7 +350,7 @@ func (c *GenkitClient) ChatFlow() (any, error) {
 			}
 
 			client := &http.Client{}
-			url := fmt.Sprintf("http://localhost:8080/api/v1/methods/%s-result?job_id=%s", input.Method, input.JobID)
+			url := fmt.Sprintf("%s/api/v1/methods/%s-result?job_id=%s", baseURL, input.Method, input.JobID)
 			req, err := http.NewRequest("GET", url, nil)
 			if err != nil {
 				return GetJobResultsOutput{Error: fmt.Sprintf("failed to create request: %v", err)}, nil
@@ -389,7 +395,7 @@ func (c *GenkitClient) ChatFlow() (any, error) {
 			}
 
 			client := &http.Client{}
-			url := fmt.Sprintf("http://localhost:8080/api/v1/datasets/%s", input.DatasetID)
+			url := fmt.Sprintf("%s/api/v1/datasets/%s", baseURL, input.DatasetID)
 			req, err := http.NewRequest("GET", url, nil)
 			if err != nil {
 				return GetDatasetDetailsOutput{Error: fmt.Sprintf("failed to create request: %v", err)}, nil
@@ -438,7 +444,7 @@ func (c *GenkitClient) ChatFlow() (any, error) {
 			}
 
 			client := &http.Client{}
-			url := fmt.Sprintf("http://localhost:8080/api/v1/jobs/%s", input.JobID)
+			url := fmt.Sprintf("%s/api/v1/jobs/%s", baseURL, input.JobID)
 			req, err := http.NewRequest("GET", url, nil)
 			if err != nil {
 				return GetJobByIdOutput{Error: fmt.Sprintf("failed to create request: %v", err)}, nil
@@ -482,7 +488,7 @@ func (c *GenkitClient) ChatFlow() (any, error) {
 		"List all jobs with optional filtering by alignment, tree, method, or status",
 		func(ctx *ai.ToolContext, input ListJobsInput) (ListJobsOutput, error) {
 			client := &http.Client{}
-			baseURL := "http://localhost:8080/api/v1/jobs"
+			apiURL := fmt.Sprintf("%s/api/v1/jobs", baseURL)
 
 			// Build query parameters
 			params := make([]string, 0)
@@ -499,9 +505,9 @@ func (c *GenkitClient) ChatFlow() (any, error) {
 				params = append(params, fmt.Sprintf("status=%s", input.Status))
 			}
 
-			url := baseURL
+			url := apiURL
 			if len(params) > 0 {
-				url = fmt.Sprintf("%s?%s", baseURL, strings.Join(params, "&"))
+				url += "?" + strings.Join(params, "&")
 			}
 
 			req, err := http.NewRequest("GET", url, nil)
@@ -552,7 +558,7 @@ func (c *GenkitClient) ChatFlow() (any, error) {
 			allJobs := make([]map[string]interface{}, 0)
 
 			// Query by alignment_id
-			url1 := fmt.Sprintf("http://localhost:8080/api/v1/jobs?alignment_id=%s", input.DatasetID)
+			url1 := fmt.Sprintf("%s/api/v1/jobs?alignment_id=%s", baseURL, input.DatasetID)
 			req1, _ := http.NewRequest("GET", url1, nil)
 			if input.UserToken != "" {
 				req1.Header.Set("user_token", input.UserToken)
@@ -572,7 +578,7 @@ func (c *GenkitClient) ChatFlow() (any, error) {
 			}
 
 			// Query by tree_id
-			url2 := fmt.Sprintf("http://localhost:8080/api/v1/jobs?tree_id=%s", input.DatasetID)
+			url2 := fmt.Sprintf("%s/api/v1/jobs?tree_id=%s", baseURL, input.DatasetID)
 			req2, _ := http.NewRequest("GET", url2, nil)
 			if input.UserToken != "" {
 				req2.Header.Set("user_token", input.UserToken)
@@ -629,7 +635,7 @@ func (c *GenkitClient) ChatFlow() (any, error) {
 			}
 
 			client := &http.Client{}
-			url := "http://localhost:8080/api/v1/visualizations"
+			url := fmt.Sprintf("%s/api/v1/visualizations", baseURL)
 
 			// Add query parameters if provided
 			if input.JobID != "" {
@@ -684,7 +690,7 @@ func (c *GenkitClient) ChatFlow() (any, error) {
 			}
 
 			client := &http.Client{}
-			url := fmt.Sprintf("http://localhost:8080/api/v1/datasets/%s", input.DatasetID)
+			url := fmt.Sprintf("%s/api/v1/datasets/%s", baseURL, input.DatasetID)
 			req, err := http.NewRequest("DELETE", url, nil)
 			if err != nil {
 				return DeleteDatasetOutput{Error: fmt.Sprintf("failed to create request: %v", err)}, nil
@@ -733,7 +739,7 @@ func (c *GenkitClient) ChatFlow() (any, error) {
 			}
 
 			client := &http.Client{}
-			url := fmt.Sprintf("http://localhost:8080/api/v1/jobs/%s", input.JobID)
+			url := fmt.Sprintf("%s/api/v1/jobs/%s", baseURL, input.JobID)
 			req, err := http.NewRequest("DELETE", url, nil)
 			if err != nil {
 				return DeleteJobOutput{Error: fmt.Sprintf("failed to create request: %v", err)}, nil

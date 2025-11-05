@@ -36,8 +36,13 @@ type HyPhyGenkitTools struct {
 }
 
 // NewHyPhyGenkitTools creates and initializes all HyPhy method tools
-func NewHyPhyGenkitTools(genkitClient *genkit.Genkit) *HyPhyGenkitTools {
+func NewHyPhyGenkitTools(genkitClient *genkit.Genkit, baseURL string) *HyPhyGenkitTools {
 	tools := &HyPhyGenkitTools{}
+
+	// Use provided baseURL or fallback to default
+	if baseURL == "" {
+		baseURL = "http://localhost:9300"
+	}
 
 	// ABSREL tool
 	tools.AbsrelTool = genkit.DefineTool[AbsrelRequest, AbsrelResult](genkitClient, "runAbsrelAnalysis",
@@ -56,7 +61,8 @@ func NewHyPhyGenkitTools(genkitClient *genkit.Genkit) *HyPhyGenkitTools {
 				return AbsrelResult{}, fmt.Errorf("failed to marshal request: %w", err)
 			}
 
-			req, err := http.NewRequest("POST", "http://localhost:8080/api/v1/methods/absrel-start", bytes.NewBuffer(reqJSON))
+			url := fmt.Sprintf("%s/api/v1/methods/absrel-start", baseURL)
+			req, err := http.NewRequest("POST", url, bytes.NewBuffer(reqJSON))
 			if err != nil {
 				return AbsrelResult{}, fmt.Errorf("failed to create request: %w", err)
 			}
@@ -100,7 +106,8 @@ func NewHyPhyGenkitTools(genkitClient *genkit.Genkit) *HyPhyGenkitTools {
 				return BgmResult{}, fmt.Errorf("failed to marshal request: %w", err)
 			}
 
-			req, err := http.NewRequest("POST", "http://localhost:8080/api/v1/methods/bgm-start", bytes.NewBuffer(reqJSON))
+			url := fmt.Sprintf("%s/api/v1/methods/bgm-start", baseURL)
+			req, err := http.NewRequest("POST", url, bytes.NewBuffer(reqJSON))
 			if err != nil {
 				return BgmResult{}, fmt.Errorf("failed to create request: %w", err)
 			}
@@ -147,7 +154,8 @@ func NewHyPhyGenkitTools(genkitClient *genkit.Genkit) *HyPhyGenkitTools {
 				return BustedResult{}, fmt.Errorf("failed to marshal request: %w", err)
 			}
 
-			req, err := http.NewRequest("POST", "http://localhost:8080/api/v1/methods/busted-start", bytes.NewBuffer(reqJSON))
+			url := fmt.Sprintf("%s/api/v1/methods/busted-start", baseURL)
+			req, err := http.NewRequest("POST", url, bytes.NewBuffer(reqJSON))
 			if err != nil {
 				return BustedResult{}, fmt.Errorf("failed to create request: %w", err)
 			}
@@ -194,7 +202,8 @@ func NewHyPhyGenkitTools(genkitClient *genkit.Genkit) *HyPhyGenkitTools {
 				return ContrastFelResult{}, fmt.Errorf("failed to marshal request: %w", err)
 			}
 
-			req, err := http.NewRequest("POST", "http://localhost:8080/api/v1/methods/contrast-fel-start", bytes.NewBuffer(reqJSON))
+			url := fmt.Sprintf("%s/api/v1/methods/contrast-fel-start", baseURL)
+			req, err := http.NewRequest("POST", url, bytes.NewBuffer(reqJSON))
 			if err != nil {
 				return ContrastFelResult{}, fmt.Errorf("failed to create request: %w", err)
 			}
@@ -241,7 +250,8 @@ func NewHyPhyGenkitTools(genkitClient *genkit.Genkit) *HyPhyGenkitTools {
 				return HyPhyJobResponse{}, fmt.Errorf("failed to marshal request: %w", err)
 			}
 
-			req, err := http.NewRequest("POST", "http://localhost:8080/api/v1/methods/fade-start", bytes.NewBuffer(reqJSON))
+			url := fmt.Sprintf("%s/api/v1/methods/fade-start", baseURL)
+			req, err := http.NewRequest("POST", url, bytes.NewBuffer(reqJSON))
 			if err != nil {
 				return HyPhyJobResponse{}, fmt.Errorf("failed to create request: %w", err)
 			}
@@ -288,7 +298,8 @@ func NewHyPhyGenkitTools(genkitClient *genkit.Genkit) *HyPhyGenkitTools {
 				return FelResult{}, fmt.Errorf("failed to marshal request: %w", err)
 			}
 
-			req, err := http.NewRequest("POST", "http://localhost:8080/api/v1/methods/fel-start", bytes.NewBuffer(reqJSON))
+			url := fmt.Sprintf("%s/api/v1/methods/fel-start", baseURL)
+			req, err := http.NewRequest("POST", url, bytes.NewBuffer(reqJSON))
 			if err != nil {
 				return FelResult{}, fmt.Errorf("failed to create request: %w", err)
 			}
@@ -332,7 +343,8 @@ func NewHyPhyGenkitTools(genkitClient *genkit.Genkit) *HyPhyGenkitTools {
 				return FubarResult{}, fmt.Errorf("failed to marshal request: %w", err)
 			}
 
-			req, err := http.NewRequest("POST", "http://localhost:8080/api/v1/methods/fubar-start", bytes.NewBuffer(reqJSON))
+			url := fmt.Sprintf("%s/api/v1/methods/fubar-start", baseURL)
+			req, err := http.NewRequest("POST", url, bytes.NewBuffer(reqJSON))
 			if err != nil {
 				return FubarResult{}, fmt.Errorf("failed to create request: %w", err)
 			}
@@ -376,7 +388,8 @@ func NewHyPhyGenkitTools(genkitClient *genkit.Genkit) *HyPhyGenkitTools {
 				return GardResult{}, fmt.Errorf("failed to marshal request: %w", err)
 			}
 
-			req, err := http.NewRequest("POST", "http://localhost:8080/api/v1/methods/gard-start", bytes.NewBuffer(reqJSON))
+			url := fmt.Sprintf("%s/api/v1/methods/gard-start", baseURL)
+			req, err := http.NewRequest("POST", url, bytes.NewBuffer(reqJSON))
 			if err != nil {
 				return GardResult{}, fmt.Errorf("failed to create request: %w", err)
 			}
@@ -423,7 +436,8 @@ func NewHyPhyGenkitTools(genkitClient *genkit.Genkit) *HyPhyGenkitTools {
 				return MemeResult{}, fmt.Errorf("failed to marshal request: %w", err)
 			}
 
-			req, err := http.NewRequest("POST", "http://localhost:8080/api/v1/methods/meme-start", bytes.NewBuffer(reqJSON))
+			url := fmt.Sprintf("%s/api/v1/methods/meme-start", baseURL)
+			req, err := http.NewRequest("POST", url, bytes.NewBuffer(reqJSON))
 			if err != nil {
 				return MemeResult{}, fmt.Errorf("failed to create request: %w", err)
 			}
@@ -467,7 +481,8 @@ func NewHyPhyGenkitTools(genkitClient *genkit.Genkit) *HyPhyGenkitTools {
 				return MultihitResult{}, fmt.Errorf("failed to marshal request: %w", err)
 			}
 
-			req, err := http.NewRequest("POST", "http://localhost:8080/api/v1/methods/multihit-start", bytes.NewBuffer(reqJSON))
+			url := fmt.Sprintf("%s/api/v1/methods/multihit-start", baseURL)
+			req, err := http.NewRequest("POST", url, bytes.NewBuffer(reqJSON))
 			if err != nil {
 				return MultihitResult{}, fmt.Errorf("failed to create request: %w", err)
 			}
@@ -511,7 +526,8 @@ func NewHyPhyGenkitTools(genkitClient *genkit.Genkit) *HyPhyGenkitTools {
 				return NrmResult{}, fmt.Errorf("failed to marshal request: %w", err)
 			}
 
-			req, err := http.NewRequest("POST", "http://localhost:8080/api/v1/methods/nrm-start", bytes.NewBuffer(reqJSON))
+			url := fmt.Sprintf("%s/api/v1/methods/nrm-start", baseURL)
+			req, err := http.NewRequest("POST", url, bytes.NewBuffer(reqJSON))
 			if err != nil {
 				return NrmResult{}, fmt.Errorf("failed to create request: %w", err)
 			}
@@ -555,7 +571,8 @@ func NewHyPhyGenkitTools(genkitClient *genkit.Genkit) *HyPhyGenkitTools {
 				return RelaxResult{}, fmt.Errorf("failed to marshal request: %w", err)
 			}
 
-			req, err := http.NewRequest("POST", "http://localhost:8080/api/v1/methods/relax-start", bytes.NewBuffer(reqJSON))
+			url := fmt.Sprintf("%s/api/v1/methods/relax-start", baseURL)
+			req, err := http.NewRequest("POST", url, bytes.NewBuffer(reqJSON))
 			if err != nil {
 				return RelaxResult{}, fmt.Errorf("failed to create request: %w", err)
 			}
@@ -602,7 +619,8 @@ func NewHyPhyGenkitTools(genkitClient *genkit.Genkit) *HyPhyGenkitTools {
 				return SlacResult{}, fmt.Errorf("failed to marshal request: %w", err)
 			}
 
-			req, err := http.NewRequest("POST", "http://localhost:8080/api/v1/methods/slac-start", bytes.NewBuffer(reqJSON))
+			url := fmt.Sprintf("%s/api/v1/methods/slac-start", baseURL)
+			req, err := http.NewRequest("POST", url, bytes.NewBuffer(reqJSON))
 			if err != nil {
 				return SlacResult{}, fmt.Errorf("failed to create request: %w", err)
 			}
@@ -646,7 +664,8 @@ func NewHyPhyGenkitTools(genkitClient *genkit.Genkit) *HyPhyGenkitTools {
 				return HyPhyJobResponse{}, fmt.Errorf("failed to marshal request: %w", err)
 			}
 
-			req, err := http.NewRequest("POST", "http://localhost:8080/api/v1/methods/slatkin-start", bytes.NewBuffer(reqJSON))
+			url := fmt.Sprintf("%s/api/v1/methods/slatkin-start", baseURL)
+			req, err := http.NewRequest("POST", url, bytes.NewBuffer(reqJSON))
 			if err != nil {
 				return HyPhyJobResponse{}, fmt.Errorf("failed to create request: %w", err)
 			}

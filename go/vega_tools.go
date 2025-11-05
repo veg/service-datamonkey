@@ -28,15 +28,17 @@ type MakeVegaSpecOutput struct {
 	Spec    map[string]interface{} `json:"spec"`    // The generated Vega-Lite spec
 }
 
-// VegaTools contains the Genkit client
+// VegaTools contains the Genkit client and API base URL
 type VegaTools struct {
-	genkit *genkit.Genkit
+	genkit  *genkit.Genkit
+	baseURL string
 }
 
 // NewVegaTools creates a new instance of VegaTools
-func NewVegaTools(g *genkit.Genkit) ai.Tool {
+func NewVegaTools(g *genkit.Genkit, baseURL string) ai.Tool {
 	vt := &VegaTools{
-		genkit: g,
+		genkit:  g,
+		baseURL: baseURL,
 	}
 	return vt.Tool()
 }
@@ -161,7 +163,8 @@ Return ONLY the title text, no quotes, no explanation, no additional text.`, inp
 
 	// Call the POST /visualizations endpoint
 	client := &http.Client{}
-	req, err := http.NewRequest("POST", "http://localhost:8080/api/v1/visualizations", bytes.NewBuffer(reqBody))
+	url := fmt.Sprintf("%s/api/v1/visualizations", v.baseURL)
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(reqBody))
 	if err != nil {
 		return MakeVegaSpecOutput{
 			Status:  "error",

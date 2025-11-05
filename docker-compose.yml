@@ -28,6 +28,7 @@ services:
       - JOB_TRACKER_DB_PATH=${JOB_TRACKER_DB_PATH:-/data/stores/jobs.db}
       - SLURM_INTERFACE=${SLURM_INTERFACE:-rest}
       - SLURM_QUEUE_NAME=${SLURM_QUEUE_NAME:-normal}
+      - API_HOST=${API_HOST:-localhost}
       - SERVICE_DATAMONKEY_PORT=${SERVICE_DATAMONKEY_PORT:-9300}
       - HYPHY_PATH=${HYPHY_PATH:-hyphy}
       - HYPHY_BASE_PATH=${HYPHY_BASE_PATH:-/data/output}

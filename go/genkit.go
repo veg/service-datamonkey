@@ -72,9 +72,10 @@ func GetModelConfig() ModelConfig {
 
 // GenkitClient represents a client for interacting with AI models using Genkit
 type GenkitClient struct {
-	Config ModelConfig
-	Ctx    context.Context
-	Genkit *genkit.Genkit
+	Config  ModelConfig
+	Ctx     context.Context
+	Genkit  *genkit.Genkit
+	BaseURL string // Base URL for API endpoints used by tools
 }
 
 // InitGenkit initializes the Genkit client with the provided configuration

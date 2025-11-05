@@ -181,6 +181,12 @@ func initAPIHandlers(scheduler sw.SchedulerInterface, datasetTracker sw.DatasetT
 		log.Printf("Warning: Failed to initialize Genkit client: %v", err)
 		log.Printf("Chat functionality will be disabled. Set GOOGLE_API_KEY, OPENAI_API_KEY, or ANTHROPIC_API_KEY to enable AI features.")
 		genkitClient = nil
+	} else {
+		// Set the base URL for API endpoints used by agentic tools
+		apiHost := getEnvWithDefault("API_HOST", "localhost")
+		apiPort := getEnvWithDefault("SERVICE_DATAMONKEY_PORT", "9300")
+		genkitClient.BaseURL = fmt.Sprintf("http://%s:%s", apiHost, apiPort)
+		log.Printf("Genkit client configured with API base URL: %s", genkitClient.BaseURL)
 	}
 
 	// Create API handlers
