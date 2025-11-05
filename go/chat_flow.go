@@ -386,15 +386,15 @@ func (c *GenkitClient) ChatFlow() (any, error) {
 
 				if resp.StatusCode == http.StatusUnauthorized {
 					return GetJobResultsOutput{
-						JobID:  input.JobID,
-						Error:  "unauthorized - invalid or missing user token",
+						JobID: input.JobID,
+						Error: "unauthorized - invalid or missing user token",
 					}, nil
 				}
 
 				if resp.StatusCode != http.StatusOK {
 					return GetJobResultsOutput{
-						JobID:  input.JobID,
-						Error:  fmt.Sprintf("unexpected status code: %d", resp.StatusCode),
+						JobID: input.JobID,
+						Error: fmt.Sprintf("unexpected status code: %d", resp.StatusCode),
 					}, nil
 				}
 
@@ -406,7 +406,7 @@ func (c *GenkitClient) ChatFlow() (any, error) {
 				// If we got HTTP 200, the job is complete and results are available
 				// The response has structure: { "job_id": "...", "result": { ... } }
 				log.Printf("getJobResults: Successfully retrieved results for job %s", input.JobID)
-				
+
 				// Extract the result field which contains the actual analysis results
 				analysisResults, _ := result["result"].(map[string]interface{})
 				if analysisResults == nil {
@@ -833,7 +833,6 @@ func (c *GenkitClient) ChatFlow() (any, error) {
 			systemPrompt += "- When creating visualizations from job results, extract ONLY the specific data fields needed for the plot.\n"
 			systemPrompt += "  Do NOT pass the entire results object - this will cause errors due to size limits.\n"
 			systemPrompt += "  For example, for FEL results, extract just the MLE content data for site-level plots.\n"
-			systemPrompt += "- ALWAYS provide a text response to the user after using tools. Summarize what you found or did.\n"
 
 			// Add user token information if available
 			if input.UserToken != "" {
@@ -911,15 +910,6 @@ func (c *GenkitClient) ChatFlow() (any, error) {
 			// Extract text and wrap in ChatResponse
 			content := genResp.Text()
 			log.Printf("ChatFlow: Successfully generated response with content length: %d", len(content))
-			
-			// If content is empty, the AI might have only called tools without generating a response
-			// This shouldn't happen in a well-configured flow, but handle it gracefully
-			if content == "" {
-				log.Printf("ChatFlow: Warning - empty response generated after tool calls")
-				// Return a helpful error message instead of empty content
-				return &ChatResponse{Content: "I apologize, but I wasn't able to generate a response. Please try rephrasing your question."}, nil
-			}
-			
 			return &ChatResponse{Content: content}, nil
 		})
 
