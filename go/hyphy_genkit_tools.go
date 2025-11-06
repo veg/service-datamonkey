@@ -10,11 +10,47 @@ import (
 	"github.com/firebase/genkit/go/genkit"
 )
 
-// HyPhyJobResponse is a generic response type for HyPhy job start operations
-// Used for methods where the result type doesn't have a JobId field
-type HyPhyJobResponse struct {
+// HyPhyJobStatus is a generic response type for HyPhy job start operations
+// Returns both job ID and status for monitoring
+type HyPhyJobStatus struct {
 	JobId  string `json:"jobId"`
 	Status string `json:"status"`
+}
+
+func extractJobID(result map[string]interface{}) (string, error) {
+	if jobIDRaw, ok := result["job_id"]; ok {
+		if jobID, ok := jobIDRaw.(string); ok && jobID != "" {
+			return jobID, nil
+		}
+	}
+
+	if jobIDRaw, ok := result["jobId"]; ok {
+		if jobID, ok := jobIDRaw.(string); ok && jobID != "" {
+			return jobID, nil
+		}
+	}
+
+	return "", fmt.Errorf("job ID not found in response")
+}
+
+func extractJobStatus(result map[string]interface{}) (string, bool) {
+	if statusRaw, ok := result["status"]; ok {
+		if status, ok := statusRaw.(string); ok && status != "" {
+			return status, true
+		}
+	}
+
+	return "", false
+}
+
+func extractJobInfo(result map[string]interface{}) (string, string, error) {
+	jobID, err := extractJobID(result)
+	if err != nil {
+		return "", "", err
+	}
+
+	status, _ := extractJobStatus(result)
+	return jobID, status, nil
 }
 
 // HyPhyGenkitTools contains all the HyPhy method tool definitions
@@ -45,26 +81,23 @@ func NewHyPhyGenkitTools(genkitClient *genkit.Genkit, baseURL string) *HyPhyGenk
 	}
 
 	// ABSREL tool
-	tools.AbsrelTool = genkit.DefineTool[AbsrelRequest, AbsrelResult](genkitClient, "runAbsrelAnalysis",
+	tools.AbsrelTool = genkit.DefineTool[AbsrelRequest, HyPhyJobStatus](genkitClient, "runAbsrelAnalysis",
 		"Start an ABSREL (Adaptive Branch-Site Random Effects Likelihood) analysis job on the Datamonkey API or check the status of an existing job",
-		func(ctx *ai.ToolContext, input AbsrelRequest) (AbsrelResult, error) {
+		func(ctx *ai.ToolContext, input AbsrelRequest) (HyPhyJobStatus, error) {
 			if input.Alignment == "" {
-				return AbsrelResult{}, fmt.Errorf("alignment is required")
-			}
-			if input.Tree == "" {
-				return AbsrelResult{}, fmt.Errorf("tree is required")
+				return HyPhyJobStatus{}, fmt.Errorf("alignment is required")
 			}
 
 			client := &http.Client{}
 			reqJSON, err := json.Marshal(input)
 			if err != nil {
-				return AbsrelResult{}, fmt.Errorf("failed to marshal request: %w", err)
+				return HyPhyJobStatus{}, fmt.Errorf("failed to marshal request: %w", err)
 			}
 
 			url := fmt.Sprintf("%s/api/v1/methods/absrel-start", baseURL)
 			req, err := http.NewRequest("POST", url, bytes.NewBuffer(reqJSON))
 			if err != nil {
-				return AbsrelResult{}, fmt.Errorf("failed to create request: %w", err)
+				return HyPhyJobStatus{}, fmt.Errorf("failed to create request: %w", err)
 			}
 			req.Header.Set("Content-Type", "application/json")
 
@@ -75,41 +108,41 @@ func NewHyPhyGenkitTools(genkitClient *genkit.Genkit, baseURL string) *HyPhyGenk
 
 			resp, err := client.Do(req)
 			if err != nil {
-				return AbsrelResult{}, fmt.Errorf("failed to send request: %w", err)
+				return HyPhyJobStatus{}, fmt.Errorf("failed to send request: %w", err)
 			}
 			defer resp.Body.Close()
 
 			var result map[string]interface{}
 			if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-				return AbsrelResult{}, fmt.Errorf("failed to parse response: %w", err)
+				return HyPhyJobStatus{}, fmt.Errorf("failed to parse response: %w", err)
 			}
 
-			jobID, ok := result["jobId"].(string)
-			if !ok {
-				return AbsrelResult{}, fmt.Errorf("job ID not found in response")
+			jobID, status, err := extractJobInfo(result)
+			if err != nil {
+				return HyPhyJobStatus{}, err
 			}
 
-			return AbsrelResult{JobId: jobID}, nil
+			return HyPhyJobStatus{JobId: jobID, Status: status}, nil
 		})
 
 	// BGM tool
-	tools.BgmTool = genkit.DefineTool[BgmRequest, BgmResult](genkitClient, "runBgmAnalysis",
+	tools.BgmTool = genkit.DefineTool[BgmRequest, HyPhyJobStatus](genkitClient, "runBgmAnalysis",
 		"Start a BGM (Bayesian Graphical Model) analysis job on the Datamonkey API or check the status of an existing job",
-		func(ctx *ai.ToolContext, input BgmRequest) (BgmResult, error) {
+		func(ctx *ai.ToolContext, input BgmRequest) (HyPhyJobStatus, error) {
 			if input.Alignment == "" {
-				return BgmResult{}, fmt.Errorf("alignment is required")
+				return HyPhyJobStatus{}, fmt.Errorf("alignment is required")
 			}
 
 			client := &http.Client{}
 			reqJSON, err := json.Marshal(input)
 			if err != nil {
-				return BgmResult{}, fmt.Errorf("failed to marshal request: %w", err)
+				return HyPhyJobStatus{}, fmt.Errorf("failed to marshal request: %w", err)
 			}
 
 			url := fmt.Sprintf("%s/api/v1/methods/bgm-start", baseURL)
 			req, err := http.NewRequest("POST", url, bytes.NewBuffer(reqJSON))
 			if err != nil {
-				return BgmResult{}, fmt.Errorf("failed to create request: %w", err)
+				return HyPhyJobStatus{}, fmt.Errorf("failed to create request: %w", err)
 			}
 			req.Header.Set("Content-Type", "application/json")
 
@@ -120,44 +153,41 @@ func NewHyPhyGenkitTools(genkitClient *genkit.Genkit, baseURL string) *HyPhyGenk
 
 			resp, err := client.Do(req)
 			if err != nil {
-				return BgmResult{}, fmt.Errorf("failed to send request: %w", err)
+				return HyPhyJobStatus{}, fmt.Errorf("failed to send request: %w", err)
 			}
 			defer resp.Body.Close()
 
 			var result map[string]interface{}
 			if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-				return BgmResult{}, fmt.Errorf("failed to parse response: %w", err)
+				return HyPhyJobStatus{}, fmt.Errorf("failed to parse response: %w", err)
 			}
 
-			jobID, ok := result["jobId"].(string)
-			if !ok {
-				return BgmResult{}, fmt.Errorf("job ID not found in response")
+			jobID, status, err := extractJobInfo(result)
+			if err != nil {
+				return HyPhyJobStatus{}, err
 			}
 
-			return BgmResult{JobId: jobID}, nil
+			return HyPhyJobStatus{JobId: jobID, Status: status}, nil
 		})
 
 	// BUSTED tool
-	tools.BustedTool = genkit.DefineTool[BustedRequest, BustedResult](genkitClient, "runBustedAnalysis",
+	tools.BustedTool = genkit.DefineTool[BustedRequest, HyPhyJobStatus](genkitClient, "runBustedAnalysis",
 		"Start a BUSTED (Branch-Site Unrestricted Statistical Test for Episodic Diversification) analysis job on the Datamonkey API or check the status of an existing job",
-		func(ctx *ai.ToolContext, input BustedRequest) (BustedResult, error) {
+		func(ctx *ai.ToolContext, input BustedRequest) (HyPhyJobStatus, error) {
 			if input.Alignment == "" {
-				return BustedResult{}, fmt.Errorf("alignment is required")
-			}
-			if input.Tree == "" {
-				return BustedResult{}, fmt.Errorf("tree is required")
+				return HyPhyJobStatus{}, fmt.Errorf("alignment is required")
 			}
 
 			client := &http.Client{}
 			reqJSON, err := json.Marshal(input)
 			if err != nil {
-				return BustedResult{}, fmt.Errorf("failed to marshal request: %w", err)
+				return HyPhyJobStatus{}, fmt.Errorf("failed to marshal request: %w", err)
 			}
 
 			url := fmt.Sprintf("%s/api/v1/methods/busted-start", baseURL)
 			req, err := http.NewRequest("POST", url, bytes.NewBuffer(reqJSON))
 			if err != nil {
-				return BustedResult{}, fmt.Errorf("failed to create request: %w", err)
+				return HyPhyJobStatus{}, fmt.Errorf("failed to create request: %w", err)
 			}
 			req.Header.Set("Content-Type", "application/json")
 
@@ -168,44 +198,41 @@ func NewHyPhyGenkitTools(genkitClient *genkit.Genkit, baseURL string) *HyPhyGenk
 
 			resp, err := client.Do(req)
 			if err != nil {
-				return BustedResult{}, fmt.Errorf("failed to send request: %w", err)
+				return HyPhyJobStatus{}, fmt.Errorf("failed to send request: %w", err)
 			}
 			defer resp.Body.Close()
 
 			var result map[string]interface{}
 			if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-				return BustedResult{}, fmt.Errorf("failed to parse response: %w", err)
+				return HyPhyJobStatus{}, fmt.Errorf("failed to parse response: %w", err)
 			}
 
-			jobID, ok := result["jobId"].(string)
-			if !ok {
-				return BustedResult{}, fmt.Errorf("job ID not found in response")
+			jobID, status, err := extractJobInfo(result)
+			if err != nil {
+				return HyPhyJobStatus{}, err
 			}
 
-			return BustedResult{JobId: jobID}, nil
+			return HyPhyJobStatus{JobId: jobID, Status: status}, nil
 		})
 
 	// CONTRAST-FEL tool
-	tools.ContrastFelTool = genkit.DefineTool[ContrastFelRequest, ContrastFelResult](genkitClient, "runContrastFelAnalysis",
+	tools.ContrastFelTool = genkit.DefineTool[ContrastFelRequest, HyPhyJobStatus](genkitClient, "runContrastFelAnalysis",
 		"Start a CONTRAST-FEL (Contrast Fixed Effects Likelihood) analysis job on the Datamonkey API or check the status of an existing job",
-		func(ctx *ai.ToolContext, input ContrastFelRequest) (ContrastFelResult, error) {
+		func(ctx *ai.ToolContext, input ContrastFelRequest) (HyPhyJobStatus, error) {
 			if input.Alignment == "" {
-				return ContrastFelResult{}, fmt.Errorf("alignment is required")
-			}
-			if input.Tree == "" {
-				return ContrastFelResult{}, fmt.Errorf("tree is required")
+				return HyPhyJobStatus{}, fmt.Errorf("alignment is required")
 			}
 
 			client := &http.Client{}
 			reqJSON, err := json.Marshal(input)
 			if err != nil {
-				return ContrastFelResult{}, fmt.Errorf("failed to marshal request: %w", err)
+				return HyPhyJobStatus{}, fmt.Errorf("failed to marshal request: %w", err)
 			}
 
 			url := fmt.Sprintf("%s/api/v1/methods/contrast-fel-start", baseURL)
 			req, err := http.NewRequest("POST", url, bytes.NewBuffer(reqJSON))
 			if err != nil {
-				return ContrastFelResult{}, fmt.Errorf("failed to create request: %w", err)
+				return HyPhyJobStatus{}, fmt.Errorf("failed to create request: %w", err)
 			}
 			req.Header.Set("Content-Type", "application/json")
 
@@ -216,44 +243,41 @@ func NewHyPhyGenkitTools(genkitClient *genkit.Genkit, baseURL string) *HyPhyGenk
 
 			resp, err := client.Do(req)
 			if err != nil {
-				return ContrastFelResult{}, fmt.Errorf("failed to send request: %w", err)
+				return HyPhyJobStatus{}, fmt.Errorf("failed to send request: %w", err)
 			}
 			defer resp.Body.Close()
 
 			var result map[string]interface{}
 			if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-				return ContrastFelResult{}, fmt.Errorf("failed to parse response: %w", err)
+				return HyPhyJobStatus{}, fmt.Errorf("failed to parse response: %w", err)
 			}
 
-			jobID, ok := result["jobId"].(string)
-			if !ok {
-				return ContrastFelResult{}, fmt.Errorf("job ID not found in response")
+			jobID, status, err := extractJobInfo(result)
+			if err != nil {
+				return HyPhyJobStatus{}, err
 			}
 
-			return ContrastFelResult{JobId: jobID}, nil
+			return HyPhyJobStatus{JobId: jobID, Status: status}, nil
 		})
 
 	// FADE tool
-	tools.FadeTool = genkit.DefineTool[FadeRequest, HyPhyJobResponse](genkitClient, "runFadeAnalysis",
+	tools.FadeTool = genkit.DefineTool[FadeRequest, HyPhyJobStatus](genkitClient, "runFadeAnalysis",
 		"Start a FADE (FUBAR Approach to Directional Evolution) analysis job on the Datamonkey API or check the status of an existing job",
-		func(ctx *ai.ToolContext, input FadeRequest) (HyPhyJobResponse, error) {
+		func(ctx *ai.ToolContext, input FadeRequest) (HyPhyJobStatus, error) {
 			if input.Alignment == "" {
-				return HyPhyJobResponse{}, fmt.Errorf("alignment is required")
-			}
-			if input.Tree == "" {
-				return HyPhyJobResponse{}, fmt.Errorf("tree is required")
+				return HyPhyJobStatus{}, fmt.Errorf("alignment is required")
 			}
 
 			client := &http.Client{}
 			reqJSON, err := json.Marshal(input)
 			if err != nil {
-				return HyPhyJobResponse{}, fmt.Errorf("failed to marshal request: %w", err)
+				return HyPhyJobStatus{}, fmt.Errorf("failed to marshal request: %w", err)
 			}
 
 			url := fmt.Sprintf("%s/api/v1/methods/fade-start", baseURL)
 			req, err := http.NewRequest("POST", url, bytes.NewBuffer(reqJSON))
 			if err != nil {
-				return HyPhyJobResponse{}, fmt.Errorf("failed to create request: %w", err)
+				return HyPhyJobStatus{}, fmt.Errorf("failed to create request: %w", err)
 			}
 			req.Header.Set("Content-Type", "application/json")
 
@@ -264,44 +288,41 @@ func NewHyPhyGenkitTools(genkitClient *genkit.Genkit, baseURL string) *HyPhyGenk
 
 			resp, err := client.Do(req)
 			if err != nil {
-				return HyPhyJobResponse{}, fmt.Errorf("failed to send request: %w", err)
+				return HyPhyJobStatus{}, fmt.Errorf("failed to send request: %w", err)
 			}
 			defer resp.Body.Close()
 
 			var result map[string]interface{}
 			if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-				return HyPhyJobResponse{}, fmt.Errorf("failed to parse response: %w", err)
+				return HyPhyJobStatus{}, fmt.Errorf("failed to parse response: %w", err)
 			}
 
-			jobID, ok := result["jobId"].(string)
-			if !ok {
-				return HyPhyJobResponse{}, fmt.Errorf("job ID not found in response")
+			jobID, status, err := extractJobInfo(result)
+			if err != nil {
+				return HyPhyJobStatus{}, err
 			}
 
-			return HyPhyJobResponse{JobId: jobID}, nil
+			return HyPhyJobStatus{JobId: jobID, Status: status}, nil
 		})
 
 	// FEL tool
-	tools.FelTool = genkit.DefineTool[FelRequest, FelResult](genkitClient, "runFelAnalysis",
+	tools.FelTool = genkit.DefineTool[FelRequest, HyPhyJobStatus](genkitClient, "runFelAnalysis",
 		"Start a FEL (Fixed Effects Likelihood) analysis job on the Datamonkey API or check the status of an existing job",
-		func(ctx *ai.ToolContext, input FelRequest) (FelResult, error) {
+		func(ctx *ai.ToolContext, input FelRequest) (HyPhyJobStatus, error) {
 			if input.Alignment == "" {
-				return FelResult{}, fmt.Errorf("alignment is required")
-			}
-			if input.Tree == "" {
-				return FelResult{}, fmt.Errorf("tree is required")
+				return HyPhyJobStatus{}, fmt.Errorf("alignment is required")
 			}
 
 			client := &http.Client{}
 			reqJSON, err := json.Marshal(input)
 			if err != nil {
-				return FelResult{}, fmt.Errorf("failed to marshal request: %w", err)
+				return HyPhyJobStatus{}, fmt.Errorf("failed to marshal request: %w", err)
 			}
 
 			url := fmt.Sprintf("%s/api/v1/methods/fel-start", baseURL)
 			req, err := http.NewRequest("POST", url, bytes.NewBuffer(reqJSON))
 			if err != nil {
-				return FelResult{}, fmt.Errorf("failed to create request: %w", err)
+				return HyPhyJobStatus{}, fmt.Errorf("failed to create request: %w", err)
 			}
 			req.Header.Set("Content-Type", "application/json")
 
@@ -312,41 +333,41 @@ func NewHyPhyGenkitTools(genkitClient *genkit.Genkit, baseURL string) *HyPhyGenk
 
 			resp, err := client.Do(req)
 			if err != nil {
-				return FelResult{}, fmt.Errorf("failed to send request: %w", err)
+				return HyPhyJobStatus{}, fmt.Errorf("failed to send request: %w", err)
 			}
 			defer resp.Body.Close()
 
 			var result map[string]interface{}
 			if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-				return FelResult{}, fmt.Errorf("failed to parse response: %w", err)
+				return HyPhyJobStatus{}, fmt.Errorf("failed to parse response: %w", err)
 			}
 
-			jobID, ok := result["jobId"].(string)
-			if !ok {
-				return FelResult{}, fmt.Errorf("job ID not found in response")
+			jobID, status, err := extractJobInfo(result)
+			if err != nil {
+				return HyPhyJobStatus{}, err
 			}
 
-			return FelResult{JobId: jobID}, nil
+			return HyPhyJobStatus{JobId: jobID, Status: status}, nil
 		})
 
 	// FUBAR tool
-	tools.FubarTool = genkit.DefineTool[FubarRequest, FubarResult](genkitClient, "runFubarAnalysis",
+	tools.FubarTool = genkit.DefineTool[FubarRequest, HyPhyJobStatus](genkitClient, "runFubarAnalysis",
 		"Start a FUBAR (Fast Unconstrained Bayesian AppRoximation) analysis job on the Datamonkey API or check the status of an existing job",
-		func(ctx *ai.ToolContext, input FubarRequest) (FubarResult, error) {
+		func(ctx *ai.ToolContext, input FubarRequest) (HyPhyJobStatus, error) {
 			if input.Alignment == "" {
-				return FubarResult{}, fmt.Errorf("alignment is required")
+				return HyPhyJobStatus{}, fmt.Errorf("alignment is required")
 			}
 
 			client := &http.Client{}
 			reqJSON, err := json.Marshal(input)
 			if err != nil {
-				return FubarResult{}, fmt.Errorf("failed to marshal request: %w", err)
+				return HyPhyJobStatus{}, fmt.Errorf("failed to marshal request: %w", err)
 			}
 
 			url := fmt.Sprintf("%s/api/v1/methods/fubar-start", baseURL)
 			req, err := http.NewRequest("POST", url, bytes.NewBuffer(reqJSON))
 			if err != nil {
-				return FubarResult{}, fmt.Errorf("failed to create request: %w", err)
+				return HyPhyJobStatus{}, fmt.Errorf("failed to create request: %w", err)
 			}
 			req.Header.Set("Content-Type", "application/json")
 
@@ -357,41 +378,41 @@ func NewHyPhyGenkitTools(genkitClient *genkit.Genkit, baseURL string) *HyPhyGenk
 
 			resp, err := client.Do(req)
 			if err != nil {
-				return FubarResult{}, fmt.Errorf("failed to send request: %w", err)
+				return HyPhyJobStatus{}, fmt.Errorf("failed to send request: %w", err)
 			}
 			defer resp.Body.Close()
 
 			var result map[string]interface{}
 			if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-				return FubarResult{}, fmt.Errorf("failed to parse response: %w", err)
+				return HyPhyJobStatus{}, fmt.Errorf("failed to parse response: %w", err)
 			}
 
-			jobID, ok := result["jobId"].(string)
-			if !ok {
-				return FubarResult{}, fmt.Errorf("job ID not found in response")
+			jobID, status, err := extractJobInfo(result)
+			if err != nil {
+				return HyPhyJobStatus{}, err
 			}
 
-			return FubarResult{JobId: jobID}, nil
+			return HyPhyJobStatus{JobId: jobID, Status: status}, nil
 		})
 
 	// GARD tool
-	tools.GardTool = genkit.DefineTool[GardRequest, GardResult](genkitClient, "runGardAnalysis",
+	tools.GardTool = genkit.DefineTool[GardRequest, HyPhyJobStatus](genkitClient, "runGardAnalysis",
 		"Start a GARD (Genetic Algorithm for Recombination Detection) analysis job on the Datamonkey API or check the status of an existing job",
-		func(ctx *ai.ToolContext, input GardRequest) (GardResult, error) {
+		func(ctx *ai.ToolContext, input GardRequest) (HyPhyJobStatus, error) {
 			if input.Alignment == "" {
-				return GardResult{}, fmt.Errorf("alignment is required")
+				return HyPhyJobStatus{}, fmt.Errorf("alignment is required")
 			}
 
 			client := &http.Client{}
 			reqJSON, err := json.Marshal(input)
 			if err != nil {
-				return GardResult{}, fmt.Errorf("failed to marshal request: %w", err)
+				return HyPhyJobStatus{}, fmt.Errorf("failed to marshal request: %w", err)
 			}
 
 			url := fmt.Sprintf("%s/api/v1/methods/gard-start", baseURL)
 			req, err := http.NewRequest("POST", url, bytes.NewBuffer(reqJSON))
 			if err != nil {
-				return GardResult{}, fmt.Errorf("failed to create request: %w", err)
+				return HyPhyJobStatus{}, fmt.Errorf("failed to create request: %w", err)
 			}
 			req.Header.Set("Content-Type", "application/json")
 
@@ -402,44 +423,41 @@ func NewHyPhyGenkitTools(genkitClient *genkit.Genkit, baseURL string) *HyPhyGenk
 
 			resp, err := client.Do(req)
 			if err != nil {
-				return GardResult{}, fmt.Errorf("failed to send request: %w", err)
+				return HyPhyJobStatus{}, fmt.Errorf("failed to send request: %w", err)
 			}
 			defer resp.Body.Close()
 
 			var result map[string]interface{}
 			if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-				return GardResult{}, fmt.Errorf("failed to parse response: %w", err)
+				return HyPhyJobStatus{}, fmt.Errorf("failed to parse response: %w", err)
 			}
 
-			jobID, ok := result["jobId"].(string)
-			if !ok {
-				return GardResult{}, fmt.Errorf("job ID not found in response")
+			jobID, status, err := extractJobInfo(result)
+			if err != nil {
+				return HyPhyJobStatus{}, err
 			}
 
-			return GardResult{JobId: jobID}, nil
+			return HyPhyJobStatus{JobId: jobID, Status: status}, nil
 		})
 
 	// MEME tool
-	tools.MemeTool = genkit.DefineTool[MemeRequest, MemeResult](genkitClient, "runMemeAnalysis",
+	tools.MemeTool = genkit.DefineTool[MemeRequest, HyPhyJobStatus](genkitClient, "runMemeAnalysis",
 		"Start a MEME (Mixed Effects Model of Evolution) analysis job on the Datamonkey API or check the status of an existing job",
-		func(ctx *ai.ToolContext, input MemeRequest) (MemeResult, error) {
+		func(ctx *ai.ToolContext, input MemeRequest) (HyPhyJobStatus, error) {
 			if input.Alignment == "" {
-				return MemeResult{}, fmt.Errorf("alignment is required")
-			}
-			if input.Tree == "" {
-				return MemeResult{}, fmt.Errorf("tree is required")
+				return HyPhyJobStatus{}, fmt.Errorf("alignment is required")
 			}
 
 			client := &http.Client{}
 			reqJSON, err := json.Marshal(input)
 			if err != nil {
-				return MemeResult{}, fmt.Errorf("failed to marshal request: %w", err)
+				return HyPhyJobStatus{}, fmt.Errorf("failed to marshal request: %w", err)
 			}
 
 			url := fmt.Sprintf("%s/api/v1/methods/meme-start", baseURL)
 			req, err := http.NewRequest("POST", url, bytes.NewBuffer(reqJSON))
 			if err != nil {
-				return MemeResult{}, fmt.Errorf("failed to create request: %w", err)
+				return HyPhyJobStatus{}, fmt.Errorf("failed to create request: %w", err)
 			}
 			req.Header.Set("Content-Type", "application/json")
 
@@ -450,41 +468,41 @@ func NewHyPhyGenkitTools(genkitClient *genkit.Genkit, baseURL string) *HyPhyGenk
 
 			resp, err := client.Do(req)
 			if err != nil {
-				return MemeResult{}, fmt.Errorf("failed to send request: %w", err)
+				return HyPhyJobStatus{}, fmt.Errorf("failed to send request: %w", err)
 			}
 			defer resp.Body.Close()
 
 			var result map[string]interface{}
 			if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-				return MemeResult{}, fmt.Errorf("failed to parse response: %w", err)
+				return HyPhyJobStatus{}, fmt.Errorf("failed to parse response: %w", err)
 			}
 
-			jobID, ok := result["jobId"].(string)
-			if !ok {
-				return MemeResult{}, fmt.Errorf("job ID not found in response")
+			jobID, status, err := extractJobInfo(result)
+			if err != nil {
+				return HyPhyJobStatus{}, err
 			}
 
-			return MemeResult{JobId: jobID}, nil
+			return HyPhyJobStatus{JobId: jobID, Status: status}, nil
 		})
 
 	// MULTIHIT tool
-	tools.MultihitTool = genkit.DefineTool[MultihitRequest, MultihitResult](genkitClient, "runMultihitAnalysis",
+	tools.MultihitTool = genkit.DefineTool[MultihitRequest, HyPhyJobStatus](genkitClient, "runMultihitAnalysis",
 		"Start a MULTI-HIT analysis job on the Datamonkey API or check the status of an existing job",
-		func(ctx *ai.ToolContext, input MultihitRequest) (MultihitResult, error) {
+		func(ctx *ai.ToolContext, input MultihitRequest) (HyPhyJobStatus, error) {
 			if input.Alignment == "" {
-				return MultihitResult{}, fmt.Errorf("alignment is required")
+				return HyPhyJobStatus{}, fmt.Errorf("alignment is required")
 			}
 
 			client := &http.Client{}
 			reqJSON, err := json.Marshal(input)
 			if err != nil {
-				return MultihitResult{}, fmt.Errorf("failed to marshal request: %w", err)
+				return HyPhyJobStatus{}, fmt.Errorf("failed to marshal request: %w", err)
 			}
 
 			url := fmt.Sprintf("%s/api/v1/methods/multihit-start", baseURL)
 			req, err := http.NewRequest("POST", url, bytes.NewBuffer(reqJSON))
 			if err != nil {
-				return MultihitResult{}, fmt.Errorf("failed to create request: %w", err)
+				return HyPhyJobStatus{}, fmt.Errorf("failed to create request: %w", err)
 			}
 			req.Header.Set("Content-Type", "application/json")
 
@@ -495,41 +513,41 @@ func NewHyPhyGenkitTools(genkitClient *genkit.Genkit, baseURL string) *HyPhyGenk
 
 			resp, err := client.Do(req)
 			if err != nil {
-				return MultihitResult{}, fmt.Errorf("failed to send request: %w", err)
+				return HyPhyJobStatus{}, fmt.Errorf("failed to send request: %w", err)
 			}
 			defer resp.Body.Close()
 
 			var result map[string]interface{}
 			if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-				return MultihitResult{}, fmt.Errorf("failed to parse response: %w", err)
+				return HyPhyJobStatus{}, fmt.Errorf("failed to parse response: %w", err)
 			}
 
-			jobID, ok := result["jobId"].(string)
-			if !ok {
-				return MultihitResult{}, fmt.Errorf("job ID not found in response")
+			jobID, status, err := extractJobInfo(result)
+			if err != nil {
+				return HyPhyJobStatus{}, err
 			}
 
-			return MultihitResult{JobId: jobID}, nil
+			return HyPhyJobStatus{JobId: jobID, Status: status}, nil
 		})
 
 	// NRM tool
-	tools.NrmTool = genkit.DefineTool[NrmRequest, NrmResult](genkitClient, "runNrmAnalysis",
+	tools.NrmTool = genkit.DefineTool[NrmRequest, HyPhyJobStatus](genkitClient, "runNrmAnalysis",
 		"Start an NRM (Non-Reversible Model) analysis job on the Datamonkey API or check the status of an existing job",
-		func(ctx *ai.ToolContext, input NrmRequest) (NrmResult, error) {
+		func(ctx *ai.ToolContext, input NrmRequest) (HyPhyJobStatus, error) {
 			if input.Alignment == "" {
-				return NrmResult{}, fmt.Errorf("alignment is required")
+				return HyPhyJobStatus{}, fmt.Errorf("alignment is required")
 			}
 
 			client := &http.Client{}
 			reqJSON, err := json.Marshal(input)
 			if err != nil {
-				return NrmResult{}, fmt.Errorf("failed to marshal request: %w", err)
+				return HyPhyJobStatus{}, fmt.Errorf("failed to marshal request: %w", err)
 			}
 
 			url := fmt.Sprintf("%s/api/v1/methods/nrm-start", baseURL)
 			req, err := http.NewRequest("POST", url, bytes.NewBuffer(reqJSON))
 			if err != nil {
-				return NrmResult{}, fmt.Errorf("failed to create request: %w", err)
+				return HyPhyJobStatus{}, fmt.Errorf("failed to create request: %w", err)
 			}
 			req.Header.Set("Content-Type", "application/json")
 
@@ -540,41 +558,41 @@ func NewHyPhyGenkitTools(genkitClient *genkit.Genkit, baseURL string) *HyPhyGenk
 
 			resp, err := client.Do(req)
 			if err != nil {
-				return NrmResult{}, fmt.Errorf("failed to send request: %w", err)
+				return HyPhyJobStatus{}, fmt.Errorf("failed to send request: %w", err)
 			}
 			defer resp.Body.Close()
 
 			var result map[string]interface{}
 			if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-				return NrmResult{}, fmt.Errorf("failed to parse response: %w", err)
+				return HyPhyJobStatus{}, fmt.Errorf("failed to parse response: %w", err)
 			}
 
-			jobID, ok := result["jobId"].(string)
-			if !ok {
-				return NrmResult{}, fmt.Errorf("job ID not found in response")
+			jobID, status, err := extractJobInfo(result)
+			if err != nil {
+				return HyPhyJobStatus{}, err
 			}
 
-			return NrmResult{JobId: jobID}, nil
+			return HyPhyJobStatus{JobId: jobID, Status: status}, nil
 		})
 
 	// RELAX tool
-	tools.RelaxTool = genkit.DefineTool[RelaxRequest, RelaxResult](genkitClient, "runRelaxAnalysis",
+	tools.RelaxTool = genkit.DefineTool[RelaxRequest, HyPhyJobStatus](genkitClient, "runRelaxAnalysis",
 		"Start a RELAX (Relaxation of Selection) analysis job on the Datamonkey API or check the status of an existing job",
-		func(ctx *ai.ToolContext, input RelaxRequest) (RelaxResult, error) {
+		func(ctx *ai.ToolContext, input RelaxRequest) (HyPhyJobStatus, error) {
 			if input.Alignment == "" {
-				return RelaxResult{}, fmt.Errorf("alignment is required")
+				return HyPhyJobStatus{}, fmt.Errorf("alignment is required")
 			}
 
 			client := &http.Client{}
 			reqJSON, err := json.Marshal(input)
 			if err != nil {
-				return RelaxResult{}, fmt.Errorf("failed to marshal request: %w", err)
+				return HyPhyJobStatus{}, fmt.Errorf("failed to marshal request: %w", err)
 			}
 
 			url := fmt.Sprintf("%s/api/v1/methods/relax-start", baseURL)
 			req, err := http.NewRequest("POST", url, bytes.NewBuffer(reqJSON))
 			if err != nil {
-				return RelaxResult{}, fmt.Errorf("failed to create request: %w", err)
+				return HyPhyJobStatus{}, fmt.Errorf("failed to create request: %w", err)
 			}
 			req.Header.Set("Content-Type", "application/json")
 
@@ -585,44 +603,41 @@ func NewHyPhyGenkitTools(genkitClient *genkit.Genkit, baseURL string) *HyPhyGenk
 
 			resp, err := client.Do(req)
 			if err != nil {
-				return RelaxResult{}, fmt.Errorf("failed to send request: %w", err)
+				return HyPhyJobStatus{}, fmt.Errorf("failed to send request: %w", err)
 			}
 			defer resp.Body.Close()
 
 			var result map[string]interface{}
 			if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-				return RelaxResult{}, fmt.Errorf("failed to parse response: %w", err)
+				return HyPhyJobStatus{}, fmt.Errorf("failed to parse response: %w", err)
 			}
 
-			jobID, ok := result["jobId"].(string)
-			if !ok {
-				return RelaxResult{}, fmt.Errorf("job ID not found in response")
+			jobID, status, err := extractJobInfo(result)
+			if err != nil {
+				return HyPhyJobStatus{}, err
 			}
 
-			return RelaxResult{JobId: jobID}, nil
+			return HyPhyJobStatus{JobId: jobID, Status: status}, nil
 		})
 
 	// SLAC tool
-	tools.SlacTool = genkit.DefineTool[SlacRequest, SlacResult](genkitClient, "runSlacAnalysis",
+	tools.SlacTool = genkit.DefineTool[SlacRequest, HyPhyJobStatus](genkitClient, "runSlacAnalysis",
 		"Start a SLAC (Single-Likelihood Ancestor Counting) analysis job on the Datamonkey API or check the status of an existing job",
-		func(ctx *ai.ToolContext, input SlacRequest) (SlacResult, error) {
+		func(ctx *ai.ToolContext, input SlacRequest) (HyPhyJobStatus, error) {
 			if input.Alignment == "" {
-				return SlacResult{}, fmt.Errorf("alignment is required")
-			}
-			if input.Tree == "" {
-				return SlacResult{}, fmt.Errorf("tree is required")
+				return HyPhyJobStatus{}, fmt.Errorf("alignment is required")
 			}
 
 			client := &http.Client{}
 			reqJSON, err := json.Marshal(input)
 			if err != nil {
-				return SlacResult{}, fmt.Errorf("failed to marshal request: %w", err)
+				return HyPhyJobStatus{}, fmt.Errorf("failed to marshal request: %w", err)
 			}
 
 			url := fmt.Sprintf("%s/api/v1/methods/slac-start", baseURL)
 			req, err := http.NewRequest("POST", url, bytes.NewBuffer(reqJSON))
 			if err != nil {
-				return SlacResult{}, fmt.Errorf("failed to create request: %w", err)
+				return HyPhyJobStatus{}, fmt.Errorf("failed to create request: %w", err)
 			}
 			req.Header.Set("Content-Type", "application/json")
 
@@ -633,41 +648,41 @@ func NewHyPhyGenkitTools(genkitClient *genkit.Genkit, baseURL string) *HyPhyGenk
 
 			resp, err := client.Do(req)
 			if err != nil {
-				return SlacResult{}, fmt.Errorf("failed to send request: %w", err)
+				return HyPhyJobStatus{}, fmt.Errorf("failed to send request: %w", err)
 			}
 			defer resp.Body.Close()
 
 			var result map[string]interface{}
 			if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-				return SlacResult{}, fmt.Errorf("failed to parse response: %w", err)
+				return HyPhyJobStatus{}, fmt.Errorf("failed to parse response: %w", err)
 			}
 
-			jobID, ok := result["jobId"].(string)
-			if !ok {
-				return SlacResult{}, fmt.Errorf("job ID not found in response")
+			jobID, status, err := extractJobInfo(result)
+			if err != nil {
+				return HyPhyJobStatus{}, err
 			}
 
-			return SlacResult{JobId: jobID}, nil
+			return HyPhyJobStatus{JobId: jobID, Status: status}, nil
 		})
 
 	// SLATKIN tool
-	tools.SlatkinTool = genkit.DefineTool[SlatkinRequest, HyPhyJobResponse](genkitClient, "runSlatkinAnalysis",
+	tools.SlatkinTool = genkit.DefineTool[SlatkinRequest, HyPhyJobStatus](genkitClient, "runSlatkinAnalysis",
 		"Start a SLATKIN (Slatkin-Maddison Test) analysis job on the Datamonkey API or check the status of an existing job",
-		func(ctx *ai.ToolContext, input SlatkinRequest) (HyPhyJobResponse, error) {
+		func(ctx *ai.ToolContext, input SlatkinRequest) (HyPhyJobStatus, error) {
 			if input.Tree == "" {
-				return HyPhyJobResponse{}, fmt.Errorf("tree is required")
+				return HyPhyJobStatus{}, fmt.Errorf("tree is required")
 			}
 
 			client := &http.Client{}
 			reqJSON, err := json.Marshal(input)
 			if err != nil {
-				return HyPhyJobResponse{}, fmt.Errorf("failed to marshal request: %w", err)
+				return HyPhyJobStatus{}, fmt.Errorf("failed to marshal request: %w", err)
 			}
 
 			url := fmt.Sprintf("%s/api/v1/methods/slatkin-start", baseURL)
 			req, err := http.NewRequest("POST", url, bytes.NewBuffer(reqJSON))
 			if err != nil {
-				return HyPhyJobResponse{}, fmt.Errorf("failed to create request: %w", err)
+				return HyPhyJobStatus{}, fmt.Errorf("failed to create request: %w", err)
 			}
 			req.Header.Set("Content-Type", "application/json")
 
@@ -678,21 +693,21 @@ func NewHyPhyGenkitTools(genkitClient *genkit.Genkit, baseURL string) *HyPhyGenk
 
 			resp, err := client.Do(req)
 			if err != nil {
-				return HyPhyJobResponse{}, fmt.Errorf("failed to send request: %w", err)
+				return HyPhyJobStatus{}, fmt.Errorf("failed to send request: %w", err)
 			}
 			defer resp.Body.Close()
 
 			var result map[string]interface{}
 			if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-				return HyPhyJobResponse{}, fmt.Errorf("failed to parse response: %w", err)
+				return HyPhyJobStatus{}, fmt.Errorf("failed to parse response: %w", err)
 			}
 
-			jobID, ok := result["jobId"].(string)
-			if !ok {
-				return HyPhyJobResponse{}, fmt.Errorf("job ID not found in response")
+			jobID, status, err := extractJobInfo(result)
+			if err != nil {
+				return HyPhyJobStatus{}, err
 			}
 
-			return HyPhyJobResponse{JobId: jobID}, nil
+			return HyPhyJobStatus{JobId: jobID, Status: status}, nil
 		})
 
 	return tools

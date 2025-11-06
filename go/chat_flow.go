@@ -826,7 +826,7 @@ func (c *GenkitClient) ChatFlow() (any, error) {
 			systemPrompt += "- getDatasetJobs: Get all jobs that used a specific dataset (requires user_token)\n"
 			systemPrompt += "- deleteDataset: Delete a dataset (requires user_token)\n"
 			systemPrompt += "- deleteJob: Delete a job (requires user_token)\n"
-			systemPrompt += "- makeVegaSpec: Generate a Vega-Lite visualization specification (requires user_token, job_id, and data)\n"
+			systemPrompt += "- makeVegaSpec: Generate a Vega-Lite visualization specification. Requires user_token and data as array of objects. Example: data=[{\"animal\":\"cat\",\"count\":3},{\"animal\":\"dog\",\"count\":4}]. Optional job_id to link to a job.\n"
 			systemPrompt += "- Various HyPhy method tools (runAbsrelAnalysis, runBgmAnalysis, runBustedAnalysis, etc.) - use getAvailableMethods to see the full list\n"
 			systemPrompt += "\nIMPORTANT NOTES:\n"
 			systemPrompt += "- Most operations require a user_token for authentication.\n"
