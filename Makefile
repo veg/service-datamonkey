@@ -71,6 +71,17 @@ default:
 	@echo "$(C_BLUE)    make test-slurm-modes$(C_NONE)"
 	@echo "      test both REST and CLI modes"
 	@echo ""
+	@echo "$(C_CYAN)  ####### AI/Genkit Development #######$(C_NONE)"
+	@echo ""
+	@echo "$(C_BLUE)    make genkit-install$(C_NONE)"
+	@echo "      install Genkit CLI (requires Node.js)"
+	@echo ""
+	@echo "$(C_BLUE)    make genkit-check$(C_NONE)"
+	@echo "      verify Genkit setup (Node.js, CLI, API key)"
+	@echo ""
+	@echo "$(C_BLUE)    make genkit-dev$(C_NONE)"
+	@echo "      start Genkit Developer UI for testing chat flows and tools"
+	@echo ""
 
 
 .PHONY: install
@@ -169,3 +180,87 @@ lint:
 .PHONY: check
 check: fmt vet
 	@echo "✓ All checks passed"
+
+# Genkit development targets
+.PHONY: genkit-install
+genkit-install:
+	@echo "Installing Genkit CLI..."
+	@if command -v npm >/dev/null 2>&1; then \
+		npm install -g genkit; \
+		echo "✓ Genkit CLI installed successfully"; \
+		echo ""; \
+		echo "Next steps:"; \
+		echo "1. Get an AI provider API key"; \
+		echo "   - Google: https://aistudio.google.com/app/apikey"; \
+		echo "   - OpenAI: https://platform.openai.com/api-keys"; \
+		echo "   - Anthropic: https://console.anthropic.com/"; \
+		echo "2. Set it: export GOOGLE_API_KEY=your-key (or OPENAI_API_KEY, etc.)"; \
+		echo "3. Start dev UI: make genkit-dev"; \
+		echo ""; \
+		echo "See docs/GENKIT_DEV_UI.md for details"; \
+	else \
+		echo "ERROR: npm not found. Please install Node.js first."; \
+		echo ""; \
+		echo "Ubuntu/Debian:"; \
+		echo "  curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -"; \
+		echo "  sudo apt-get install -y nodejs"; \
+		echo ""; \
+		echo "macOS:"; \
+		echo "  brew install node"; \
+		echo ""; \
+		echo "Or visit: https://nodejs.org/"; \
+		exit 1; \
+	fi
+
+.PHONY: genkit-check
+genkit-check:
+	@echo "Checking Genkit setup..."
+	@echo ""
+	@if command -v node >/dev/null 2>&1; then \
+		echo "✓ Node.js installed: $$(node --version)"; \
+	else \
+		echo "✗ Node.js not found - Install from: https://nodejs.org/"; \
+	fi
+	@echo ""
+	@if command -v genkit >/dev/null 2>&1; then \
+		echo "✓ Genkit CLI installed: $$(genkit --version)"; \
+	else \
+		echo "✗ Genkit CLI not found - Run: make genkit-install"; \
+	fi
+	@echo ""
+	@if [ -n "$$GOOGLE_API_KEY" ] || [ -n "$$OPENAI_API_KEY" ] || [ -n "$$ANTHROPIC_API_KEY" ]; then \
+		if [ -n "$$GOOGLE_API_KEY" ]; then echo "✓ GOOGLE_API_KEY is set"; fi; \
+		if [ -n "$$OPENAI_API_KEY" ]; then echo "✓ OPENAI_API_KEY is set"; fi; \
+		if [ -n "$$ANTHROPIC_API_KEY" ]; then echo "✓ ANTHROPIC_API_KEY is set"; fi; \
+	else \
+		echo "✗ No AI provider API key set"; \
+		echo "  Set one of: GOOGLE_API_KEY, OPENAI_API_KEY, or ANTHROPIC_API_KEY"; \
+	fi
+	@echo ""
+	@echo "See docs/GENKIT_DEV_UI.md for details"
+
+.PHONY: genkit-dev
+genkit-dev:
+	@echo "Starting Genkit Developer UI..."
+	@echo ""
+	@if ! command -v genkit >/dev/null 2>&1; then \
+		echo "ERROR: Genkit CLI not found"; \
+		echo "Install it with: make genkit-install"; \
+		exit 1; \
+	fi
+	@if [ -z "$$GOOGLE_API_KEY" ] && [ -z "$$OPENAI_API_KEY" ] && [ -z "$$ANTHROPIC_API_KEY" ]; then \
+		echo "ERROR: No AI provider API key set"; \
+		echo "Set one of:"; \
+		echo "  export GOOGLE_API_KEY=your-key"; \
+		echo "  export OPENAI_API_KEY=your-key"; \
+		echo "  export ANTHROPIC_API_KEY=your-key"; \
+		echo ""; \
+		echo "See docs/GENKIT_DEV_UI.md for details"; \
+		exit 1; \
+	fi
+	@echo "✓ Prerequisites met"
+	@echo ""
+	@echo "Developer UI: http://localhost:4000"
+	@echo "Press Ctrl+C to stop"
+	@echo ""
+	@OTEL_SDK_DISABLED=true genkit start -- go run ./cmd/genkit-dev/main.go

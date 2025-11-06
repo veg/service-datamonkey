@@ -27,3 +27,5 @@ go.work.sum
 # pulled down version of openapi.yaml from api-datamonkey
 openapi.yaml
 
+# Genkit Dev Tools Stuffs
+.genkit/

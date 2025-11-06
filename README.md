@@ -40,6 +40,24 @@ make fmt
 make check
 ```
 
+### AI/Genkit Development
+
+Test and debug AI chat flows interactively with the Genkit Developer UI:
+
+```bash
+make genkit-check      # Check prerequisites
+make genkit-install    # Install Genkit CLI (if needed)
+
+# Set your AI provider API key
+export GOOGLE_API_KEY="your-key"        # Google (default)
+# OR export OPENAI_API_KEY="your-key"   # OpenAI
+# OR export ANTHROPIC_API_KEY="your-key" # Anthropic
+
+make genkit-dev        # Start UI at http://localhost:4000
+```
+
+**See [docs/GENKIT_DEV_UI.md](docs/GENKIT_DEV_UI.md) for details**
+
 ### Testing
 
 For comprehensive testing instructions, see [TESTING.md](docs/TESTING.md).
