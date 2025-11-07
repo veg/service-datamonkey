@@ -94,7 +94,7 @@ func initSlurmRestConfig() sw.SlurmRestConfig {
 // initLocalSlurmConfig initializes and returns local Slurm configuration
 func initLocalSlurmConfig() sw.SlurmConfig {
 	// Get the partition from environment, with a default if not set
-	partition := getEnvWithDefault("SLURM_PARTITION", "normal")
+	partition := getEnvWithDefault("SLURM_QUEUE_NAME", "normal")
 
 	// Create a basic configuration with only the critical parameter (partition)
 	// Other parameters will use defaults or be set per-job
