@@ -661,6 +661,17 @@ func (c *GenkitClient) ChatFlow() (any, error) {
 			Error          string                   `json:"error,omitempty"`
 		}
 
+		// Define input/output types for fetching a single visualization
+		type GetVisualizationInput struct {
+			UserToken string `json:"user_token" jsonschema:"description=User authentication token"`
+			VizID     string `json:"viz_id" jsonschema:"description=Visualization ID to retrieve"`
+		}
+
+		type GetVisualizationOutput struct {
+			Visualization map[string]interface{} `json:"visualization,omitempty"`
+			Error         string                 `json:"error,omitempty"`
+		}
+
 		// Define a tool for listing visualizations
 		listVisualizationsTool := genkit.DefineTool[ListVisualizationsInput, ListVisualizationsOutput](c.Genkit, "listVisualizations",
 			"List visualizations for the authenticated user, optionally filtered by job or dataset",
@@ -711,6 +722,43 @@ func (c *GenkitClient) ChatFlow() (any, error) {
 				}
 
 				return ListVisualizationsOutput{Visualizations: visualizations}, nil
+			})
+
+		// Define a tool for retrieving a single visualization's details/spec
+		getVisualizationDetailsTool := genkit.DefineTool[GetVisualizationInput, GetVisualizationOutput](c.Genkit, "getVisualizationDetails",
+			"Retrieve a visualization's Vega spec and metadata by viz_id (use user_token for private visualizations)",
+			func(ctx *ai.ToolContext, input GetVisualizationInput) (GetVisualizationOutput, error) {
+				if input.VizID == "" {
+					return GetVisualizationOutput{Error: "viz_id is required"}, nil
+				}
+
+				client := &http.Client{}
+				url := fmt.Sprintf("%s/api/v1/visualizations/%s", baseURL, input.VizID)
+				req, err := http.NewRequest("GET", url, nil)
+				if err != nil {
+					return GetVisualizationOutput{Error: fmt.Sprintf("failed to create request: %v", err)}, nil
+				}
+
+				if input.UserToken != "" {
+					req.Header.Set("user_token", input.UserToken)
+				}
+
+				resp, err := client.Do(req)
+				if err != nil {
+					return GetVisualizationOutput{Error: fmt.Sprintf("failed to send request: %v", err)}, nil
+				}
+				defer resp.Body.Close()
+
+				if resp.StatusCode != http.StatusOK {
+					return GetVisualizationOutput{Error: fmt.Sprintf("API returned status %d", resp.StatusCode)}, nil
+				}
+
+				var result map[string]interface{}
+				if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+					return GetVisualizationOutput{Error: fmt.Sprintf("failed to parse response: %v", err)}, nil
+				}
+
+				return GetVisualizationOutput{Visualization: result}, nil
 			})
 
 		// Define a tool for deleting a dataset
@@ -827,6 +875,7 @@ func (c *GenkitClient) ChatFlow() (any, error) {
 			systemPrompt += "- deleteDataset: Delete a dataset (requires user_token)\n"
 			systemPrompt += "- deleteJob: Delete a job (requires user_token)\n"
 			systemPrompt += "- makeVegaSpec: Generate a Vega-Lite visualization specification. Requires user_token and data as array of objects. Example: data=[{\"animal\":\"cat\",\"count\":3},{\"animal\":\"dog\",\"count\":4}]. Optional job_id to link to a job.\n"
+			systemPrompt += "- getVisualizationDetails: Fetch the stored Vega specification and metadata for a visualization by viz_id (requires user_token for private items).\n"
 			systemPrompt += "- Various HyPhy method tools (runAbsrelAnalysis, runBgmAnalysis, runBustedAnalysis, etc.) - use getAvailableMethods to see the full list\n"
 			systemPrompt += "\nIMPORTANT NOTES:\n"
 			systemPrompt += "- Most operations require a user_token for authentication.\n"
@@ -878,6 +927,7 @@ func (c *GenkitClient) ChatFlow() (any, error) {
 					listJobsTool,
 					getDatasetJobsTool,
 					listVisualizationsTool,
+					getVisualizationDetailsTool,
 					deleteDatasetTool,
 					deleteJobTool,
 					hyphyTools.AbsrelTool,
