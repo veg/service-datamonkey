@@ -19,6 +19,7 @@ import (
 	"time"
 
 	sw "github.com/d-callan/service-datamonkey/go"
+	"github.com/joho/godotenv"
 )
 
 // getEnvWithDefault returns environment variable value or default if not set
@@ -36,6 +37,19 @@ func getEnvWithFatal(key string) string {
 		log.Fatalf("%s is not set", key)
 	}
 	return value
+}
+
+// loadDotEnv loads environment variables from a local .env file if present
+func loadDotEnv() {
+	if err := godotenv.Load(); err != nil {
+		if os.IsNotExist(err) {
+			log.Println("No .env file found, relying on existing environment variables")
+		} else {
+			log.Printf("Warning: failed to load .env file: %v", err)
+		}
+		return
+	}
+	log.Println("Loaded environment variables from .env file")
 }
 
 // initUnifiedDB initializes the unified database and enables WAL mode
@@ -263,6 +277,8 @@ func initAPIHandlers(scheduler sw.SchedulerInterface, datasetTracker sw.DatasetT
 }
 
 func main() {
+	loadDotEnv()
+
 	// Initialize unified database
 	db := initUnifiedDB()
 	defer db.Close()
